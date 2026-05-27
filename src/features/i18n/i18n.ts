@@ -4,6 +4,7 @@ import { bn } from "./translations/bn";
 import { en, type TranslationDictionary, type TranslationKey } from "./translations/en";
 import { es } from "./translations/es";
 import { fr } from "./translations/fr";
+import { he } from "./translations/he";
 import { hi } from "./translations/hi";
 import { pt } from "./translations/pt";
 import { ru } from "./translations/ru";
@@ -23,6 +24,7 @@ export const dictionaries: Record<LanguageCode, TranslationDictionary> = {
   pt,
   ru,
   ur,
+  he,
 };
 
 export function translate(

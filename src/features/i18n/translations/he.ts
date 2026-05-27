@@ -1,0 +1,37 @@
+import { en, type TranslationDictionary } from "./en";
+
+export const he: TranslationDictionary = {
+  ...en,
+  "app.subtitle": "סימון מים מקצועי ל-PDF. פרטי בתכנון.",
+  "app.privateMessage": "המסמך שלך לעולם לא עוזב את המכשיר.",
+  "actions.importPdf": "ייבוא PDF",
+  "actions.export": "ייצוא",
+  "actions.securityDetails": "פרטי אבטחה",
+  "brand.logoAlt": "לוגו רוח מסמך של GhostMark",
+  "brand.aboutTitle": "על GhostMark",
+  "brand.aboutBody":
+    "GhostMark הוא כלי סימון מים ל-PDF שמעדיף פרטיות ומיועד לתהליכי עבודה מקומיים עם מסמכים. הוא אינו מעלה מסמכים, אינו משתמש בחשבונות ואינו כולל מעקב מובנה.",
+  "brand.aboutLimit":
+    "GhostMark אינו מערכת מוסמכת לטיפול במסמכים מסווגים. לתהליכים רגישים, השתמשו בגרסה הלא מקוונת בסביבה מבודדת.",
+  "workflow.import": "ייבוא",
+  "workflow.watermark": "סימון מים",
+  "workflow.preview": "תצוגה מקדימה",
+  "workflow.security": "אבטחה",
+  "workflow.export": "ייצוא",
+  "workflow.complete": "הושלם",
+  "privacy.processedLocally": "מעובד מקומית. ללא העלאה.",
+  "privacy.noFileUploads": "אין העלאת קבצים",
+  "privacy.noAnalytics": "אין אנליטיקה",
+  "preview.livePreview": "תצוגה חיה",
+  "preview.toggleWatermark": "הצג סימון מים",
+  "preview.visualNote": "התצוגה חזותית. הייצוא מחיל את סימון המים על קובץ ה-PDF.",
+  "watermark.basic": "בסיסי",
+  "watermark.positionAndAppearance": "מיקום",
+  "watermark.advanced": "הגדרות מתקדמות",
+  "security.title": "מרכז אבטחה",
+  "export.complete": "הייצוא הושלם. נוצר מקומית.",
+  "validation.selectPdf": "בחרו PDF תחילה.",
+  "validation.addWatermarkText": "הוסיפו טקסט סימון מים כדי להמשיך.",
+  "validation.pageRange": "הזינו עמודים כמו 1, 3, 5-9.",
+  "validation.uploadImage": "העלו תמונת PNG או JPG.",
+};

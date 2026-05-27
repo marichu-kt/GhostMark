@@ -1,7 +1,6 @@
 import { HardDrive, ShieldCheck } from "lucide-react";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { Button } from "../ui/Button";
-import { Notice } from "../ui/Notice";
 import { PdfImporter } from "../pdf/PdfImporter";
 import type { LoadedPdf } from "../../types/pdf";
 import { BrandMark } from "../brand/BrandMark";
@@ -13,14 +12,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ onLoaded, onOpenSecurity }: EmptyStateProps) {
   const { t } = useTranslation();
-  const highlights = [
-    t("privacy.localProcessing"),
-    t("privacy.noFileUploads"),
-    t("privacy.noAccounts"),
-    t("privacy.noAnalytics"),
-    t("privacy.noCookies"),
-    t("privacy.offlineReady"),
-  ];
+  const highlights = [t("privacy.localProcessing"), t("privacy.noUpload"), t("privacy.noTracking")];
 
   return (
     <section className="mx-auto grid w-full max-w-5xl gap-6 px-6 py-8">
@@ -36,7 +28,7 @@ export function EmptyState({ onLoaded, onOpenSecurity }: EmptyStateProps) {
               <p className="mt-2 text-lg text-steel-100">{t("app.subtitle")}</p>
               <p className="mt-3 inline-flex items-center gap-2 rounded-md border border-local-500/70 bg-local-700/20 px-3 py-2 text-sm font-medium text-local-100">
                 <HardDrive size={16} aria-hidden="true" />
-                {t("app.privateMessage")}
+                {t("privacy.processedLocally")}
               </p>
             </div>
             <p className="max-w-2xl text-sm leading-6 text-steel-300">{t("app.description")}</p>
@@ -44,7 +36,7 @@ export function EmptyState({ onLoaded, onOpenSecurity }: EmptyStateProps) {
               <PdfImporter onLoaded={onLoaded} mode="button" />
               <Button variant="secondary" onClick={onOpenSecurity}>
                 <ShieldCheck size={16} aria-hidden="true" />
-                {t("actions.openSecurityCenter")}
+                {t("actions.securityDetails")}
               </Button>
             </div>
           </div>
@@ -62,9 +54,6 @@ export function EmptyState({ onLoaded, onOpenSecurity }: EmptyStateProps) {
           </div>
         </div>
       </div>
-
-      <Notice tone="warning">{t("app.warningSensitive")}</Notice>
-      <Notice title={t("security.privacyNoticeTitle")}>{t("app.honestPrivacy")}</Notice>
     </section>
   );
 }

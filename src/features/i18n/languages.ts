@@ -11,6 +11,7 @@ export const languages: LanguageDefinition[] = [
   { code: "pt", name: "Portuguese", nativeName: "Português", flag: "🇵🇹", direction: "ltr" },
   { code: "ru", name: "Russian", nativeName: "Русский", flag: "🇷🇺", direction: "ltr" },
   { code: "ur", name: "Urdu", nativeName: "اردو", flag: "🇵🇰", direction: "rtl" },
+  { code: "he", name: "Hebrew", nativeName: "עברית", flag: "🇮🇱", direction: "rtl" },
 ];
 
 export function getLanguageDefinition(code: LanguageCode): LanguageDefinition {

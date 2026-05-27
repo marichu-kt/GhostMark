@@ -8,7 +8,8 @@ export type LanguageCode =
   | "bn"
   | "pt"
   | "ru"
-  | "ur";
+  | "ur"
+  | "he";
 
 export interface LanguageDefinition {
   code: LanguageCode;

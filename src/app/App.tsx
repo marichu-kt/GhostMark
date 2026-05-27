@@ -6,17 +6,21 @@ import { createDownloadFileName } from "../features/pdf/fileFormatting";
 import { exportPdf } from "../features/pdf/exportPdf";
 import { cleanupSessionReferences, wipeBytes } from "../features/security/sessionCleanup";
 import { createDefaultWatermarkConfig } from "../features/watermark/defaults";
+import {
+  getAffectedPagesSummary,
+  getWatermarkSummary,
+  validateWatermarkConfig,
+} from "../features/watermark/validation";
 import { useTranslation } from "../features/i18n/useTranslation";
 import { AppShell } from "../components/layout/AppShell";
 import { EmptyState } from "../components/layout/EmptyState";
 import type { WorkflowStep } from "../components/layout/Sidebar";
 import { PdfImporter } from "../components/pdf/PdfImporter";
 import { PdfPreview } from "../components/pdf/PdfPreview";
-import { PrivacyNotice } from "../components/security/PrivacyNotice";
 import { SecurityCenter } from "../components/security/SecurityCenter";
 import { WatermarkDesigner } from "../components/watermark/WatermarkDesigner";
-import { PageRulesPanel } from "../components/watermark/PageRulesPanel";
 import { ExportPanel } from "../components/export/ExportPanel";
+import { Notice } from "../components/ui/Notice";
 
 function triggerDownload(result: PdfExportResult) {
   const link = document.createElement("a");
@@ -35,6 +39,7 @@ export function App() {
   const [loadedPdf, setLoadedPdf] = useState<LoadedPdf | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(1.1);
+  const [previewEnabled, setPreviewEnabled] = useState(true);
   const [watermarkConfig, setWatermarkConfig] = useState<WatermarkConfig>(() =>
     createDefaultWatermarkConfig(),
   );
@@ -113,7 +118,7 @@ export function App() {
     setZoom(1.1);
     setOutputFileName(createDownloadFileName(document.fileName));
     setExportError(null);
-    setActiveStep("design");
+    setActiveStep("watermark");
   }
 
   function removeDocument() {
@@ -157,13 +162,15 @@ export function App() {
   );
 
   async function handleGenerateExport() {
-    if (!loadedPdf) {
-      setExportError(t("export.noDocument"));
+    const validation = validateWatermarkConfig(watermarkConfig, loadedPdf);
+
+    if (!validation.isValid) {
+      setExportError(t(validation.messageKey ?? "export.error"));
       return;
     }
 
-    if (watermarkConfig.type === "image" && !watermarkConfig.imageData) {
-      setExportError(t("export.uploadImageFirst"));
+    if (!loadedPdf) {
+      setExportError(t("export.noDocument"));
       return;
     }
 
@@ -202,38 +209,54 @@ export function App() {
   const rightPanelTitle = useMemo(() => {
     const titles: Record<WorkflowStep, string> = {
       import: t("workflow.import"),
-      design: t("workflow.design"),
-      pageRules: t("workflow.pageRules"),
-      security: t("workflow.security"),
+      watermark: t("workflow.watermark"),
+      preview: t("workflow.preview"),
       export: t("workflow.export"),
+      security: t("workflow.security"),
     };
 
     return titles[activeStep];
   }, [activeStep, t]);
 
+  const validation = useMemo(
+    () => validateWatermarkConfig(watermarkConfig, loadedPdf),
+    [loadedPdf, watermarkConfig],
+  );
+  const watermarkReady = validation.isValid;
+  const validationMessage = validation.messageKey ? t(validation.messageKey) : undefined;
+  const watermarkSummary = useMemo(() => getWatermarkSummary(watermarkConfig), [watermarkConfig]);
+  const affectedPagesSummary = useMemo(
+    () => getAffectedPagesSummary(watermarkConfig, loadedPdf?.pageCount ?? 1),
+    [loadedPdf?.pageCount, watermarkConfig],
+  );
+
   const rightPanel = useMemo(() => {
     switch (activeStep) {
       case "import":
         return (
-          <>
+          <div className="grid gap-4">
             <PdfImporter
               onLoaded={handleLoaded}
               loadedPdf={loadedPdf}
               onRemove={removeDocument}
               onClear={() => clearSession()}
             />
-            <PrivacyNotice />
-          </>
+          </div>
         );
-      case "design":
-        return <WatermarkDesigner config={watermarkConfig} onChange={setWatermarkConfig} />;
-      case "pageRules":
+      case "watermark":
         return (
-          <PageRulesPanel
-            value={watermarkConfig.pages}
+          <WatermarkDesigner
+            config={watermarkConfig}
             totalPages={loadedPdf?.pageCount ?? 1}
-            onChange={(pages) => setWatermarkConfig((config) => ({ ...config, pages }))}
+            validationMessage={validationMessage}
+            onChange={setWatermarkConfig}
           />
+        );
+      case "preview":
+        return (
+          <Notice title={t("preview.livePreview")}>
+            {previewEnabled ? t("preview.panelOn") : t("preview.panelOff")}
+          </Notice>
         );
       case "security":
         return <SecurityCenter loadedPdf={loadedPdf} />;
@@ -252,6 +275,9 @@ export function App() {
             generating={generating}
             error={exportError}
             result={exportResult}
+            watermarkSummary={watermarkSummary}
+            affectedPagesSummary={affectedPagesSummary}
+            validationMessage={validationMessage}
             onGenerate={() => void handleGenerateExport()}
             onStartNew={() => clearSession()}
             onClearSession={() => clearSession()}
@@ -266,13 +292,18 @@ export function App() {
     clearAfterDownload,
     clearSession,
     classifiedMode,
+    affectedPagesSummary,
     exportError,
     exportResult,
     generating,
     loadedPdf,
     outputFileName,
+    previewEnabled,
     removePreviewData,
+    t,
+    validationMessage,
     watermarkConfig,
+    watermarkSummary,
   ]);
 
   return (
@@ -280,7 +311,9 @@ export function App() {
       activeStep={activeStep}
       onStepChange={setActiveStep}
       fileName={loadedPdf?.fileName}
-      canExport={Boolean(loadedPdf)}
+      canExport={watermarkReady}
+      hasDocument={Boolean(loadedPdf)}
+      watermarkReady={watermarkReady}
       onExport={() => setActiveStep("export")}
       rightPanelTitle={rightPanelTitle}
       rightPanel={rightPanel}
@@ -288,10 +321,13 @@ export function App() {
       {loadedPdf ? (
         <PdfPreview
           document={loadedPdf}
+          watermarkConfig={watermarkConfig}
           currentPage={currentPage}
           zoom={zoom}
+          previewEnabled={previewEnabled}
           onPageChange={setPageSafely}
           onZoomChange={setZoom}
+          onPreviewEnabledChange={setPreviewEnabled}
         />
       ) : (
         <EmptyState onLoaded={handleLoaded} onOpenSecurity={() => setActiveStep("security")} />
