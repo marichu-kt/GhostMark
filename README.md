@@ -1,5 +1,7 @@
 # GhostMark
 
+<img src="./public/brand/ghostmark-logo.png" alt="GhostMark document ghost logo" width="120" />
+
 Professional PDF watermarking. Private by design.
 
 GhostMark is a free, open-source, browser-based tool for applying serious document watermarks to PDF files. It is built for local processing, clear controls, and honest privacy expectations.
@@ -9,6 +11,14 @@ GhostMark is a free, open-source, browser-based tool for applying serious docume
 GhostMark adds text, repeated pattern, classification banner, seal, and image watermarks to PDF documents directly in the browser. The app has no backend, database, analytics, cookies, telemetry, or account system.
 
 Your document never leaves your device through GhostMark.
+
+## Brand
+
+GhostMark uses a document ghost mark as its local brand asset. The image is stored in `public/brand/ghostmark-logo.png` and is used only as a local static asset.
+
+GhostMark is a privacy-first PDF watermarking tool designed for local document workflows. It does not upload documents, use accounts, or include built-in tracking.
+
+GhostMark is not a certified classified-document handling system. For sensitive workflows, use the offline build in an isolated environment.
 
 ## Features
 
@@ -163,6 +173,7 @@ src/
   types/               Shared TypeScript types
   styles/              Tailwind global styles
 public/
+  brand/               Local GhostMark brand assets
   icons/               Reserved for local app icons
   fonts/               Reserved for local font files only
 ```

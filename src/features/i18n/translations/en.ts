@@ -1,6 +1,7 @@
 export const en = {
   "app.name": "GhostMark",
   "app.subtitle": "Professional PDF watermarking. Private by design.",
+  "app.privateMessage": "Your document never leaves your device.",
   "app.description":
     "Apply text, image, seal, classification, and pattern watermarks to PDF documents directly in your browser.",
   "app.warningSensitive":
@@ -24,6 +25,12 @@ export const en = {
   "actions.nextPage": "Next page",
   "actions.close": "Close",
   "actions.applyPreset": "Apply preset",
+  "brand.logoAlt": "GhostMark document ghost logo",
+  "brand.aboutTitle": "About GhostMark",
+  "brand.aboutBody":
+    "GhostMark is a privacy-first PDF watermarking tool designed for local document workflows. It does not upload documents, use accounts, or include built-in tracking.",
+  "brand.aboutLimit":
+    "GhostMark is not a certified classified-document handling system. For sensitive workflows, use the offline build in an isolated environment.",
   "badges.localMode": "Local Mode",
   "badges.classifiedMode": "Classified Mode",
   "badges.loadedLocally": "Loaded locally",

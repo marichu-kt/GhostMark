@@ -81,7 +81,7 @@ export function PdfPreview({
         onSelectPage={onPageChange}
       />
       <section className="flex min-w-0 flex-1 flex-col">
-        <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-graphite-700 bg-graphite-900 px-4">
+        <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-graphite-700 bg-graphite-950/45 px-4">
           <PageNavigator
             currentPage={currentPage}
             totalPages={document.pageCount}
@@ -92,12 +92,12 @@ export function PdfPreview({
 
         <div
           ref={viewportRef}
-          className="control-scrollbar relative flex flex-1 justify-center overflow-auto bg-graphite-850 p-8"
+          className="control-scrollbar relative flex flex-1 justify-center overflow-auto bg-[linear-gradient(180deg,#242a31,#1d2228)] p-8"
         >
           <div className="relative h-max w-max">
             <canvas
               ref={canvasRef}
-              className="rounded-sm bg-document-50 shadow-[0_12px_34px_rgba(0,0,0,0.45)]"
+              className="rounded-sm bg-document-50 shadow-[0_18px_42px_rgba(0,0,0,0.48)] ring-1 ring-black/20"
               aria-label={`${t("preview.page")} ${currentPage}`}
             />
             {loading ? (

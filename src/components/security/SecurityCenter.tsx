@@ -8,6 +8,7 @@ import { useTranslation } from "../../features/i18n/useTranslation";
 import { Button } from "../ui/Button";
 import { FieldGroup } from "../ui/FieldGroup";
 import { Notice } from "../ui/Notice";
+import { BrandMark } from "../brand/BrandMark";
 import { PrivacyChecklist } from "./PrivacyChecklist";
 import { ClassifiedModePanel } from "./ClassifiedModePanel";
 import { PrivacyNotice } from "./PrivacyNotice";
@@ -23,6 +24,15 @@ export function SecurityCenter({ loadedPdf }: SecurityCenterProps) {
 
   return (
     <>
+      <section className="grid gap-3 rounded-md border border-graphite-700 bg-graphite-950 p-4">
+        <div className="flex items-center gap-3">
+          <BrandMark variant="compact" />
+          <h3 className="text-sm font-semibold text-white">{t("brand.aboutTitle")}</h3>
+        </div>
+        <p className="text-sm leading-6 text-steel-300">{t("brand.aboutBody")}</p>
+        <Notice tone="warning">{t("brand.aboutLimit")}</Notice>
+      </section>
+
       <FieldGroup title={t("security.title")}>
         <PrivacyChecklist />
         <Button

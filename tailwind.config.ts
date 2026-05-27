@@ -39,6 +39,13 @@ const config: Config = {
           500: "#b95c59",
           700: "#7d3432",
         },
+        brand: {
+          red: "#c62828",
+          ink: "#111417",
+          paper: "#f8f7f2",
+          graphite: "#191d22",
+          steel: "#7a8793",
+        },
       },
       boxShadow: {
         panel: "0 12px 30px rgba(0, 0, 0, 0.18)",

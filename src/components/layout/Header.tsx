@@ -4,6 +4,7 @@ import { useTranslation } from "../../features/i18n/useTranslation";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { LanguageSelector } from "../language/LanguageSelector";
+import { BrandMark } from "../brand/BrandMark";
 
 interface HeaderProps {
   fileName?: string;
@@ -16,14 +17,14 @@ export function Header({ fileName, canExport, onExport }: HeaderProps) {
   const { t } = useTranslation();
 
   return (
-    <header className="flex min-h-16 items-center justify-between gap-4 border-b border-graphite-700 bg-graphite-900 px-4">
+    <header className="flex min-h-16 items-center justify-between gap-4 border-b border-graphite-700 bg-graphite-900/95 px-4 shadow-[0_1px_0_rgba(255,255,255,0.03)]">
       <div className="flex min-w-0 items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-md border border-steel-500 bg-graphite-950 text-sm font-bold text-amberline-100">
-            GM
+        <div className="flex min-w-0 items-center gap-3">
+          <BrandMark variant="header" showText />
+          <div className="min-w-0">
+            <div className="h-8 border-l border-graphite-700" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-semibold tracking-wide text-white">{t("app.name")}</div>
             <div className="truncate text-xs text-steel-300">
               {fileName ? `${t("header.currentFile")}: ${fileName}` : t("header.noFile")}
             </div>

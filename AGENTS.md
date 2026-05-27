@@ -38,6 +38,7 @@ src/
   types/
   styles/
 public/
+  brand/
   icons/
   fonts/
 .github/workflows/deploy.yml
@@ -128,6 +129,8 @@ Avoid:
 - Generic startup landing-page sections.
 
 Use restrained graphite, navy-black, muted steel, document off-white, pale amber, muted green, and muted red tones.
+
+The official GhostMark brand asset is the local PNG at `public/brand/ghostmark-logo.png`. Use it through `BrandMark` instead of recreating the logo or loading remote images. Keep mascot usage compact and professional.
 
 ## Prohibited Dependencies And Features
 

@@ -20,7 +20,7 @@ export function Sidebar({ activeStep, onChange }: SidebarProps) {
   ];
 
   return (
-    <aside className="w-56 shrink-0 border-r border-graphite-700 bg-graphite-950 px-3 py-4">
+    <aside className="w-56 shrink-0 border-r border-graphite-700 bg-graphite-950 px-3 py-4 shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)]">
       <nav className="grid gap-1" aria-label="Workflow">
         {items.map((item) => {
           const Icon = item.icon;
@@ -32,10 +32,10 @@ export function Sidebar({ activeStep, onChange }: SidebarProps) {
               type="button"
               onClick={() => onChange(item.step)}
               className={classNames(
-                "flex min-h-10 items-center gap-3 rounded-md px-3 text-left text-sm transition-colors",
+                "flex min-h-10 items-center gap-3 rounded-md border-l-2 px-3 text-left text-sm transition-colors",
                 active
-                  ? "bg-graphite-800 text-white"
-                  : "text-steel-300 hover:bg-graphite-900 hover:text-white",
+                  ? "border-brand-red bg-graphite-800 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
+                  : "border-transparent text-steel-300 hover:bg-graphite-900 hover:text-white",
               )}
               aria-current={active ? "page" : undefined}
             >
