@@ -1,0 +1,34 @@
+import { useTranslation } from "../../features/i18n/useTranslation";
+
+interface ThumbnailRailProps {
+  pageCount: number;
+  currentPage: number;
+  onSelectPage: (page: number) => void;
+}
+
+export function ThumbnailRail({ pageCount, currentPage, onSelectPage }: ThumbnailRailProps) {
+  const { t } = useTranslation();
+  const visible = Array.from({ length: Math.min(pageCount, 8) }, (_, index) => index + 1);
+
+  return (
+    <aside className="hidden w-28 shrink-0 border-r border-graphite-700 bg-graphite-950/80 p-3 lg:block">
+      <div className="grid gap-2">
+        {visible.map((page) => (
+          <button
+            key={page}
+            type="button"
+            className={`grid aspect-[3/4] place-items-center rounded border text-xs ${
+              page === currentPage
+                ? "border-amberline-300 bg-document-100 text-graphite-950"
+                : "border-graphite-700 bg-graphite-900 text-steel-300"
+            }`}
+            onClick={() => onSelectPage(page)}
+          >
+            {page}
+          </button>
+        ))}
+      </div>
+      <p className="mt-3 text-[11px] leading-4 text-steel-500">{t("preview.thumbnailPlanned")}</p>
+    </aside>
+  );
+}
