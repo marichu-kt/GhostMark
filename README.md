@@ -33,7 +33,7 @@ GhostMark is not a certified classified-document handling system. For sensitive 
 - Local Blob download using `pdf-lib`.
 - Security Center with honest privacy checks.
 - Classified Mode for stricter local handling.
-- Internationalization architecture with 10 language options and RTL support for Arabic and Urdu.
+- Internationalization architecture with 11 language options and RTL support for Arabic, Urdu, and Hebrew.
 - Static GitHub Pages deployment.
 
 ## Privacy Model
@@ -75,6 +75,13 @@ GhostMark can verify its own application configuration, but it cannot audit or c
 Browser extensions, compromised devices, screen recording tools, operating-system telemetry, network monitoring, and hosting-provider logs are outside GhostMark's control.
 
 For sensitive documents, use the offline build in an isolated environment with network access disabled.
+
+## Current Limitations
+
+- Live preview is visual and approximate; exported PDFs are the authoritative output.
+- GhostMark is not a certified classified-document handling system.
+- Hosted GitHub Pages deployments may still create provider-level technical access logs.
+- Browser extensions, operating-system tools, and network monitoring remain outside GhostMark's control.
 
 ## Classified Mode
 

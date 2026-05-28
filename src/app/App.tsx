@@ -174,6 +174,11 @@ export function App() {
       return;
     }
 
+    if (!outputFileName.trim()) {
+      setExportError(t("validation.outputFilename"));
+      return;
+    }
+
     setGenerating(true);
     setExportError(null);
 
@@ -248,7 +253,6 @@ export function App() {
           <WatermarkDesigner
             config={watermarkConfig}
             totalPages={loadedPdf?.pageCount ?? 1}
-            validationMessage={validationMessage}
             onChange={setWatermarkConfig}
           />
         );
@@ -271,16 +275,16 @@ export function App() {
             onClearAfterDownloadChange={setClearAfterDownload}
             removePreviewData={removePreviewData}
             onRemovePreviewDataChange={setRemovePreviewData}
-            disabled={!loadedPdf}
+            disabled={!watermarkReady}
             generating={generating}
             error={exportError}
             result={exportResult}
             watermarkSummary={watermarkSummary}
             affectedPagesSummary={affectedPagesSummary}
             validationMessage={validationMessage}
+            filenameError={!outputFileName.trim() ? t("validation.outputFilename") : undefined}
             onGenerate={() => void handleGenerateExport()}
             onStartNew={() => clearSession()}
-            onClearSession={() => clearSession()}
           />
         );
       default:
@@ -314,6 +318,8 @@ export function App() {
       canExport={watermarkReady}
       hasDocument={Boolean(loadedPdf)}
       watermarkReady={watermarkReady}
+      showSidebar={Boolean(loadedPdf)}
+      showRightPanel={Boolean(loadedPdf) || activeStep === "security"}
       onExport={() => setActiveStep("export")}
       rightPanelTitle={rightPanelTitle}
       rightPanel={rightPanel}

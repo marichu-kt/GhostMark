@@ -9,10 +9,11 @@ import { BrandMark } from "../brand/BrandMark";
 interface HeaderProps {
   fileName?: string;
   canExport: boolean;
+  hasDocument: boolean;
   onExport: () => void;
 }
 
-export function Header({ fileName, canExport, onExport }: HeaderProps) {
+export function Header({ fileName, canExport, hasDocument, onExport }: HeaderProps) {
   const { classifiedMode } = useAppSettings();
   const { t } = useTranslation();
 
@@ -24,27 +25,30 @@ export function Header({ fileName, canExport, onExport }: HeaderProps) {
           <div className="min-w-0">
             <div className="h-8 border-l border-graphite-700" aria-hidden="true" />
           </div>
-          <div className="min-w-0">
-            <div className="truncate text-xs text-steel-300">
-              {fileName ? `${t("header.currentFile")}: ${fileName}` : t("header.noFile")}
+          {fileName ? (
+            <div className="min-w-0">
+              <div className="max-w-80 truncate text-xs text-steel-300">{fileName}</div>
             </div>
-          </div>
+          ) : null}
         </div>
         <div className="hidden items-center gap-2 lg:flex">
           <Badge tone="safe">
             <ShieldCheck size={14} aria-hidden="true" />
             {t("badges.localMode")}
           </Badge>
+          <Badge tone="neutral">{t("privacy.noUpload")}</Badge>
           {classifiedMode ? <Badge tone="warning">{t("badges.classifiedMode")}</Badge> : null}
         </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
         <LanguageSelector />
-        <Button variant="primary" size="sm" onClick={onExport} disabled={!canExport}>
-          <Download size={16} aria-hidden="true" />
-          {t("actions.export")}
-        </Button>
+        {hasDocument ? (
+          <Button variant="primary" size="sm" onClick={onExport} disabled={!canExport}>
+            <Download size={16} aria-hidden="true" />
+            {t("actions.export")}
+          </Button>
+        ) : null}
       </div>
     </header>
   );

@@ -1,7 +1,6 @@
 import { useAppSettings } from "../../app/AppProviders";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { FieldGroup } from "../ui/FieldGroup";
-import { Notice } from "../ui/Notice";
 import { Toggle } from "../ui/Toggle";
 
 export function ClassifiedModePanel() {
@@ -16,7 +15,6 @@ export function ClassifiedModePanel() {
         onChange={setClassifiedMode}
         description={t("security.classifiedDescription")}
       />
-      <Notice tone="warning">{t("security.classifiedDescription")}</Notice>
     </FieldGroup>
   );
 }

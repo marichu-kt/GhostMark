@@ -12,45 +12,36 @@ interface EmptyStateProps {
 
 export function EmptyState({ onLoaded, onOpenSecurity }: EmptyStateProps) {
   const { t } = useTranslation();
-  const highlights = [t("privacy.localProcessing"), t("privacy.noUpload"), t("privacy.noTracking")];
 
   return (
-    <section className="mx-auto grid w-full max-w-5xl gap-6 px-6 py-8">
-      <div className="relative overflow-hidden rounded-md border border-graphite-700 bg-graphite-900 shadow-panel">
-        <div className="absolute right-8 top-6 hidden lg:block" aria-hidden="true">
+    <section className="mx-auto grid min-h-[calc(100vh-104px)] w-full max-w-4xl place-items-center px-6 py-10">
+      <div className="relative w-full overflow-hidden rounded-md border border-graphite-700 bg-graphite-900 shadow-panel">
+        <div className="absolute right-8 top-8 hidden opacity-25 lg:block" aria-hidden="true">
           <BrandMark variant="watermark" />
         </div>
-        <div className="grid gap-8 p-6 lg:grid-cols-[1fr_300px] lg:p-8">
-          <div className="grid gap-5">
-            <BrandMark variant="hero" />
-            <div>
-              <h1 className="text-4xl font-semibold tracking-normal text-white">{t("app.name")}</h1>
-              <p className="mt-2 text-lg text-steel-100">{t("app.subtitle")}</p>
-              <p className="mt-3 inline-flex items-center gap-2 rounded-md border border-local-500/70 bg-local-700/20 px-3 py-2 text-sm font-medium text-local-100">
-                <HardDrive size={16} aria-hidden="true" />
-                {t("privacy.processedLocally")}
-              </p>
-            </div>
-            <p className="max-w-2xl text-sm leading-6 text-steel-300">{t("app.description")}</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <PdfImporter onLoaded={onLoaded} mode="button" />
-              <Button variant="secondary" onClick={onOpenSecurity}>
-                <ShieldCheck size={16} aria-hidden="true" />
-                {t("actions.securityDetails")}
-              </Button>
-            </div>
+        <div className="grid gap-5 p-6 lg:p-8">
+          <BrandMark variant="hero" />
+          <div className="grid gap-2">
+            <h1 className="text-4xl font-semibold tracking-normal text-white">{t("app.name")}</h1>
+            <p className="text-lg text-steel-100">{t("app.subtitle")}</p>
+            <p className="max-w-xl text-sm leading-6 text-steel-300">{t("app.description")}</p>
           </div>
-
-          <div className="grid content-start gap-3 rounded-md border border-graphite-700 bg-graphite-950/70 p-4">
-            <BrandMark variant="empty" className="mb-1" />
-            <div className="grid gap-2">
-              {highlights.map((item) => (
-                <div key={item} className="flex items-center gap-2 text-sm text-steel-100">
-                  <ShieldCheck size={16} className="text-local-500" aria-hidden="true" />
-                  {item}
-                </div>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-steel-200">
+            <span className="inline-flex items-center gap-2 rounded-md border border-local-500/60 bg-local-700/15 px-3 py-1.5 text-local-100">
+              <HardDrive size={15} aria-hidden="true" />
+              {t("privacy.processedLocally")}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-md border border-graphite-700 bg-graphite-950 px-3 py-1.5">
+              <ShieldCheck size={15} className="text-local-500" aria-hidden="true" />
+              {t("privacy.noTracking")}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <PdfImporter onLoaded={onLoaded} mode="button" />
+            <Button variant="ghost" size="sm" onClick={onOpenSecurity}>
+              <ShieldCheck size={15} aria-hidden="true" />
+              {t("actions.securityDetails")}
+            </Button>
           </div>
         </div>
       </div>

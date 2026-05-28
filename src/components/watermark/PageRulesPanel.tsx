@@ -2,9 +2,7 @@ import { useMemo } from "react";
 import type { PageRuleConfig, PageRuleMode } from "../../types/watermark";
 import { parsePageSelection, resolvePageRules } from "../../features/pdf/pageRules";
 import { useTranslation } from "../../features/i18n/useTranslation";
-import { FieldGroup } from "../ui/FieldGroup";
 import { Input } from "../ui/Input";
-import { Notice } from "../ui/Notice";
 import { Select } from "../ui/Select";
 
 interface PageRulesPanelProps {
@@ -33,7 +31,7 @@ export function PageRulesPanel({ value, totalPages, onChange }: PageRulesPanelPr
   }, [requiresSelection, t, totalPages, value]);
 
   return (
-    <FieldGroup title={t("workflow.pageRules")} description={t("pages.syntax")}>
+    <div className="grid gap-4">
       <Select
         label={t("pages.mode")}
         value={value.mode}
@@ -58,16 +56,11 @@ export function PageRulesPanel({ value, totalPages, onChange }: PageRulesPanelPr
           helpText={
             validation && !validation.error
               ? t("pages.selectedCount", { count: validation.count })
-              : t("pages.syntax")
+              : undefined
           }
           onChange={(event) => onChange({ ...value, selection: event.target.value })}
         />
       ) : null}
-      <Notice>
-        {requiresSelection && validation && !validation.error
-          ? t("pages.willProcessCount", { count: validation.count })
-          : t("pages.syntax")}
-      </Notice>
-    </FieldGroup>
+    </div>
   );
 }

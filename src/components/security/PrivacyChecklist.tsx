@@ -14,16 +14,16 @@ export function PrivacyChecklist() {
   ];
 
   return (
-    <section className="grid gap-2">
+    <section className="grid gap-1.5">
       {statuses.map((status, index) => (
         <div
           key={status}
-          className="flex items-start gap-2 rounded-md border border-graphite-700 bg-graphite-950 p-3 text-sm text-steel-100"
+          className="flex items-center gap-2 rounded-md border border-graphite-700 bg-graphite-950 px-3 py-2 text-sm text-steel-100"
         >
           {index === statuses.length - 1 ? (
-            <Info size={16} className="mt-0.5 text-amberline-300" aria-hidden="true" />
+            <Info size={15} className="text-amberline-300" aria-hidden="true" />
           ) : (
-            <CheckCircle2 size={16} className="mt-0.5 text-local-500" aria-hidden="true" />
+            <CheckCircle2 size={15} className="text-local-500" aria-hidden="true" />
           )}
           <span>{status}</span>
         </div>

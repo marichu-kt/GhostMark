@@ -18,9 +18,10 @@ export async function exportPdf(
   const blobBytes = new Uint8Array(bytes);
   const blob = new Blob([blobBytes.buffer], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
-  const fileName = options.outputFileName.toLowerCase().endsWith(".pdf")
-    ? options.outputFileName
-    : `${options.outputFileName}.pdf`;
+  const cleanFileName = options.outputFileName.trim() || "ghostmark-watermarked.pdf";
+  const fileName = cleanFileName.toLowerCase().endsWith(".pdf")
+    ? cleanFileName
+    : `${cleanFileName}.pdf`;
 
   return {
     blob,

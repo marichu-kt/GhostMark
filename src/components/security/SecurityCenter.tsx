@@ -24,13 +24,20 @@ export function SecurityCenter({ loadedPdf }: SecurityCenterProps) {
 
   return (
     <>
-      <section className="grid gap-3 rounded-md border border-graphite-700 bg-graphite-950 p-4">
+      <section className="grid gap-3 rounded-md border border-graphite-700 bg-graphite-950 p-3">
         <div className="flex items-center gap-3">
           <BrandMark variant="compact" />
           <h3 className="text-sm font-semibold text-white">{t("brand.aboutTitle")}</h3>
         </div>
-        <p className="text-sm leading-6 text-steel-300">{t("brand.aboutBody")}</p>
-        <Notice tone="warning">{t("brand.aboutLimit")}</Notice>
+        <p className="text-xs leading-5 text-steel-300">{t("brand.aboutBody")}</p>
+        <details className="rounded-md border border-graphite-700 bg-graphite-900/70">
+          <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-steel-100">
+            {t("security.limitations")}
+          </summary>
+          <p className="border-t border-graphite-700 px-3 py-2 text-xs leading-5 text-steel-300">
+            {t("brand.aboutLimit")}
+          </p>
+        </details>
       </section>
 
       <FieldGroup title={t("security.title")}>
@@ -46,18 +53,24 @@ export function SecurityCenter({ loadedPdf }: SecurityCenterProps) {
 
       {result ? (
         <FieldGroup title={t("security.privacyCheckResult")}>
-          <Notice tone="success">{result.summary}</Notice>
-          <div className="grid gap-2">
-            {result.items.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-md border border-graphite-700 bg-graphite-950 p-3 text-sm"
-              >
-                <div className="font-medium text-white">{item.label}</div>
-                <div className="mt-1 text-xs leading-5 text-steel-300">{item.detail}</div>
-              </div>
-            ))}
-          </div>
+          <Notice tone="success">{t("security.checkComplete")}</Notice>
+          <details className="rounded-md border border-graphite-700 bg-graphite-950/70">
+            <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-white">
+              {t("export.details")}
+            </summary>
+            <div className="grid gap-2 border-t border-graphite-700 p-3">
+              <p className="text-xs leading-5 text-steel-300">{result.summary}</p>
+              {result.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-md border border-graphite-700 bg-graphite-950 p-2 text-sm"
+                >
+                  <div className="font-medium text-white">{item.label}</div>
+                  <div className="mt-1 text-xs leading-5 text-steel-300">{item.detail}</div>
+                </div>
+              ))}
+            </div>
+          </details>
         </FieldGroup>
       ) : null}
 

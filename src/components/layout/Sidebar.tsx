@@ -17,42 +17,31 @@ export function Sidebar({ activeStep, hasDocument, watermarkReady, onChange }: S
     {
       step: "import" as const,
       label: t("workflow.import"),
-      helper: hasDocument ? t("workflow.complete") : t("workflow.importHelper"),
       complete: hasDocument,
       icon: FileUp,
     },
     {
       step: "watermark" as const,
       label: t("workflow.watermark"),
-      helper: watermarkReady ? t("workflow.complete") : t("workflow.watermarkHelper"),
       complete: watermarkReady,
       icon: PenLine,
     },
     {
       step: "preview" as const,
       label: t("workflow.preview"),
-      helper: hasDocument ? t("workflow.previewHelper") : t("workflow.selectPdfFirst"),
       complete: false,
       icon: Eye,
     },
     {
       step: "export" as const,
       label: t("workflow.export"),
-      helper: watermarkReady ? t("workflow.exportHelper") : t("workflow.exportBlocked"),
       complete: false,
       icon: Download,
-    },
-    {
-      step: "security" as const,
-      label: t("workflow.security"),
-      helper: t("workflow.securityHelper"),
-      complete: false,
-      icon: ShieldCheck,
     },
   ];
 
   return (
-    <aside className="w-56 shrink-0 border-r border-graphite-700 bg-graphite-950 px-3 py-4 shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)]">
+    <aside className="flex w-44 shrink-0 flex-col border-r border-graphite-700 bg-graphite-950 px-2 py-3 shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)]">
       <nav className="grid gap-1" aria-label="Workflow">
         {items.map((item) => {
           const Icon = item.icon;
@@ -64,7 +53,7 @@ export function Sidebar({ activeStep, hasDocument, watermarkReady, onChange }: S
               type="button"
               onClick={() => onChange(item.step)}
               className={classNames(
-                "flex min-h-14 items-start gap-3 rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors",
+                "flex min-h-10 items-center gap-2 rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors",
                 active
                   ? "border-brand-red bg-graphite-800 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
                   : "border-transparent text-steel-300 hover:bg-graphite-900 hover:text-white",
@@ -78,14 +67,25 @@ export function Sidebar({ activeStep, hasDocument, watermarkReady, onChange }: S
                   <Icon size={17} aria-hidden="true" />
                 )}
               </span>
-              <span className="grid gap-0.5">
-                <span className="font-medium">{item.label}</span>
-                <span className="text-xs leading-4 text-steel-400">{item.helper}</span>
-              </span>
+              <span className="font-medium">{item.label}</span>
             </button>
           );
         })}
       </nav>
+      <button
+        type="button"
+        onClick={() => onChange("security")}
+        className={classNames(
+          "mt-auto flex min-h-9 items-center gap-2 rounded-md px-3 py-2 text-left text-xs transition-colors",
+          activeStep === "security"
+            ? "bg-graphite-800 text-white"
+            : "text-steel-400 hover:bg-graphite-900 hover:text-white",
+        )}
+        aria-current={activeStep === "security" ? "page" : undefined}
+      >
+        <ShieldCheck size={15} aria-hidden="true" />
+        <span>{t("workflow.security")}</span>
+      </button>
     </aside>
   );
 }

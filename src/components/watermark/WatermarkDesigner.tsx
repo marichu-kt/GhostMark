@@ -18,14 +18,12 @@ import { WatermarkTypeSelector } from "./WatermarkTypeSelector";
 interface WatermarkDesignerProps {
   config: WatermarkConfig;
   totalPages: number;
-  validationMessage?: string;
   onChange: (config: WatermarkConfig) => void;
 }
 
 export function WatermarkDesigner({
   config,
   totalPages,
-  validationMessage,
   onChange,
 }: WatermarkDesignerProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -62,13 +60,25 @@ export function WatermarkDesigner({
     label: t(option.labelKey),
   }));
 
+  const pageRuleLabel = {
+    all: t("pages.all"),
+    first: t("pages.first"),
+    last: t("pages.last"),
+    odd: t("pages.odd"),
+    even: t("pages.even"),
+    range: t("pages.range"),
+    specific: t("pages.specific"),
+    exclude: t("pages.exclude"),
+  }[config.pages.mode];
+  const showPosition = config.type === "text" || config.type === "seal" || config.type === "image";
+  const showRotation = config.type === "text" || config.type === "pattern" || config.type === "image";
+
   return (
     <>
-      <FieldGroup title={t("watermark.basic")}>
-        <WatermarkTypeSelector value={config.type} onChange={setType} />
-        <PresetSelector onApply={patchConfig} />
-        {validationMessage ? <Notice tone="warning">{validationMessage}</Notice> : null}
+      <WatermarkTypeSelector value={config.type} onChange={setType} />
+      <PresetSelector onApply={patchConfig} />
 
+      <FieldGroup title={t("watermark.basic")}>
         {config.type === "text" || config.type === "pattern" ? (
           <Input
             label={t("watermark.textValue")}
@@ -138,13 +148,13 @@ export function WatermarkDesigner({
               {t("watermark.uploadImage")}
             </Button>
             {imageError ? <Notice tone="danger">{imageError}</Notice> : null}
-            {!config.imageData ? <Notice>{t("validation.uploadImage")}</Notice> : null}
+            {!config.imageData ? (
+              <p className="text-xs leading-5 text-steel-300">{t("validation.uploadImage")}</p>
+            ) : null}
           </>
         ) : null}
-      </FieldGroup>
 
-      <FieldGroup title={t("watermark.positionAndAppearance")}>
-        {config.type !== "classification-banner" ? (
+        {showPosition ? (
           <Select
             label={t("watermark.position")}
             value={config.positionPreset}
@@ -152,21 +162,27 @@ export function WatermarkDesigner({
             options={positionOptions}
           />
         ) : null}
-        <Slider
-          label={config.type === "image" ? t("watermark.scale") : t("watermark.fontSize")}
-          min={config.type === "image" ? 0.05 : 10}
-          max={config.type === "image" ? 1.5 : config.type === "classification-banner" ? 32 : 140}
-          step={config.type === "image" ? 0.05 : 1}
-          value={config.type === "image" ? config.scale : config.fontSize}
-          displayValue={
-            config.type === "image"
-              ? `${Math.round(config.scale * 100)}%`
-              : `${config.fontSize}px`
-          }
-          onChange={(value) =>
-            config.type === "image" ? patchConfig({ scale: value }) : patchConfig({ fontSize: value })
-          }
-        />
+        {config.type === "text" ? (
+          <Slider
+            label={t("watermark.fontSize")}
+            min={10}
+            max={140}
+            value={config.fontSize}
+            displayValue={`${config.fontSize}px`}
+            onChange={(fontSize) => patchConfig({ fontSize })}
+          />
+        ) : null}
+        {config.type === "image" ? (
+          <Slider
+            label={t("watermark.scale")}
+            min={0.05}
+            max={1.5}
+            step={0.05}
+            value={config.scale}
+            displayValue={`${Math.round(config.scale * 100)}%`}
+            onChange={(scale) => patchConfig({ scale })}
+          />
+        ) : null}
         <Slider
           label={t("watermark.opacity")}
           min={0.02}
@@ -176,17 +192,17 @@ export function WatermarkDesigner({
           displayValue={`${Math.round(config.opacity * 100)}%`}
           onChange={(opacity) => patchConfig({ opacity })}
         />
-        {config.type !== "classification-banner" ? (
+        {showRotation ? (
           <Slider
             label={t("watermark.rotation")}
-            min={config.type === "seal" ? -25 : -90}
-            max={config.type === "seal" ? 25 : 90}
+            min={-90}
+            max={90}
             value={config.rotation}
             displayValue={`${config.rotation}°`}
             onChange={(rotation) => patchConfig({ rotation })}
           />
         ) : null}
-        {config.type !== "classification-banner" && config.type !== "image" ? (
+        {config.type === "text" ? (
           <Input
             label={t("watermark.color")}
             type="color"
@@ -194,9 +210,17 @@ export function WatermarkDesigner({
             onChange={(event) => patchConfig({ color: event.target.value })}
           />
         ) : null}
+        {config.type === "pattern" ? (
+          <div className="flex items-center justify-between gap-3 rounded-md border border-graphite-700 bg-graphite-950 px-3 py-2 text-sm">
+            <span className="text-steel-400">{t("watermark.spacing")}</span>
+            <span className="font-medium text-white">
+              {config.patternSpacingX} x {config.patternSpacingY}
+            </span>
+          </div>
+        ) : null}
       </FieldGroup>
 
-      <Collapsible title={t("workflow.pageRules")} description={t("pages.defaultAll")}>
+      <Collapsible title={`${t("pages.label")}: ${pageRuleLabel}`}>
         <PageRulesPanel
           value={config.pages}
           totalPages={totalPages}
@@ -204,9 +228,23 @@ export function WatermarkDesigner({
         />
       </Collapsible>
 
-      <Collapsible title={t("watermark.advanced")} description={t("watermark.advancedDescription")}>
+      <Collapsible title={t("watermark.advanced")}>
         {config.type === "pattern" ? (
           <>
+            <Slider
+              label={t("watermark.fontSize")}
+              min={10}
+              max={140}
+              value={config.fontSize}
+              displayValue={`${config.fontSize}px`}
+              onChange={(fontSize) => patchConfig({ fontSize })}
+            />
+            <Input
+              label={t("watermark.color")}
+              type="color"
+              value={config.color}
+              onChange={(event) => patchConfig({ color: event.target.value })}
+            />
             <Slider
               label={t("watermark.patternSpacingX")}
               min={80}
@@ -230,23 +268,49 @@ export function WatermarkDesigner({
         ) : null}
 
         {config.type === "classification-banner" ? (
-          <Slider
-            label={t("watermark.bannerMargin")}
-            min={0}
-            max={72}
-            value={config.bannerMargin}
-            onChange={(bannerMargin) => patchConfig({ bannerMargin })}
-          />
+          <>
+            <Slider
+              label={t("watermark.fontSize")}
+              min={10}
+              max={32}
+              value={config.fontSize}
+              displayValue={`${config.fontSize}px`}
+              onChange={(fontSize) => patchConfig({ fontSize })}
+            />
+            <Slider
+              label={t("watermark.bannerMargin")}
+              min={0}
+              max={72}
+              value={config.bannerMargin}
+              onChange={(bannerMargin) => patchConfig({ bannerMargin })}
+            />
+          </>
         ) : null}
 
         {config.type === "seal" ? (
-          <Slider
-            label={t("watermark.sealBorder")}
-            min={1}
-            max={8}
-            value={config.sealBorderThickness}
-            onChange={(sealBorderThickness) => patchConfig({ sealBorderThickness })}
-          />
+          <>
+            <Slider
+              label={t("watermark.rotation")}
+              min={-25}
+              max={25}
+              value={config.rotation}
+              displayValue={`${config.rotation}°`}
+              onChange={(rotation) => patchConfig({ rotation })}
+            />
+            <Input
+              label={t("watermark.color")}
+              type="color"
+              value={config.color}
+              onChange={(event) => patchConfig({ color: event.target.value })}
+            />
+            <Slider
+              label={t("watermark.sealBorder")}
+              min={1}
+              max={8}
+              value={config.sealBorderThickness}
+              onChange={(sealBorderThickness) => patchConfig({ sealBorderThickness })}
+            />
+          </>
         ) : null}
 
         {config.type !== "classification-banner" ? (

@@ -10,8 +10,8 @@ interface WatermarkPreviewOverlayProps {
 }
 
 interface PositionStyle {
-  left: string;
-  top: string;
+  left: number;
+  top: number;
   transform: string;
 }
 
@@ -27,31 +27,48 @@ function bytesToDataUrl(bytes: Uint8Array, mimeType: string): string {
   return `data:${mimeType};base64,${btoa(binary)}`;
 }
 
-function resolvePosition(config: WatermarkConfig, rotation = 0): PositionStyle {
+function estimateTextWidth(text: string, fontSize: number): number {
+  return Math.max(fontSize, text.length * fontSize * 0.62);
+}
+
+function resolvePdfLikePosition(
+  config: WatermarkConfig,
+  pageWidth: number,
+  pageHeight: number,
+  elementWidth: number,
+  elementHeight: number,
+  zoom: number,
+  rotation = 0,
+): PositionStyle {
   if (config.x !== 0 || config.y !== 0) {
     // Preview coordinates approximate pdf-lib placement. PDF export uses a bottom-left
     // origin, while this HTML overlay uses top-left CSS coordinates.
+    const x = config.x * zoom;
+    const y = config.y * zoom;
     return {
-      left: `${config.x}px`,
-      top: `calc(100% - ${config.y}px)`,
-      transform: `translate(0, -100%) rotate(${rotation}deg)`,
+      left: x,
+      top: pageHeight - y - elementHeight,
+      transform: `rotate(${rotation}deg)`,
     };
   }
 
-  const map: Record<typeof config.positionPreset, Pick<PositionStyle, "left" | "top">> = {
-    center: { left: "50%", top: "50%" },
-    "diagonal-center": { left: "50%", top: "50%" },
-    "top-left": { left: "10%", top: "12%" },
-    "top-center": { left: "50%", top: "12%" },
-    "top-right": { left: "90%", top: "12%" },
-    "bottom-left": { left: "10%", top: "88%" },
-    "bottom-center": { left: "50%", top: "88%" },
-    "bottom-right": { left: "90%", top: "88%" },
+  const margin = 48 * zoom;
+  const map: Record<typeof config.positionPreset, { x: number; y: number }> = {
+    center: { x: pageWidth / 2 - elementWidth / 2, y: pageHeight / 2 - elementHeight / 2 },
+    "diagonal-center": { x: pageWidth / 2 - elementWidth / 2, y: pageHeight / 2 - elementHeight / 2 },
+    "top-left": { x: margin, y: pageHeight - margin - elementHeight },
+    "top-center": { x: pageWidth / 2 - elementWidth / 2, y: pageHeight - margin - elementHeight },
+    "top-right": { x: pageWidth - margin - elementWidth, y: pageHeight - margin - elementHeight },
+    "bottom-left": { x: margin, y: margin },
+    "bottom-center": { x: pageWidth / 2 - elementWidth / 2, y: margin },
+    "bottom-right": { x: pageWidth - margin - elementWidth, y: margin },
   };
+  const position = map[config.positionPreset];
 
   return {
-    ...map[config.positionPreset],
-    transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+    left: position.x,
+    top: pageHeight - position.y - elementHeight,
+    transform: `rotate(${rotation}deg)`,
   };
 }
 
@@ -80,7 +97,17 @@ export function WatermarkPreviewOverlay({
   const baseText = config.text.trim();
 
   if (config.type === "text" && baseText) {
-    const position = resolvePosition(config, config.rotation);
+    const elementWidth = estimateTextWidth(baseText, fontSize);
+    const elementHeight = fontSize;
+    const position = resolvePdfLikePosition(
+      config,
+      pageWidth,
+      pageHeight,
+      elementWidth,
+      elementHeight,
+      zoom,
+      config.rotation,
+    );
 
     return (
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -91,6 +118,7 @@ export function WatermarkPreviewOverlay({
             color: textColor,
             fontSize,
             opacity,
+            transformOrigin: "center",
           }}
         >
           {baseText}
@@ -185,9 +213,17 @@ export function WatermarkPreviewOverlay({
   }
 
   if (config.type === "seal") {
-    const position = resolvePosition(config, config.rotation);
     const width = 190 * zoom;
     const height = (config.sealShowDate ? 82 : 66) * zoom;
+    const position = resolvePdfLikePosition(
+      config,
+      pageWidth,
+      pageHeight,
+      width,
+      height,
+      zoom,
+      config.rotation,
+    );
 
     return (
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -201,6 +237,7 @@ export function WatermarkPreviewOverlay({
             borderWidth: Math.max(1, config.sealBorderThickness),
             color: textColor,
             opacity,
+            transformOrigin: "center",
           }}
         >
           <div className="font-bold" style={{ fontSize: Math.max(12, 18 * zoom) }}>
@@ -218,8 +255,17 @@ export function WatermarkPreviewOverlay({
   }
 
   if (config.type === "image" && imageUrl) {
-    const position = resolvePosition(config, config.rotation);
     const width = Math.max(48, 260 * config.scale * zoom);
+    const height = width;
+    const position = resolvePdfLikePosition(
+      config,
+      pageWidth,
+      pageHeight,
+      width,
+      height,
+      zoom,
+      config.rotation,
+    );
 
     return (
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -231,6 +277,7 @@ export function WatermarkPreviewOverlay({
             ...position,
             width,
             opacity,
+            transformOrigin: "center",
           }}
         />
       </div>
