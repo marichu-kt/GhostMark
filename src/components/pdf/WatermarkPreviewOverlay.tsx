@@ -126,24 +126,6 @@ export function WatermarkPreviewOverlay({
         const baseText = layer.text.trim();
         const selected = layer.id === selectedLayerId;
 
-        if (layer.type === "redaction") {
-          const rectangles = layer.redactionRectangles.filter((rectangle) => rectangle.page === currentPage);
-
-          return rectangles.map((rectangle) => (
-            <div
-              key={rectangle.id}
-              className="absolute bg-black"
-              style={{
-                left: rectangle.x * zoom,
-                top: pageHeight - rectangle.y * zoom - rectangle.height * zoom,
-                width: rectangle.width * zoom,
-                height: rectangle.height * zoom,
-                boxShadow: selected ? "0 0 0 2px rgba(198,40,40,0.65)" : undefined,
-              }}
-            />
-          ));
-        }
-
         if (layer.type === "text" && baseText) {
           const elementWidth = estimateTextWidth(baseText, fontSize);
           const elementHeight = fontSize;

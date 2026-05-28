@@ -77,7 +77,7 @@ export function ExportPanel({
         {error ? <Notice tone="danger">{error}</Notice> : null}
         <Button variant="primary" disabled={disabled || generating} onClick={onGenerate}>
           <Download size={16} aria-hidden="true" />
-          {generating ? t("preview.loading") : t("actions.generatePdf")}
+          {generating ? t("preview.loading") : t("actions.exportPdf")}
         </Button>
       </FieldGroup>
 

@@ -8,8 +8,6 @@ export function getLayerTypeLabel(type: LayerType): string {
   switch (type) {
     case "classification-banner":
       return "Banner";
-    case "redaction":
-      return "Redaction";
     default:
       return type.charAt(0).toUpperCase() + type.slice(1);
   }
@@ -32,10 +30,6 @@ export function duplicateLayer(layer: DocumentLayer): DocumentLayer {
     ...layer,
     id: crypto.randomUUID(),
     name: `${getLayerDisplayName(layer)} copy`,
-    redactionRectangles: layer.redactionRectangles.map((rectangle) => ({
-      ...rectangle,
-      id: crypto.randomUUID(),
-    })),
     imageData: layer.imageData ? new Uint8Array(layer.imageData) : undefined,
   };
 }

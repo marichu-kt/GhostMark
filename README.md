@@ -1,137 +1,44 @@
 # GhostMark
 
-<img src="./public/brand/ghostmark-logo.png" alt="GhostMark document ghost logo" width="120" />
+<p align="center">
+  <img src="./public/brand/ghostmark-logo.png" alt="GhostMark document ghost logo" width="120" />
+</p>
 
-Professional PDF watermarking. Private by design.
+<p align="center">
+  <strong>Private PDF watermarking in your browser.</strong>
+</p>
 
-GhostMark is a free, open-source, browser-based tool for applying serious document watermarks to PDF files. It is built for local processing, clear controls, and honest privacy expectations.
+GhostMark is a free, open-source PDF watermarking app built for local document workflows. Import a PDF, add one or more watermark layers, preview the result, and export a new PDF without uploading your document.
 
-## Overview
-
-GhostMark adds text, repeated pattern, classification banner, seal, image watermark, and redaction layers to PDF documents directly in the browser. The app has no backend, database, analytics, cookies, telemetry, or account system.
-
-Your document never leaves your device through GhostMark.
-
-## Brand
-
-GhostMark uses a document ghost mark as its local brand asset. The image is stored in `public/brand/ghostmark-logo.png` and is used only as a local static asset.
-
-GhostMark is a privacy-first PDF watermarking tool designed for local document workflows. It does not upload documents, use accounts, or include built-in tracking.
-
-GhostMark is not a certified classified-document handling system. For sensitive workflows, use the offline build in an isolated environment.
+```mermaid
+flowchart LR
+    A[Import PDF] --> B[Add watermarks]
+    B --> C[Preview locally]
+    C --> D[Export PDF]
+```
 
 ## Features
 
-- Local PDF import with file validation, page count, and file details.
-- PDF preview rendered in the browser with PDF.js.
-- Text watermark configuration with size, color, opacity, rotation, and positioning.
-- Repeated pattern watermark export.
-- Top and bottom classification banner export.
-- Simple document-control seal export.
-- Image watermark export for PNG and JPG assets.
-- Multi-layer editing so several watermark and redaction layers can be combined.
-- Redacted pages are flattened to prevent copying covered text from the exported PDF.
-- Page rules for all, first, last, odd, even, range, specific, and excluded pages.
-- Local Blob download using `pdf-lib`.
-- Security Center with honest privacy checks.
-- Classified Mode for stricter local handling.
-- Internationalization architecture with 11 language options and RTL support for Arabic, Urdu, and Hebrew.
+- Text, image, pattern, banner, and seal watermark layers.
+- Multiple enabled layers with ordering, duplication, and per-layer page rules.
+- Live visual preview powered by PDF.js.
+- Local PDF export powered by pdf-lib.
+- Drag-and-drop PDF import.
+- 11 interface languages, including Hebrew, Arabic, and Urdu with RTL support.
 - Static GitHub Pages deployment.
 
-## Privacy Model
+## Privacy
 
-GhostMark processes PDFs locally in the browser. The selected PDF is held in browser memory for the active session and is not uploaded by the application.
+GhostMark has no backend, database, analytics, cookies, telemetry, accounts, upload endpoint, or cloud sync.
 
-GhostMark has:
+Your PDF is processed in browser memory. Hosted static pages may still create provider-level access logs, so sensitive workflows should use an offline build in an isolated environment.
 
-- No backend.
-- No database.
-- No analytics.
-- No cookies.
-- No tracking.
-- No telemetry.
-- No remote API calls.
-- No CDN-hosted scripts or fonts.
-- No automatic document persistence.
+GhostMark is not a certified classified-document handling system.
 
-Hosted static pages may still generate technical access logs at the hosting provider level, such as IP address, request time, and browser metadata.
-
-## What GhostMark Does Not Do
-
-GhostMark does not provide:
-
-- User accounts.
-- Cloud sync.
-- Recent documents.
-- Document history.
-- File upload endpoints.
-- Analytics or error telemetry.
-- A certified classified-document handling environment.
-- Guaranteed anonymity.
-- Compliance guarantees.
-
-## Security Limitations
-
-GhostMark can verify its own application configuration, but it cannot audit or control the surrounding environment.
-
-Browser extensions, compromised devices, screen recording tools, operating-system telemetry, network monitoring, and hosting-provider logs are outside GhostMark's control.
-
-For sensitive documents, use the offline build in an isolated environment with network access disabled.
-
-## Current Limitations
-
-- Live preview is visual and approximate; exported PDFs are the authoritative output.
-- Redaction pages are rasterized, which removes text selection on those pages and may increase output file size.
-- GhostMark is not a certified classified-document handling system.
-- Hosted GitHub Pages deployments may still create provider-level technical access logs.
-- Browser extensions, operating-system tools, and network monitoring remain outside GhostMark's control.
-
-## Classified Mode
-
-Classified Mode is designed for stricter local handling:
-
-- Language selection stays in memory only.
-- Persistent storage is avoided.
-- Document history and autosave features are not present.
-- A warning is shown before leaving with a loaded document.
-- Export cleanup is stricter.
-
-GhostMark is not certified for classified information. For truly sensitive environments, use an offline build with network access disabled.
-
-## Offline Usage
-
-Recommended sensitive workflow:
-
-1. Clone this repository or download a release archive.
-2. Run `npm install`.
-3. Run `npm run build`.
-4. Serve `dist` locally with a static server.
-5. Disconnect network access if required by your environment.
-6. Process documents locally.
-
-Avoid relying on `file://` for production use. Some browsers restrict module workers, PDF.js worker loading, or generated Blob behavior when opening the app directly from the filesystem.
-
-## Tech Stack
-
-- TypeScript
-- React
-- Vite
-- Tailwind CSS
-- PDF.js through `pdfjs-dist`
-- `pdf-lib`
-- Vitest
-
-## Development
-
-Install dependencies:
+## Use Locally
 
 ```bash
 npm install
-```
-
-Run the development server:
-
-```bash
 npm run dev
 ```
 
@@ -139,87 +46,40 @@ Build the static app:
 
 ```bash
 npm run build
-```
-
-Preview the production build:
-
-```bash
 npm run preview
 ```
 
-Typecheck:
+For sensitive documents:
+
+1. Clone or download GhostMark.
+2. Run `npm install`.
+3. Run `npm run build`.
+4. Serve `dist` locally.
+5. Disconnect the network if required.
+6. Process documents locally.
+
+## Tech Stack
+
+- React + TypeScript + Vite
+- Tailwind CSS
+- PDF.js / `pdfjs-dist`
+- `pdf-lib`
+- Vitest
+
+## Development
 
 ```bash
 npm run typecheck
-```
-
-## Testing
-
-Run deterministic utility tests:
-
-```bash
 npm run test
+npm run build
 ```
 
-The current test suite covers page selection parsing, rule resolution, layer validation, language registration, and redaction search matching.
-
-## GitHub Pages Deployment
-
-Vite is configured with:
+Vite is configured for GitHub Pages with:
 
 ```ts
 base: "/GhostMark/"
 ```
 
-The GitHub Actions workflow in `.github/workflows/deploy.yml` installs dependencies, builds the app, uploads the `dist` artifact, and deploys it using official GitHub Pages actions.
-
-## Project Structure
-
-```text
-src/
-  app/                 Application state and providers
-  components/          Layout, UI, PDF, watermark, security, and export components
-  features/            PDF, watermark, security, and i18n utilities
-  types/               Shared TypeScript types
-  styles/              Tailwind global styles
-public/
-  brand/               Local GhostMark brand assets
-  icons/               Reserved for local app icons
-  fonts/               Reserved for local font files only
-```
-
-## Roadmap
-
-v1.0:
-
-- PDF import
-- Preview
-- Text watermark
-- Pattern watermark
-- Classification banner
-- Seal
-- Page rules
-- Local export
-- Security center
-- Classified mode
-- i18n architecture
-
-v1.1:
-
-- Image watermark export refinements
-- Thumbnail rail
-- Drag-and-drop positioning
-- Metadata tools
-- Stronger offline packaging
-
-v1.2:
-
-- Encrypted export package
-- Custom fonts
-- Advanced templates
-- Keyboard shortcuts
-- Accessibility audit
-
 ## License
 
-GhostMark is released under the MIT License. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

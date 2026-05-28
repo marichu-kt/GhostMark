@@ -1,14 +1,23 @@
 import { useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Copy, ImagePlus, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Bookmark,
+  Copy,
+  Grid3X3,
+  ImagePlus,
+  Plus,
+  Stamp,
+  Trash2,
+  Type,
+} from "lucide-react";
 import type {
   DocumentLayer,
   LayerType,
   PageRuleConfig,
   PositionPreset,
-  RedactionRectangle,
   WatermarkLayer,
 } from "../../types/watermark";
-import { findRedactionMatches } from "../../features/pdf/redactionSearch";
 import type { TranslationKey } from "../../features/i18n/i18n";
 import { createLayerForType } from "../../features/watermark/defaults";
 import { duplicateLayer, getDefaultLayerName, getLayerDisplayName } from "../../features/watermark/layers";
@@ -31,12 +40,21 @@ interface WatermarkDesignerProps {
   selectedLayerId: string | null;
   totalPages: number;
   currentPage: number;
-  pdfBytes?: Uint8Array;
+  canExport: boolean;
   onChange: (layers: DocumentLayer[]) => void;
   onSelectedLayerChange: (layerId: string | null) => void;
+  onExport: () => void;
 }
 
-const layerTypes: LayerType[] = ["text", "image", "pattern", "classification-banner", "seal", "redaction"];
+const layerTypes: LayerType[] = ["text", "image", "pattern", "classification-banner", "seal"];
+
+const layerIcons: Record<LayerType, typeof Type> = {
+  text: Type,
+  image: ImagePlus,
+  pattern: Grid3X3,
+  "classification-banner": Bookmark,
+  seal: Stamp,
+};
 
 function getLayerTypeTranslationKey(type: LayerType): TranslationKey {
   switch (type) {
@@ -48,11 +66,13 @@ function getLayerTypeTranslationKey(type: LayerType): TranslationKey {
       return "layers.banner";
     case "seal":
       return "layers.seal";
-    case "redaction":
-      return "layers.redaction";
     default:
       return "layers.text";
   }
+}
+
+function isCurrentPageOnly(layer: DocumentLayer, currentPage: number): boolean {
+  return layer.pages.mode === "specific" && layer.pages.selection.trim() === String(currentPage);
 }
 
 export function WatermarkDesigner({
@@ -60,14 +80,13 @@ export function WatermarkDesigner({
   selectedLayerId,
   totalPages,
   currentPage,
-  pdfBytes,
+  canExport,
   onChange,
   onSelectedLayerChange,
+  onExport,
 }: WatermarkDesignerProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [searching, setSearching] = useState(false);
-  const [searchResult, setSearchResult] = useState<string | null>(null);
   const { t } = useTranslation();
   const selectedLayer = layers.find((layer) => layer.id === selectedLayerId) ?? layers[0] ?? null;
 
@@ -80,7 +99,7 @@ export function WatermarkDesigner({
   }
 
   function addLayer(type: LayerType) {
-    const layer = createLayerForType(type, currentPage);
+    const layer = createLayerForType(type);
     replaceLayers([...layers, layer]);
     onSelectedLayerChange(layer.id);
   }
@@ -139,65 +158,10 @@ export function WatermarkDesigner({
     setImageError(null);
   }
 
-  function addRectangle() {
-    if (!selectedLayer) {
-      return;
-    }
-
-    const rectangle: RedactionRectangle = {
-      id: crypto.randomUUID(),
-      page: currentPage,
-      x: 72,
-      y: 640,
-      width: 180,
-      height: 36,
-    };
-
-    patchSelectedLayer({ redactionRectangles: [...selectedLayer.redactionRectangles, rectangle] });
-  }
-
-  function updateRectangle(rectangleId: string, patch: Partial<RedactionRectangle>) {
-    if (!selectedLayer) {
-      return;
-    }
-
+  function setQuickPages(mode: "current" | "all") {
     patchSelectedLayer({
-      redactionRectangles: selectedLayer.redactionRectangles.map((rectangle) =>
-        rectangle.id === rectangleId ? { ...rectangle, ...patch } : rectangle,
-      ),
+      pages: mode === "current" ? { mode: "specific", selection: String(currentPage) } : { mode: "all", selection: "" },
     });
-  }
-
-  function removeRectangle(rectangleId: string) {
-    if (!selectedLayer) {
-      return;
-    }
-
-    patchSelectedLayer({
-      redactionRectangles: selectedLayer.redactionRectangles.filter((rectangle) => rectangle.id !== rectangleId),
-    });
-  }
-
-  async function handleFindMatches() {
-    if (!selectedLayer || !pdfBytes || !selectedLayer.redactionSearchText.trim()) {
-      return;
-    }
-
-    setSearching(true);
-    setSearchResult(null);
-
-    try {
-      const rectangles = await findRedactionMatches(pdfBytes, {
-        query: selectedLayer.redactionSearchText,
-        caseSensitive: selectedLayer.redactionCaseSensitive,
-      });
-      patchSelectedLayer({ redactionRectangles: [...selectedLayer.redactionRectangles, ...rectangles] });
-      setSearchResult(t("redaction.matchesFound", { count: rectangles.length }));
-    } catch {
-      setSearchResult(t("redaction.matchesFailed"));
-    } finally {
-      setSearching(false);
-    }
   }
 
   const positionOptions = positionPresets.map((option) => ({
@@ -205,34 +169,29 @@ export function WatermarkDesigner({
     label: t(option.labelKey),
   }));
 
-  const pageRuleLabel = selectedLayer
-    ? {
-        all: t("pages.all"),
-        first: t("pages.first"),
-        last: t("pages.last"),
-        odd: t("pages.odd"),
-        even: t("pages.even"),
-        range: t("pages.range"),
-        specific: t("pages.specific"),
-        exclude: t("pages.exclude"),
-      }[selectedLayer.pages.mode]
-    : t("pages.all");
+  const quickPageMode = selectedLayer && isCurrentPageOnly(selectedLayer, currentPage) ? "current" : "all";
 
   return (
     <>
-      <FieldGroup title={t("layers.title")}>
-        <div className="grid grid-cols-3 gap-2">
-          {layerTypes.map((type) => (
-            <Button key={type} variant="quiet" size="sm" onClick={() => addLayer(type)}>
-              <Plus size={14} aria-hidden="true" />
-              {t(getLayerTypeTranslationKey(type))}
-            </Button>
-          ))}
-        </div>
+      <FieldGroup title={t("layers.addWatermark")}>
+        <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
+          {layerTypes.map((type) => {
+            const Icon = layerIcons[type];
 
+            return (
+              <Button key={type} variant="quiet" size="sm" onClick={() => addLayer(type)}>
+                <Icon size={15} aria-hidden="true" />
+                {t(getLayerTypeTranslationKey(type))}
+              </Button>
+            );
+          })}
+        </div>
+      </FieldGroup>
+
+      <FieldGroup title={t("layers.title")}>
         {layers.length === 0 ? (
-          <div className="rounded-md border border-graphite-700 bg-graphite-950 p-3 text-sm text-steel-300">
-            {t("layers.noLayers")}
+          <div className="rounded-md border border-dashed border-graphite-600 bg-graphite-950/80 p-3 text-sm text-steel-300">
+            {t("layers.addFirst")}
           </div>
         ) : (
           <div className="grid gap-2">
@@ -242,8 +201,8 @@ export function WatermarkDesigner({
               return (
                 <div
                   key={layer.id}
-                  className={`grid gap-2 rounded-md border p-2 ${
-                    selected ? "border-brand-red bg-graphite-800" : "border-graphite-700 bg-graphite-950"
+                  className={`rounded-md border p-2 transition-colors ${
+                    selected ? "border-brand-red bg-graphite-800/90" : "border-graphite-700 bg-graphite-950/80"
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -264,42 +223,42 @@ export function WatermarkDesigner({
                       </span>
                       <span className="block truncate text-xs text-steel-400">{getLayerListSummary(layer)}</span>
                     </button>
-                  </div>
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      size="icon"
-                      variant="quiet"
-                      aria-label={t("layers.moveUp")}
-                      disabled={index === 0}
-                      onClick={() => moveLayer(layer.id, -1)}
-                    >
-                      <ArrowUp size={14} aria-hidden="true" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="quiet"
-                      aria-label={t("layers.moveDown")}
-                      disabled={index === layers.length - 1}
-                      onClick={() => moveLayer(layer.id, 1)}
-                    >
-                      <ArrowDown size={14} aria-hidden="true" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="quiet"
-                      aria-label={t("layers.duplicate")}
-                      onClick={() => duplicateSelectedLayer(layer)}
-                    >
-                      <Copy size={14} aria-hidden="true" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="quiet"
-                      aria-label={t("layers.delete")}
-                      onClick={() => removeLayer(layer.id)}
-                    >
-                      <Trash2 size={14} aria-hidden="true" />
-                    </Button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="quiet"
+                        aria-label={t("layers.moveUp")}
+                        disabled={index === 0}
+                        onClick={() => moveLayer(layer.id, -1)}
+                      >
+                        <ArrowUp size={13} aria-hidden="true" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="quiet"
+                        aria-label={t("layers.moveDown")}
+                        disabled={index === layers.length - 1}
+                        onClick={() => moveLayer(layer.id, 1)}
+                      >
+                        <ArrowDown size={13} aria-hidden="true" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="quiet"
+                        aria-label={t("layers.duplicate")}
+                        onClick={() => duplicateSelectedLayer(layer)}
+                      >
+                        <Copy size={13} aria-hidden="true" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="quiet"
+                        aria-label={t("layers.delete")}
+                        onClick={() => removeLayer(layer.id)}
+                      >
+                        <Trash2 size={13} aria-hidden="true" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
@@ -310,23 +269,15 @@ export function WatermarkDesigner({
 
       {selectedLayer ? (
         <>
-          <FieldGroup title={t("layers.selected")}>
-            <Input
-              label={t("layers.name")}
-              value={selectedLayer.name}
-              onChange={(event) => patchSelectedLayer({ name: event.target.value })}
+          <FieldGroup title={t("layers.currentMark")}>
+            <PresetSelector
+              onApply={(patch) =>
+                patchSelectedLayer({
+                  ...patch,
+                  name: patch.type ? getDefaultLayerName(patch.type) : selectedLayer.name,
+                })
+              }
             />
-
-            {selectedLayer.type !== "redaction" ? (
-              <PresetSelector
-                onApply={(patch) =>
-                  patchSelectedLayer({
-                    ...patch,
-                    name: patch.type ? getDefaultLayerName(patch.type) : selectedLayer.name,
-                  })
-                }
-              />
-            ) : null}
 
             {selectedLayer.type === "text" || selectedLayer.type === "pattern" ? (
               <Input
@@ -347,18 +298,20 @@ export function WatermarkDesigner({
                     patchSelectedLayer({ classificationText: event.target.value, text: event.target.value })
                   }
                 />
-                <Toggle
-                  label={t("watermark.topBanner")}
-                  checked={selectedLayer.bannerEnabledTop}
-                  onChange={(enabled) => patchSelectedLayer({ bannerEnabledTop: enabled, classificationTop: enabled })}
-                />
-                <Toggle
-                  label={t("watermark.bottomBanner")}
-                  checked={selectedLayer.bannerEnabledBottom}
-                  onChange={(enabled) =>
-                    patchSelectedLayer({ bannerEnabledBottom: enabled, classificationBottom: enabled })
-                  }
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Toggle
+                    label={t("watermark.topBanner")}
+                    checked={selectedLayer.bannerEnabledTop}
+                    onChange={(enabled) => patchSelectedLayer({ bannerEnabledTop: enabled, classificationTop: enabled })}
+                  />
+                  <Toggle
+                    label={t("watermark.bottomBanner")}
+                    checked={selectedLayer.bannerEnabledBottom}
+                    onChange={(enabled) =>
+                      patchSelectedLayer({ bannerEnabledBottom: enabled, classificationBottom: enabled })
+                    }
+                  />
+                </div>
               </>
             ) : null}
 
@@ -398,29 +351,6 @@ export function WatermarkDesigner({
               </>
             ) : null}
 
-            {selectedLayer.type === "redaction" ? (
-              <>
-                <p className="text-xs leading-5 text-steel-300">{t("redaction.flattened")}</p>
-                <Button variant="secondary" onClick={addRectangle}>
-                  <Plus size={16} aria-hidden="true" />
-                  {t("redaction.addRectangle")}
-                </Button>
-                <Input
-                  label={t("redaction.findText")}
-                  value={selectedLayer.redactionSearchText}
-                  onChange={(event) => patchSelectedLayer({ redactionSearchText: event.target.value })}
-                />
-                <Button
-                  variant="secondary"
-                  disabled={searching || !selectedLayer.redactionSearchText.trim()}
-                  onClick={() => void handleFindMatches()}
-                >
-                  {searching ? t("preview.loading") : t("redaction.findMatches")}
-                </Button>
-                {searchResult ? <p className="text-xs leading-5 text-steel-300">{searchResult}</p> : null}
-              </>
-            ) : null}
-
             {selectedLayer.type === "text" || selectedLayer.type === "seal" || selectedLayer.type === "image" ? (
               <Select
                 label={t("watermark.position")}
@@ -453,17 +383,15 @@ export function WatermarkDesigner({
               />
             ) : null}
 
-            {selectedLayer.type !== "redaction" ? (
-              <Slider
-                label={t("watermark.opacity")}
-                min={0.02}
-                max={1}
-                step={0.01}
-                value={selectedLayer.opacity}
-                displayValue={`${Math.round(selectedLayer.opacity * 100)}%`}
-                onChange={(opacity) => patchSelectedLayer({ opacity })}
-              />
-            ) : null}
+            <Slider
+              label={t("watermark.opacity")}
+              min={0.02}
+              max={1}
+              step={0.01}
+              value={selectedLayer.opacity}
+              displayValue={`${Math.round(selectedLayer.opacity * 100)}%`}
+              onChange={(opacity) => patchSelectedLayer({ opacity })}
+            />
 
             {selectedLayer.type === "text" || selectedLayer.type === "pattern" || selectedLayer.type === "image" ? (
               <Slider
@@ -484,79 +412,34 @@ export function WatermarkDesigner({
                 onChange={(event) => patchSelectedLayer({ color: event.target.value })}
               />
             ) : null}
-
-            {selectedLayer.type === "pattern" ? (
-              <div className="flex items-center justify-between gap-3 rounded-md border border-graphite-700 bg-graphite-950 px-3 py-2 text-sm">
-                <span className="text-steel-400">{t("watermark.spacing")}</span>
-                <span className="font-medium text-white">
-                  {selectedLayer.patternSpacingX} x {selectedLayer.patternSpacingY}
-                </span>
-              </div>
-            ) : null}
           </FieldGroup>
 
-          {selectedLayer.type === "redaction" ? (
-            <Collapsible title={`${t("redaction.rectangles")}: ${selectedLayer.redactionRectangles.length}`} defaultOpen>
-              <div className="grid gap-3">
-                {selectedLayer.redactionRectangles.map((rectangle, index) => (
-                  <div key={rectangle.id} className="grid gap-3 rounded-md border border-graphite-700 bg-graphite-950 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-semibold text-white">
-                        {t("redaction.blackout")} {index + 1}
-                      </span>
-                      <Button size="icon" variant="quiet" aria-label={t("layers.delete")} onClick={() => removeRectangle(rectangle.id)}>
-                        <Trash2 size={14} aria-hidden="true" />
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input
-                        label={t("preview.page")}
-                        type="number"
-                        min={1}
-                        max={totalPages}
-                        value={rectangle.page}
-                        onChange={(event) =>
-                          updateRectangle(rectangle.id, {
-                            page: Math.min(totalPages, Math.max(1, Number(event.target.value))),
-                          })
-                        }
-                      />
-                      <Input
-                        label={t("watermark.customX")}
-                        type="number"
-                        value={rectangle.x}
-                        onChange={(event) => updateRectangle(rectangle.id, { x: Number(event.target.value) })}
-                      />
-                      <Input
-                        label={t("watermark.customY")}
-                        type="number"
-                        value={rectangle.y}
-                        onChange={(event) => updateRectangle(rectangle.id, { y: Number(event.target.value) })}
-                      />
-                      <Input
-                        label={t("redaction.width")}
-                        type="number"
-                        value={rectangle.width}
-                        onChange={(event) =>
-                          updateRectangle(rectangle.id, { width: Math.max(1, Number(event.target.value)) })
-                        }
-                      />
-                      <Input
-                        label={t("redaction.height")}
-                        type="number"
-                        value={rectangle.height}
-                        onChange={(event) =>
-                          updateRectangle(rectangle.id, { height: Math.max(1, Number(event.target.value)) })
-                        }
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Collapsible>
-          ) : null}
+          <FieldGroup title={t("pages.applyTo")}>
+            <div className="grid gap-2">
+              <label className="flex items-center gap-3 rounded-md border border-graphite-700 bg-graphite-950/75 px-3 py-2 text-sm text-steel-100">
+                <input
+                  type="radio"
+                  name="quick-pages"
+                  className="h-4 w-4 accent-brand-red"
+                  checked={quickPageMode === "current"}
+                  onChange={() => setQuickPages("current")}
+                />
+                {t("pages.currentPage")}
+              </label>
+              <label className="flex items-center gap-3 rounded-md border border-graphite-700 bg-graphite-950/75 px-3 py-2 text-sm text-steel-100">
+                <input
+                  type="radio"
+                  name="quick-pages"
+                  className="h-4 w-4 accent-brand-red"
+                  checked={quickPageMode === "all"}
+                  onChange={() => setQuickPages("all")}
+                />
+                {t("pages.allPages")}
+              </label>
+            </div>
+          </FieldGroup>
 
-          <Collapsible title={`${t("pages.label")}: ${pageRuleLabel}`}>
+          <Collapsible title={t("pages.moreOptions")}>
             <PageRulesPanel
               value={selectedLayer.pages}
               totalPages={totalPages}
@@ -565,14 +448,6 @@ export function WatermarkDesigner({
           </Collapsible>
 
           <Collapsible title={t("watermark.advanced")}>
-            {selectedLayer.type === "redaction" ? (
-              <Toggle
-                label={t("redaction.caseSensitive")}
-                checked={selectedLayer.redactionCaseSensitive}
-                onChange={(redactionCaseSensitive) => patchSelectedLayer({ redactionCaseSensitive })}
-              />
-            ) : null}
-
             {selectedLayer.type === "pattern" ? (
               <>
                 <Slider
@@ -662,7 +537,7 @@ export function WatermarkDesigner({
               </>
             ) : null}
 
-            {selectedLayer.type !== "classification-banner" && selectedLayer.type !== "redaction" ? (
+            {selectedLayer.type !== "classification-banner" ? (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <Input
@@ -694,6 +569,12 @@ export function WatermarkDesigner({
           </Collapsible>
         </>
       ) : null}
+
+      <div className="sticky bottom-0 -mx-4 border-t border-graphite-700 bg-graphite-900/95 px-4 pb-2 pt-3 lg:-mx-5 lg:px-5">
+        <Button variant="primary" className="w-full" disabled={!canExport} onClick={onExport}>
+          {t("actions.exportPdf")}
+        </Button>
+      </div>
     </>
   );
 }

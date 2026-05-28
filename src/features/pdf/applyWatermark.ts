@@ -8,10 +8,9 @@ import {
   type PDFFont,
   type RGB,
 } from "pdf-lib";
-import type { DocumentLayer, RedactionRectangle, WatermarkConfig } from "../../types/watermark";
+import type { DocumentLayer, WatermarkConfig } from "../../types/watermark";
 import { resolveWatermarkPosition } from "../watermark/positioning";
 import { resolvePageRules } from "./pageRules";
-import { renderPdfPageToCanvas } from "./renderPdfPreview";
 
 interface ApplyWatermarkOptions {
   cleanupMetadata?: boolean;
@@ -33,18 +32,6 @@ function parseHexColor(hex: string): RGB {
 
 function clampOpacity(opacity: number): number {
   return Math.min(1, Math.max(0, opacity));
-}
-
-function dataUrlToBytes(dataUrl: string): Uint8Array {
-  const base64 = dataUrl.split(",")[1] ?? "";
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return bytes;
 }
 
 function drawTextWatermark(page: PDFPage, font: PDFFont, config: WatermarkConfig) {
@@ -220,99 +207,6 @@ async function drawImageWatermark(page: PDFPage, image: PDFImage, config: Waterm
   });
 }
 
-function getRedactionRectanglesForPage(
-  layers: DocumentLayer[],
-  pageIndex: number,
-  totalPages: number,
-): RedactionRectangle[] {
-  const pageNumber = pageIndex + 1;
-  const rectangles: RedactionRectangle[] = [];
-
-  for (const layer of layers) {
-    if (!layer.enabled || layer.type !== "redaction") {
-      continue;
-    }
-
-    const selectedPages = new Set(resolvePageRules(layer.pages, totalPages));
-
-    if (!selectedPages.has(pageIndex)) {
-      continue;
-    }
-
-    rectangles.push(
-      ...layer.redactionRectangles.filter((rectangle) => rectangle.page === pageNumber),
-    );
-  }
-
-  return rectangles;
-}
-
-async function flattenRedactedPages(inputBytes: Uint8Array, layers: DocumentLayer[]): Promise<Uint8Array> {
-  const sourceDoc = await PDFDocument.load(inputBytes.slice(), { updateMetadata: false });
-  const outputDoc = await PDFDocument.create();
-  const sourcePages = sourceDoc.getPages();
-  const totalPages = sourcePages.length;
-  const redactionMap = new Map<number, RedactionRectangle[]>();
-
-  for (let pageIndex = 0; pageIndex < totalPages; pageIndex += 1) {
-    const rectangles = getRedactionRectanglesForPage(layers, pageIndex, totalPages);
-
-    if (rectangles.length > 0) {
-      redactionMap.set(pageIndex, rectangles);
-    }
-  }
-
-  if (redactionMap.size === 0) {
-    return inputBytes;
-  }
-
-  for (let pageIndex = 0; pageIndex < totalPages; pageIndex += 1) {
-    const sourcePage = sourcePages[pageIndex];
-    const { width, height } = sourcePage.getSize();
-    const rectangles = redactionMap.get(pageIndex);
-
-    if (!rectangles) {
-      const [copiedPage] = await outputDoc.copyPages(sourceDoc, [pageIndex]);
-      outputDoc.addPage(copiedPage);
-      continue;
-    }
-
-    const canvas = document.createElement("canvas");
-    await renderPdfPageToCanvas(inputBytes, canvas, pageIndex + 1, 2);
-    const context = canvas.getContext("2d", { alpha: false });
-
-    if (!context) {
-      throw new Error("Canvas rendering context is not available.");
-    }
-
-    const scaleX = canvas.width / width;
-    const scaleY = canvas.height / height;
-    context.fillStyle = "#000000";
-
-    for (const rectangle of rectangles) {
-      context.fillRect(
-        rectangle.x * scaleX,
-        (height - rectangle.y - rectangle.height) * scaleY,
-        rectangle.width * scaleX,
-        rectangle.height * scaleY,
-      );
-    }
-
-    const pngBytes = dataUrlToBytes(canvas.toDataURL("image/png"));
-    const image = await outputDoc.embedPng(pngBytes);
-    const redactedPage = outputDoc.addPage([width, height]);
-
-    redactedPage.drawImage(image, {
-      x: 0,
-      y: 0,
-      width,
-      height,
-    });
-  }
-
-  return outputDoc.save();
-}
-
 async function drawLayer(
   page: PDFPage,
   regularFont: PDFFont,
@@ -348,15 +242,14 @@ export async function applyDocumentLayers(
   layers: DocumentLayer[],
   options: ApplyWatermarkOptions = {},
 ): Promise<Uint8Array> {
-  const redactedBytes = await flattenRedactedPages(inputBytes, layers);
-  const pdfDoc = await PDFDocument.load(redactedBytes.slice(), { updateMetadata: false });
+  const pdfDoc = await PDFDocument.load(inputBytes.slice(), { updateMetadata: false });
   const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const pages = pdfDoc.getPages();
   const embeddedImages = new Map<string, PDFImage>();
 
   for (const layer of layers) {
-    if (!layer.enabled || layer.type === "redaction") {
+    if (!layer.enabled) {
       continue;
     }
 

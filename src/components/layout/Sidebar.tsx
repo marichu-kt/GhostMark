@@ -35,7 +35,7 @@ export function Sidebar({ activeStep, hasDocument, watermarkReady, onChange }: S
   ];
 
   return (
-    <aside className="flex w-full shrink-0 items-center gap-2 overflow-x-auto border-b border-graphite-700 bg-graphite-950 px-2 py-2 shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)] lg:w-32 lg:flex-col lg:items-stretch lg:overflow-visible lg:border-b-0 lg:border-r lg:py-3 lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)]">
+    <aside className="flex w-full shrink-0 items-center gap-2 overflow-x-auto border-b border-graphite-700 bg-[#0b1016] px-2 py-2 shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)] lg:w-36 lg:flex-col lg:items-stretch lg:overflow-visible lg:border-b-0 lg:border-r lg:py-4 lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)]">
       <nav className="flex gap-1 lg:grid" aria-label="Workflow">
         {items.map((item) => {
           const Icon = item.icon;
@@ -47,7 +47,7 @@ export function Sidebar({ activeStep, hasDocument, watermarkReady, onChange }: S
               type="button"
               onClick={() => onChange(item.step)}
               className={classNames(
-                "flex min-h-10 shrink-0 items-center gap-2 rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors",
+                "flex min-h-11 shrink-0 items-center gap-3 rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors",
                 active
                   ? "border-brand-red bg-graphite-800 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
                   : "border-transparent text-steel-300 hover:bg-graphite-900 hover:text-white",

@@ -1,18 +1,7 @@
-import type { DocumentLayer, LayerType, RedactionRectangle, WatermarkConfig } from "../../types/watermark";
+import type { DocumentLayer, LayerType, WatermarkConfig } from "../../types/watermark";
 import { getDefaultLayerName } from "./layers";
 
-function createDefaultRedactionRectangle(page = 1): RedactionRectangle {
-  return {
-    id: crypto.randomUUID(),
-    page,
-    x: 72,
-    y: 640,
-    width: 180,
-    height: 36,
-  };
-}
-
-export function createDefaultLayer(type: LayerType = "text", page = 1): DocumentLayer {
+export function createDefaultLayer(type: LayerType = "text"): DocumentLayer {
   return {
     id: crypto.randomUUID(),
     type,
@@ -46,9 +35,6 @@ export function createDefaultLayer(type: LayerType = "text", page = 1): Document
     sealSubtitle: "DOCUMENT CONTROL",
     sealShowDate: true,
     sealBorderThickness: 2,
-    redactionRectangles: type === "redaction" ? [createDefaultRedactionRectangle(page)] : [],
-    redactionSearchText: "",
-    redactionCaseSensitive: false,
   };
 }
 
@@ -60,8 +46,8 @@ export function createDefaultDocumentLayers(): DocumentLayer[] {
   return [createDefaultLayer("text")];
 }
 
-export function createLayerForType(type: LayerType, page = 1): DocumentLayer {
-  const layer = createDefaultLayer(type, page);
+export function createLayerForType(type: LayerType): DocumentLayer {
+  const layer = createDefaultLayer(type);
 
   switch (type) {
     case "image":
@@ -80,15 +66,6 @@ export function createLayerForType(type: LayerType, page = 1): DocumentLayer {
       };
     case "seal":
       return { ...layer, name: "Seal", opacity: 0.75, rotation: 0, positionPreset: "bottom-right" };
-    case "redaction":
-      return {
-        ...layer,
-        name: "Redaction",
-        opacity: 1,
-        rotation: 0,
-        color: "#000000",
-        redactionRectangles: [createDefaultRedactionRectangle(page)],
-      };
     default:
       return { ...layer, name: "Text" };
   }

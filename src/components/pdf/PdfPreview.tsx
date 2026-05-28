@@ -5,6 +5,7 @@ import { getPdfPageSize, renderPdfPageToCanvas } from "../../features/pdf/render
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { Notice } from "../ui/Notice";
 import { PageNavigator } from "./PageNavigator";
+import { ThumbnailRail } from "./ThumbnailRail";
 import { WatermarkPreviewOverlay } from "./WatermarkPreviewOverlay";
 import { ZoomControls } from "./ZoomControls";
 
@@ -86,16 +87,18 @@ export function PdfPreview({
   }
 
   return (
-    <div className="flex h-full min-h-[calc(100vh-104px)]">
-      <section className="flex min-w-0 flex-1 flex-col">
-        <div className="flex min-h-12 flex-wrap items-center justify-between gap-3 border-b border-graphite-700 bg-graphite-950/45 px-4">
+    <div className="flex h-full min-h-0">
+      <ThumbnailRail document={document} currentPage={currentPage} onSelectPage={onPageChange} />
+      <section className="flex min-w-0 flex-1 flex-col bg-[#151b22]">
+        <div className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-graphite-700 bg-[#111820]/95 px-4">
           <PageNavigator
             currentPage={currentPage}
             totalPages={document.pageCount}
             onChange={onPageChange}
           />
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 text-xs text-steel-200">
+          <div className="flex flex-wrap items-center gap-3">
+            <ZoomControls zoom={zoom} onZoomChange={onZoomChange} onFitWidth={() => void fitWidth()} />
+            <label className="flex min-h-9 items-center gap-2 rounded-md border border-graphite-700 bg-graphite-900 px-3 text-xs font-medium text-steel-100">
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-brand-red"
@@ -105,12 +108,11 @@ export function PdfPreview({
               {t("preview.toggleWatermark")}
             </label>
           </div>
-          <ZoomControls zoom={zoom} onZoomChange={onZoomChange} onFitWidth={() => void fitWidth()} />
         </div>
 
         <div
           ref={viewportRef}
-          className="control-scrollbar relative flex flex-1 justify-center overflow-auto bg-[linear-gradient(180deg,#242a31,#1d2228)] p-8"
+          className="control-scrollbar relative flex min-h-0 flex-1 justify-center overflow-auto bg-[radial-gradient(circle_at_center,rgba(64,77,96,0.24),transparent_42%),linear-gradient(180deg,#1c232c,#111820)] p-6 sm:p-8"
         >
           <div className="relative h-max w-max">
             <canvas

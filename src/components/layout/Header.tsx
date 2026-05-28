@@ -18,17 +18,19 @@ export function Header({ fileName, canExport, hasDocument, onExport }: HeaderPro
   const { t } = useTranslation();
 
   return (
-    <header className="flex min-h-16 items-center justify-between gap-3 border-b border-graphite-700 bg-graphite-900/95 px-3 shadow-[0_1px_0_rgba(255,255,255,0.03)] sm:px-4">
+    <header className="flex h-[72px] shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#080d14]/95 px-4 shadow-[0_1px_0_rgba(255,255,255,0.04)] sm:px-6">
       <div className="flex min-w-0 items-center gap-3 lg:gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <BrandMark variant="header" showText />
-          <div className="hidden min-w-0 sm:block">
-            <div className="h-8 border-l border-graphite-700" aria-hidden="true" />
-          </div>
           {fileName ? (
-            <div className="hidden min-w-0 sm:block">
-              <div className="max-w-40 truncate text-xs text-steel-300 xl:max-w-80">{fileName}</div>
-            </div>
+            <>
+              <div className="hidden min-w-0 sm:block">
+                <div className="h-8 border-l border-graphite-700" aria-hidden="true" />
+              </div>
+              <div className="hidden min-w-0 md:block">
+                <div className="max-w-48 truncate text-sm text-steel-200 xl:max-w-96">{fileName}</div>
+              </div>
+            </>
           ) : null}
         </div>
         <div className="hidden items-center gap-2 lg:flex">
@@ -49,10 +51,10 @@ export function Header({ fileName, canExport, hasDocument, onExport }: HeaderPro
             size="sm"
             onClick={onExport}
             disabled={!canExport}
-            aria-label={t("actions.export")}
+            aria-label={t("actions.exportPdf")}
           >
             <Download size={16} aria-hidden="true" />
-            <span className="hidden sm:inline">{t("actions.export")}</span>
+            <span className="hidden sm:inline">{t("actions.exportPdf")}</span>
           </Button>
         ) : null}
       </div>

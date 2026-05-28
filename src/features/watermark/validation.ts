@@ -33,10 +33,6 @@ export function validateWatermarkConfig(
     return { isValid: false, messageKey: "validation.uploadImage" };
   }
 
-  if (config.type === "redaction" && config.redactionRectangles.length === 0) {
-    return { isValid: false, messageKey: "validation.addRedactionRectangle" };
-  }
-
   try {
     resolvePageRules(config.pages, loadedPdf.pageCount);
   } catch {
@@ -83,8 +79,6 @@ export function getWatermarkSummary(config: WatermarkConfig): string {
       return `Seal: ${config.sealTitle.trim() || "Not set"}`;
     case "image":
       return config.imageData ? "Image watermark ready" : "Image watermark missing";
-    case "redaction":
-      return `Redaction: ${config.redactionRectangles.length} areas`;
     default:
       return "Watermark";
   }
@@ -147,9 +141,5 @@ export function getDocumentAffectedPagesSummary(layers: DocumentLayer[], totalPa
 }
 
 export function getLayerListSummary(layer: DocumentLayer): string {
-  if (layer.type === "redaction") {
-    return `${getLayerDisplayName(layer)}: ${layer.redactionRectangles.length} areas`;
-  }
-
   return getWatermarkSummary(layer);
 }

@@ -49,9 +49,6 @@ function makeConfig(patch: Partial<WatermarkConfig> = {}): WatermarkConfig {
     sealSubtitle: "DOCUMENT CONTROL",
     sealShowDate: true,
     sealBorderThickness: 2,
-    redactionRectangles: [],
-    redactionSearchText: "",
-    redactionCaseSensitive: false,
     ...patch,
   };
 }
@@ -86,12 +83,6 @@ describe("validateWatermarkConfig", () => {
     });
   });
 
-  it("requires at least one redaction rectangle for redaction layers", () => {
-    expect(validateWatermarkConfig(makeConfig({ type: "redaction", redactionRectangles: [] }), loadedPdf)).toEqual({
-      isValid: false,
-      messageKey: "validation.addRedactionRectangle",
-    });
-  });
 });
 
 describe("validateDocumentLayers", () => {
@@ -107,11 +98,7 @@ describe("validateDocumentLayers", () => {
       validateDocumentLayers(
         [
           makeConfig({ id: "text-layer" }),
-          makeConfig({
-            id: "redaction-layer",
-            type: "redaction",
-            redactionRectangles: [{ id: "box-1", page: 1, x: 72, y: 640, width: 120, height: 32 }],
-          }),
+          makeConfig({ id: "seal-layer", type: "seal" }),
         ],
         loadedPdf,
       ),

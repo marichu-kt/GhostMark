@@ -261,9 +261,10 @@ export function App() {
             selectedLayerId={selectedLayerId}
             totalPages={loadedPdf?.pageCount ?? 1}
             currentPage={currentPage}
-            pdfBytes={loadedPdf?.bytes}
+            canExport={watermarkReady}
             onChange={setLayers}
             onSelectedLayerChange={setSelectedLayerId}
+            onExport={() => setActiveStep("export")}
           />
         );
       case "security":

@@ -39,7 +39,7 @@ export function Slider({
         step={step}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className={classNames("accent-amberline-300", className)}
+        className={classNames("accent-brand-red", className)}
         {...props}
       />
     </label>

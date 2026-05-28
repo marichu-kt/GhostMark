@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { FileUp, Trash2 } from "lucide-react";
+import { type DragEvent, useRef, useState } from "react";
+import { FileText, FileUp, LockKeyhole, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import type { LoadedPdf } from "../../types/pdf";
 import { formatFileSize } from "../../features/pdf/fileFormatting";
 import { loadPdf, PdfImportError } from "../../features/pdf/loadPdf";
@@ -13,7 +13,7 @@ interface PdfImporterProps {
   loadedPdf?: LoadedPdf | null;
   onRemove?: () => void;
   onClear?: () => void;
-  mode?: "button" | "panel";
+  mode?: "button" | "panel" | "dropzone";
 }
 
 export function PdfImporter({
@@ -26,6 +26,7 @@ export function PdfImporter({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const { t } = useTranslation();
 
   async function handleFile(file: File | undefined) {
@@ -40,13 +41,36 @@ export function PdfImporter({
       const document = await loadPdf(file);
       onLoaded(document);
     } catch (caughtError) {
-      setError(caughtError instanceof PdfImportError ? caughtError.message : t("import.errorLoad"));
+      setError(
+        caughtError instanceof PdfImportError && caughtError.message.includes(".pdf")
+          ? t("import.errorChoosePdf")
+          : t("import.errorLoad"),
+      );
     } finally {
       setLoading(false);
       if (inputRef.current) {
         inputRef.current.value = "";
       }
     }
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragActive(true);
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragActive(false);
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragActive(false);
+    void handleFile(event.dataTransfer.files?.[0]);
   }
 
   const input = (
@@ -69,6 +93,64 @@ export function PdfImporter({
         </Button>
         {error ? <Notice tone="danger">{error}</Notice> : null}
       </>
+    );
+  }
+
+  if (mode === "dropzone") {
+    return (
+      <section className="grid gap-5">
+        {input}
+        <div
+          className={`rounded-xl border bg-graphite-950/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)] transition sm:p-7 ${
+            dragActive
+              ? "border-brand-red ring-4 ring-brand-red/20"
+              : "border-brand-red/55 ring-1 ring-white/5"
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <div className="grid place-items-center gap-5 rounded-lg border border-dashed border-steel-500/60 bg-[radial-gradient(circle_at_center,rgba(198,40,40,0.12),transparent_55%)] px-5 py-10 text-center sm:py-12">
+            <div className="grid h-20 w-20 place-items-center rounded-2xl border border-brand-red/50 bg-brand-red/10 text-brand-red shadow-[0_0_36px_rgba(198,40,40,0.28)]">
+              <FileText size={42} aria-hidden="true" />
+            </div>
+            <div className="grid gap-2">
+              <h2 className="text-xl font-semibold text-white">{t("import.dropTitle")}</h2>
+              <p className="text-sm text-steel-300">{t("import.dropSubtitle")}</p>
+            </div>
+            <Button variant="primary" size="md" onClick={() => inputRef.current?.click()} disabled={loading}>
+              <FileUp size={18} aria-hidden="true" />
+              {loading ? t("preview.loading") : t("actions.selectPdf")}
+            </Button>
+          </div>
+        </div>
+
+        {error ? <Notice tone="danger">{error}</Notice> : null}
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="flex items-start gap-3 rounded-md border border-graphite-700 bg-graphite-950/70 p-3">
+            <ShieldCheck size={20} className="mt-0.5 text-brand-red" aria-hidden="true" />
+            <div className="grid gap-0.5">
+              <div className="text-sm font-semibold text-white">{t("trust.local")}</div>
+              <div className="text-xs text-steel-400">{t("trust.localDetail")}</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 rounded-md border border-graphite-700 bg-graphite-950/70 p-3">
+            <LockKeyhole size={20} className="mt-0.5 text-brand-red" aria-hidden="true" />
+            <div className="grid gap-0.5">
+              <div className="text-sm font-semibold text-white">{t("trust.private")}</div>
+              <div className="text-xs text-steel-400">{t("trust.privateDetail")}</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 rounded-md border border-graphite-700 bg-graphite-950/70 p-3">
+            <Sparkles size={20} className="mt-0.5 text-local-500" aria-hidden="true" />
+            <div className="grid gap-0.5">
+              <div className="text-sm font-semibold text-white">{t("trust.fast")}</div>
+              <div className="text-xs text-steel-400">{t("trust.fastDetail")}</div>
+            </div>
+          </div>
+        </div>
+      </section>
     );
   }
 
