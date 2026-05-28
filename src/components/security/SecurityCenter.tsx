@@ -38,6 +38,14 @@ export function SecurityCenter({ loadedPdf }: SecurityCenterProps) {
             {t("brand.aboutLimit")}
           </p>
         </details>
+        <details className="rounded-md border border-graphite-700 bg-graphite-900/70">
+          <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-steel-100">
+            {t("redaction.title")}
+          </summary>
+          <p className="border-t border-graphite-700 px-3 py-2 text-xs leading-5 text-steel-300">
+            {t("redaction.flattenedDetails")}
+          </p>
+        </details>
       </section>
 
       <FieldGroup title={t("security.title")}>

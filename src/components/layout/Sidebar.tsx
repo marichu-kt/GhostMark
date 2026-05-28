@@ -1,8 +1,8 @@
-import { CheckCircle2, Download, Eye, FileUp, PenLine, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Download, FileUp, PenLine, ShieldCheck } from "lucide-react";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { classNames } from "../ui/classNames";
 
-export type WorkflowStep = "import" | "watermark" | "preview" | "export" | "security";
+export type WorkflowStep = "import" | "edit" | "export" | "security";
 
 interface SidebarProps {
   activeStep: WorkflowStep;
@@ -21,16 +21,10 @@ export function Sidebar({ activeStep, hasDocument, watermarkReady, onChange }: S
       icon: FileUp,
     },
     {
-      step: "watermark" as const,
-      label: t("workflow.watermark"),
+      step: "edit" as const,
+      label: t("workflow.edit"),
       complete: watermarkReady,
       icon: PenLine,
-    },
-    {
-      step: "preview" as const,
-      label: t("workflow.preview"),
-      complete: false,
-      icon: Eye,
     },
     {
       step: "export" as const,
@@ -41,7 +35,7 @@ export function Sidebar({ activeStep, hasDocument, watermarkReady, onChange }: S
   ];
 
   return (
-    <aside className="flex w-full shrink-0 items-center gap-2 overflow-x-auto border-b border-graphite-700 bg-graphite-950 px-2 py-2 shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)] lg:w-44 lg:flex-col lg:items-stretch lg:overflow-visible lg:border-b-0 lg:border-r lg:py-3 lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)]">
+    <aside className="flex w-full shrink-0 items-center gap-2 overflow-x-auto border-b border-graphite-700 bg-graphite-950 px-2 py-2 shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)] lg:w-32 lg:flex-col lg:items-stretch lg:overflow-visible lg:border-b-0 lg:border-r lg:py-3 lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)]">
       <nav className="flex gap-1 lg:grid" aria-label="Workflow">
         {items.map((item) => {
           const Icon = item.icon;

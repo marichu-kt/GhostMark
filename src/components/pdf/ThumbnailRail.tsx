@@ -1,5 +1,3 @@
-import { useTranslation } from "../../features/i18n/useTranslation";
-
 interface ThumbnailRailProps {
   pageCount: number;
   currentPage: number;
@@ -7,7 +5,6 @@ interface ThumbnailRailProps {
 }
 
 export function ThumbnailRail({ pageCount, currentPage, onSelectPage }: ThumbnailRailProps) {
-  const { t } = useTranslation();
   const visible = Array.from({ length: Math.min(pageCount, 8) }, (_, index) => index + 1);
 
   return (
@@ -28,7 +25,6 @@ export function ThumbnailRail({ pageCount, currentPage, onSelectPage }: Thumbnai
           </button>
         ))}
       </div>
-      <p className="mt-3 text-[11px] leading-4 text-steel-500">{t("preview.thumbnailPlanned")}</p>
     </aside>
   );
 }

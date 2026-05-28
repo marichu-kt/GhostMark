@@ -1,9 +1,12 @@
-export type WatermarkType =
+export type LayerType =
   | "text"
   | "image"
   | "pattern"
   | "classification-banner"
-  | "seal";
+  | "seal"
+  | "redaction";
+
+export type WatermarkType = Exclude<LayerType, "redaction">;
 
 export type WatermarkLayer = "above-content" | "below-content";
 
@@ -32,9 +35,21 @@ export interface PageRuleConfig {
   selection: string;
 }
 
-export interface WatermarkConfig {
+export interface RedactionRectangle {
   id: string;
-  type: WatermarkType;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DocumentLayer {
+  id: string;
+  type: LayerType;
+  name: string;
+  enabled: boolean;
+  locked?: boolean;
   text: string;
   fontSize: number;
   color: string;
@@ -61,7 +76,19 @@ export interface WatermarkConfig {
   sealSubtitle: string;
   sealShowDate: boolean;
   sealBorderThickness: number;
+  redactionRectangles: RedactionRectangle[];
+  redactionSearchText: string;
+  redactionCaseSensitive: boolean;
 }
+
+export type WatermarkConfig = DocumentLayer;
+
+export type TextLayerConfig = DocumentLayer & { type: "text" };
+export type ImageLayerConfig = DocumentLayer & { type: "image" };
+export type PatternLayerConfig = DocumentLayer & { type: "pattern" };
+export type ClassificationBannerLayerConfig = DocumentLayer & { type: "classification-banner" };
+export type SealLayerConfig = DocumentLayer & { type: "seal" };
+export type RedactionLayerConfig = DocumentLayer & { type: "redaction" };
 
 export interface WatermarkPreset {
   id: string;

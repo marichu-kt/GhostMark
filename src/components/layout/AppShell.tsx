@@ -3,7 +3,6 @@ import type { WorkflowStep } from "./Sidebar";
 import { Header } from "./Header";
 import { RightPanel } from "./RightPanel";
 import { Sidebar } from "./Sidebar";
-import { StatusBar } from "./StatusBar";
 
 interface AppShellProps {
   activeStep: WorkflowStep;
@@ -51,7 +50,6 @@ export function AppShell({
         </main>
         {showRightPanel ? <RightPanel title={rightPanelTitle}>{rightPanel}</RightPanel> : null}
       </div>
-      <StatusBar />
     </div>
   );
 }

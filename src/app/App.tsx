@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PdfExportResult, LoadedPdf } from "../types/pdf";
-import type { WatermarkConfig } from "../types/watermark";
+import type { DocumentLayer } from "../types/watermark";
 import { useAppSettings } from "./AppProviders";
 import { createDownloadFileName } from "../features/pdf/fileFormatting";
 import { exportPdf } from "../features/pdf/exportPdf";
 import { cleanupSessionReferences, wipeBytes } from "../features/security/sessionCleanup";
-import { createDefaultWatermarkConfig } from "../features/watermark/defaults";
+import { createDefaultDocumentLayers } from "../features/watermark/defaults";
 import {
-  getAffectedPagesSummary,
-  getWatermarkSummary,
-  validateWatermarkConfig,
+  getDocumentAffectedPagesSummary,
+  getLayersSummary,
+  validateDocumentLayers,
 } from "../features/watermark/validation";
 import { useTranslation } from "../features/i18n/useTranslation";
 import { AppShell } from "../components/layout/AppShell";
@@ -20,7 +20,6 @@ import { PdfPreview } from "../components/pdf/PdfPreview";
 import { SecurityCenter } from "../components/security/SecurityCenter";
 import { WatermarkDesigner } from "../components/watermark/WatermarkDesigner";
 import { ExportPanel } from "../components/export/ExportPanel";
-import { Notice } from "../components/ui/Notice";
 
 function triggerDownload(result: PdfExportResult) {
   const link = document.createElement("a");
@@ -40,9 +39,8 @@ export function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(1.1);
   const [previewEnabled, setPreviewEnabled] = useState(true);
-  const [watermarkConfig, setWatermarkConfig] = useState<WatermarkConfig>(() =>
-    createDefaultWatermarkConfig(),
-  );
+  const [layers, setLayers] = useState<DocumentLayer[]>(() => createDefaultDocumentLayers());
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(() => layers[0]?.id ?? null);
   const [outputFileName, setOutputFileName] = useState("ghostmark-watermarked.pdf");
   const [cleanupMetadata, setCleanupMetadata] = useState(true);
   const [removePreviewData, setRemovePreviewData] = useState(true);
@@ -52,7 +50,7 @@ export function App() {
   const [generating, setGenerating] = useState(false);
   const loadedPdfRef = useRef<LoadedPdf | null>(null);
   const exportResultRef = useRef<PdfExportResult | null>(null);
-  const watermarkConfigRef = useRef<WatermarkConfig>(watermarkConfig);
+  const layersRef = useRef<DocumentLayer[]>(layers);
 
   useEffect(() => {
     loadedPdfRef.current = loadedPdf;
@@ -63,15 +61,15 @@ export function App() {
   }, [exportResult]);
 
   useEffect(() => {
-    watermarkConfigRef.current = watermarkConfig;
-  }, [watermarkConfig]);
+    layersRef.current = layers;
+  }, [layers]);
 
   useEffect(
     () => () => {
       cleanupSessionReferences({
         loadedPdf: loadedPdfRef.current,
         generatedUrl: exportResultRef.current?.url,
-        watermarkConfig: watermarkConfigRef.current,
+        layers: layersRef.current,
       });
     },
     [],
@@ -118,7 +116,10 @@ export function App() {
     setZoom(1.1);
     setOutputFileName(createDownloadFileName(document.fileName));
     setExportError(null);
-    setActiveStep("watermark");
+    const defaultLayers = createDefaultDocumentLayers();
+    setLayers(defaultLayers);
+    setSelectedLayerId(defaultLayers[0]?.id ?? null);
+    setActiveStep("edit");
   }
 
   function removeDocument() {
@@ -143,12 +144,14 @@ export function App() {
       cleanupSessionReferences({
         loadedPdf: loadedPdfRef.current,
         generatedUrl: resetExport ? exportResultRef.current?.url : null,
-        watermarkConfig: watermarkConfigRef.current,
+        layers: layersRef.current,
       });
       setLoadedPdf(null);
       setCurrentPage(1);
       setZoom(1.1);
-      setWatermarkConfig(createDefaultWatermarkConfig());
+      const defaultLayers = createDefaultDocumentLayers();
+      setLayers(defaultLayers);
+      setSelectedLayerId(defaultLayers[0]?.id ?? null);
       setExportError(null);
 
       if (resetExport) {
@@ -162,7 +165,7 @@ export function App() {
   );
 
   async function handleGenerateExport() {
-    const validation = validateWatermarkConfig(watermarkConfig, loadedPdf);
+    const validation = validateDocumentLayers(layers, loadedPdf);
 
     if (!validation.isValid) {
       setExportError(t(validation.messageKey ?? "export.error"));
@@ -184,7 +187,7 @@ export function App() {
 
     try {
       revokeExportResult();
-      const result = await exportPdf(loadedPdf.bytes, watermarkConfig, {
+      const result = await exportPdf(loadedPdf.bytes, layers, {
         outputFileName,
         cleanupMetadata,
       });
@@ -198,11 +201,15 @@ export function App() {
 
       if (clearAfterDownload || classifiedMode) {
         wipeBytes(loadedPdf.bytes);
-        if (watermarkConfig.imageData) {
-          wipeBytes(watermarkConfig.imageData);
+        for (const layer of layers) {
+          if (layer.imageData) {
+            wipeBytes(layer.imageData);
+          }
         }
         setLoadedPdf(null);
-        setWatermarkConfig(createDefaultWatermarkConfig());
+        const defaultLayers = createDefaultDocumentLayers();
+        setLayers(defaultLayers);
+        setSelectedLayerId(defaultLayers[0]?.id ?? null);
       }
     } catch {
       setExportError(t("export.error"));
@@ -214,8 +221,7 @@ export function App() {
   const rightPanelTitle = useMemo(() => {
     const titles: Record<WorkflowStep, string> = {
       import: t("workflow.import"),
-      watermark: t("workflow.watermark"),
-      preview: t("workflow.preview"),
+      edit: t("workflow.edit"),
       export: t("workflow.export"),
       security: t("workflow.security"),
     };
@@ -224,15 +230,15 @@ export function App() {
   }, [activeStep, t]);
 
   const validation = useMemo(
-    () => validateWatermarkConfig(watermarkConfig, loadedPdf),
-    [loadedPdf, watermarkConfig],
+    () => validateDocumentLayers(layers, loadedPdf),
+    [loadedPdf, layers],
   );
   const watermarkReady = validation.isValid;
   const validationMessage = validation.messageKey ? t(validation.messageKey) : undefined;
-  const watermarkSummary = useMemo(() => getWatermarkSummary(watermarkConfig), [watermarkConfig]);
+  const watermarkSummary = useMemo(() => getLayersSummary(layers), [layers]);
   const affectedPagesSummary = useMemo(
-    () => getAffectedPagesSummary(watermarkConfig, loadedPdf?.pageCount ?? 1),
-    [loadedPdf?.pageCount, watermarkConfig],
+    () => getDocumentAffectedPagesSummary(layers, loadedPdf?.pageCount ?? 1),
+    [loadedPdf?.pageCount, layers],
   );
 
   const rightPanel = useMemo(() => {
@@ -248,19 +254,17 @@ export function App() {
             />
           </div>
         );
-      case "watermark":
+      case "edit":
         return (
           <WatermarkDesigner
-            config={watermarkConfig}
+            layers={layers}
+            selectedLayerId={selectedLayerId}
             totalPages={loadedPdf?.pageCount ?? 1}
-            onChange={setWatermarkConfig}
+            currentPage={currentPage}
+            pdfBytes={loadedPdf?.bytes}
+            onChange={setLayers}
+            onSelectedLayerChange={setSelectedLayerId}
           />
-        );
-      case "preview":
-        return (
-          <Notice title={t("preview.livePreview")}>
-            {previewEnabled ? t("preview.panelOn") : t("preview.panelOff")}
-          </Notice>
         );
       case "security":
         return <SecurityCenter loadedPdf={loadedPdf} />;
@@ -302,11 +306,12 @@ export function App() {
     generating,
     loadedPdf,
     outputFileName,
-    previewEnabled,
     removePreviewData,
+    currentPage,
+    layers,
+    selectedLayerId,
     t,
     validationMessage,
-    watermarkConfig,
     watermarkSummary,
   ]);
 
@@ -327,7 +332,8 @@ export function App() {
       {loadedPdf ? (
         <PdfPreview
           document={loadedPdf}
-          watermarkConfig={watermarkConfig}
+          layers={layers}
+          selectedLayerId={selectedLayerId}
           currentPage={currentPage}
           zoom={zoom}
           previewEnabled={previewEnabled}

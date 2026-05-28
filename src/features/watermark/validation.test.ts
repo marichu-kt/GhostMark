@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { LoadedPdf } from "../../types/pdf";
 import type { WatermarkConfig } from "../../types/watermark";
-import { getAffectedPagesSummary, getWatermarkSummary, validateWatermarkConfig } from "./validation";
+import {
+  getAffectedPagesSummary,
+  getDocumentAffectedPagesSummary,
+  getLayersSummary,
+  getWatermarkSummary,
+  validateDocumentLayers,
+  validateWatermarkConfig,
+} from "./validation";
 
 const loadedPdf: LoadedPdf = {
   id: "test-pdf",
@@ -16,6 +23,8 @@ function makeConfig(patch: Partial<WatermarkConfig> = {}): WatermarkConfig {
   return {
     id: "test-watermark",
     type: "text",
+    name: "Text",
+    enabled: true,
     text: "CONFIDENTIAL",
     fontSize: 64,
     color: "#2f343a",
@@ -40,6 +49,9 @@ function makeConfig(patch: Partial<WatermarkConfig> = {}): WatermarkConfig {
     sealSubtitle: "DOCUMENT CONTROL",
     sealShowDate: true,
     sealBorderThickness: 2,
+    redactionRectangles: [],
+    redactionSearchText: "",
+    redactionCaseSensitive: false,
     ...patch,
   };
 }
@@ -73,6 +85,38 @@ describe("validateWatermarkConfig", () => {
       isValid: true,
     });
   });
+
+  it("requires at least one redaction rectangle for redaction layers", () => {
+    expect(validateWatermarkConfig(makeConfig({ type: "redaction", redactionRectangles: [] }), loadedPdf)).toEqual({
+      isValid: false,
+      messageKey: "validation.addRedactionRectangle",
+    });
+  });
+});
+
+describe("validateDocumentLayers", () => {
+  it("requires an enabled layer", () => {
+    expect(validateDocumentLayers([makeConfig({ enabled: false })], loadedPdf)).toEqual({
+      isValid: false,
+      messageKey: "validation.addLayer",
+    });
+  });
+
+  it("accepts multiple valid enabled layers", () => {
+    expect(
+      validateDocumentLayers(
+        [
+          makeConfig({ id: "text-layer" }),
+          makeConfig({
+            id: "redaction-layer",
+            type: "redaction",
+            redactionRectangles: [{ id: "box-1", page: 1, x: 72, y: 640, width: 120, height: 32 }],
+          }),
+        ],
+        loadedPdf,
+      ),
+    ).toEqual({ isValid: true });
+  });
 });
 
 describe("watermark summaries", () => {
@@ -87,5 +131,24 @@ describe("watermark summaries", () => {
       pages: { mode: "specific" as const, selection: "1, 3, 5" },
     };
     expect(getAffectedPagesSummary(config, 6)).toBe("3 pages");
+  });
+
+  it("summarizes enabled document layers", () => {
+    expect(getLayersSummary([makeConfig(), makeConfig({ id: "disabled", enabled: false })])).toBe(
+      "Text: CONFIDENTIAL",
+    );
+    expect(getLayersSummary([makeConfig(), makeConfig({ id: "seal", type: "seal" })])).toBe("2 layers");
+  });
+
+  it("summarizes affected pages across layers", () => {
+    expect(
+      getDocumentAffectedPagesSummary(
+        [
+          makeConfig({ pages: { mode: "specific", selection: "1, 3" } }),
+          makeConfig({ id: "second", pages: { mode: "specific", selection: "3, 5" } }),
+        ],
+        6,
+      ),
+    ).toBe("3 pages");
   });
 });

@@ -65,7 +65,7 @@ export function ExportPanel({
         />
         <div className="grid gap-2 rounded-md border border-graphite-700 bg-graphite-950 p-3 text-sm">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-steel-400">{t("export.summaryWatermark")}</span>
+            <span className="text-steel-400">{t("export.summaryLayers")}</span>
             <span className="text-right font-medium text-white">{watermarkSummary}</span>
           </div>
           <div className="flex items-center justify-between gap-3">

@@ -8,7 +8,7 @@ GhostMark is a free, open-source, browser-based tool for applying serious docume
 
 ## Overview
 
-GhostMark adds text, repeated pattern, classification banner, seal, and image watermarks to PDF documents directly in the browser. The app has no backend, database, analytics, cookies, telemetry, or account system.
+GhostMark adds text, repeated pattern, classification banner, seal, image watermark, and redaction layers to PDF documents directly in the browser. The app has no backend, database, analytics, cookies, telemetry, or account system.
 
 Your document never leaves your device through GhostMark.
 
@@ -29,6 +29,8 @@ GhostMark is not a certified classified-document handling system. For sensitive 
 - Top and bottom classification banner export.
 - Simple document-control seal export.
 - Image watermark export for PNG and JPG assets.
+- Multi-layer editing so several watermark and redaction layers can be combined.
+- Redacted pages are flattened to prevent copying covered text from the exported PDF.
 - Page rules for all, first, last, odd, even, range, specific, and excluded pages.
 - Local Blob download using `pdf-lib`.
 - Security Center with honest privacy checks.
@@ -79,6 +81,7 @@ For sensitive documents, use the offline build in an isolated environment with n
 ## Current Limitations
 
 - Live preview is visual and approximate; exported PDFs are the authoritative output.
+- Redaction pages are rasterized, which removes text selection on those pages and may increase output file size.
 - GhostMark is not a certified classified-document handling system.
 - Hosted GitHub Pages deployments may still create provider-level technical access logs.
 - Browser extensions, operating-system tools, and network monitoring remain outside GhostMark's control.
@@ -158,7 +161,7 @@ Run deterministic utility tests:
 npm run test
 ```
 
-The current test suite covers page selection parsing and rule resolution.
+The current test suite covers page selection parsing, rule resolution, layer validation, language registration, and redaction search matching.
 
 ## GitHub Pages Deployment
 

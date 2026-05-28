@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import type { LoadedPdf } from "../../types/pdf";
-import type { WatermarkConfig } from "../../types/watermark";
+import type { DocumentLayer } from "../../types/watermark";
 import { getPdfPageSize, renderPdfPageToCanvas } from "../../features/pdf/renderPdfPreview";
 import { useTranslation } from "../../features/i18n/useTranslation";
-import { Badge } from "../ui/Badge";
 import { Notice } from "../ui/Notice";
 import { PageNavigator } from "./PageNavigator";
-import { ThumbnailRail } from "./ThumbnailRail";
 import { WatermarkPreviewOverlay } from "./WatermarkPreviewOverlay";
 import { ZoomControls } from "./ZoomControls";
 
 interface PdfPreviewProps {
   document: LoadedPdf;
-  watermarkConfig: WatermarkConfig;
+  layers: DocumentLayer[];
+  selectedLayerId?: string | null;
   currentPage: number;
   zoom: number;
   previewEnabled: boolean;
@@ -23,7 +22,8 @@ interface PdfPreviewProps {
 
 export function PdfPreview({
   document,
-  watermarkConfig,
+  layers,
+  selectedLayerId,
   currentPage,
   zoom,
   previewEnabled,
@@ -87,11 +87,6 @@ export function PdfPreview({
 
   return (
     <div className="flex h-full min-h-[calc(100vh-104px)]">
-      <ThumbnailRail
-        pageCount={document.pageCount}
-        currentPage={currentPage}
-        onSelectPage={onPageChange}
-      />
       <section className="flex min-w-0 flex-1 flex-col">
         <div className="flex min-h-12 flex-wrap items-center justify-between gap-3 border-b border-graphite-700 bg-graphite-950/45 px-4">
           <PageNavigator
@@ -100,9 +95,6 @@ export function PdfPreview({
             onChange={onPageChange}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={previewEnabled ? "safe" : "neutral"} title={t("preview.visualNote")}>
-              {t("preview.livePreview")}
-            </Badge>
             <label className="flex items-center gap-2 text-xs text-steel-200">
               <input
                 type="checkbox"
@@ -127,11 +119,14 @@ export function PdfPreview({
               aria-label={`${t("preview.page")} ${currentPage}`}
             />
             <WatermarkPreviewOverlay
-              config={watermarkConfig}
+              layers={layers}
               enabled={previewEnabled}
               zoom={zoom}
+              currentPage={currentPage}
+              totalPages={document.pageCount}
               pageWidth={pageDisplaySize.width}
               pageHeight={pageDisplaySize.height}
+              selectedLayerId={selectedLayerId}
             />
             {loading ? (
               <div className="absolute inset-0 grid place-items-center bg-graphite-950/45 text-sm text-steel-100">

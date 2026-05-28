@@ -1,6 +1,6 @@
 import type { PdfExportResult } from "../../types/pdf";
-import type { WatermarkConfig } from "../../types/watermark";
-import { applyWatermark } from "./applyWatermark";
+import type { DocumentLayer } from "../../types/watermark";
+import { applyDocumentLayers } from "./applyWatermark";
 
 export interface ExportPdfOptions {
   outputFileName: string;
@@ -9,10 +9,10 @@ export interface ExportPdfOptions {
 
 export async function exportPdf(
   inputBytes: Uint8Array,
-  config: WatermarkConfig,
+  layers: DocumentLayer[],
   options: ExportPdfOptions,
 ): Promise<PdfExportResult> {
-  const bytes = await applyWatermark(inputBytes, config, {
+  const bytes = await applyDocumentLayers(inputBytes, layers, {
     cleanupMetadata: options.cleanupMetadata,
   });
   const blobBytes = new Uint8Array(bytes);
