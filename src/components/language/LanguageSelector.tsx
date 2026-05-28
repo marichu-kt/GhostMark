@@ -19,7 +19,7 @@ export function LanguageSelector() {
         aria-label={t("language.label")}
         value={language}
         onChange={(event) => setLanguage(event.target.value as typeof language)}
-        className="max-w-36 rounded-md border border-graphite-700 bg-graphite-950 px-2 py-1 text-xs text-white"
+        className="max-w-24 rounded-md border border-graphite-700 bg-graphite-950 px-2 py-1 text-xs text-white sm:max-w-36"
       >
         {languages.map((item) => (
           <option key={item.code} value={item.code}>

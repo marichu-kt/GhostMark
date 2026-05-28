@@ -37,7 +37,7 @@ export function AppShell({
   return (
     <div className="flex min-h-screen flex-col bg-graphite-950 text-steel-100">
       <Header fileName={fileName} canExport={canExport} hasDocument={hasDocument} onExport={onExport} />
-      <div className="flex min-h-0 flex-1">
+      <div className="flex flex-1 flex-col lg:min-h-0 lg:flex-row lg:overflow-hidden">
         {showSidebar ? (
           <Sidebar
             activeStep={activeStep}
@@ -46,7 +46,7 @@ export function AppShell({
             onChange={onStepChange}
           />
         ) : null}
-        <main className="control-scrollbar min-w-0 flex-1 overflow-auto bg-graphite-900">
+        <main className="control-scrollbar min-h-[520px] min-w-0 flex-1 overflow-auto bg-graphite-900 lg:min-h-0">
           {children}
         </main>
         {showRightPanel ? <RightPanel title={rightPanelTitle}>{rightPanel}</RightPanel> : null}

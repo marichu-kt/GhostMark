@@ -18,16 +18,16 @@ export function Header({ fileName, canExport, hasDocument, onExport }: HeaderPro
   const { t } = useTranslation();
 
   return (
-    <header className="flex min-h-16 items-center justify-between gap-4 border-b border-graphite-700 bg-graphite-900/95 px-4 shadow-[0_1px_0_rgba(255,255,255,0.03)]">
-      <div className="flex min-w-0 items-center gap-4">
+    <header className="flex min-h-16 items-center justify-between gap-3 border-b border-graphite-700 bg-graphite-900/95 px-3 shadow-[0_1px_0_rgba(255,255,255,0.03)] sm:px-4">
+      <div className="flex min-w-0 items-center gap-3 lg:gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <BrandMark variant="header" showText />
-          <div className="min-w-0">
+          <div className="hidden min-w-0 sm:block">
             <div className="h-8 border-l border-graphite-700" aria-hidden="true" />
           </div>
           {fileName ? (
-            <div className="min-w-0">
-              <div className="max-w-80 truncate text-xs text-steel-300">{fileName}</div>
+            <div className="hidden min-w-0 sm:block">
+              <div className="max-w-40 truncate text-xs text-steel-300 xl:max-w-80">{fileName}</div>
             </div>
           ) : null}
         </div>
@@ -41,12 +41,18 @@ export function Header({ fileName, canExport, hasDocument, onExport }: HeaderPro
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <LanguageSelector />
         {hasDocument ? (
-          <Button variant="primary" size="sm" onClick={onExport} disabled={!canExport}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={onExport}
+            disabled={!canExport}
+            aria-label={t("actions.export")}
+          >
             <Download size={16} aria-hidden="true" />
-            {t("actions.export")}
+            <span className="hidden sm:inline">{t("actions.export")}</span>
           </Button>
         ) : null}
       </div>
