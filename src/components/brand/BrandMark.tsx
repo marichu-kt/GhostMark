@@ -10,7 +10,7 @@ interface BrandMarkProps {
 }
 
 const logoSrc = `${import.meta.env.BASE_URL}brand/ghostmark-logo.png`;
-const bannerSrc = `${import.meta.env.BASE_URL}brand/banner.png`;
+const bannerSrc = `${import.meta.env.BASE_URL}brand/banner-RD.png`;
 
 const variantStyles: Record<BrandMarkVariant, string> = {
   header: "items-center",

@@ -101,7 +101,7 @@ export function PdfImporter({
       <section className="grid gap-3">
         {input}
         <div
-          className={`rounded-2xl border bg-[#101728]/78 p-4 shadow-[0_24px_90px_rgba(0,0,0,0.45),0_0_42px_rgba(255,45,61,0.12)] backdrop-blur transition sm:p-5 ${
+          className={`ghostmark-neon-frame rounded-2xl border bg-[#101728]/78 p-4 shadow-[0_24px_90px_rgba(0,0,0,0.45),0_0_42px_rgba(255,45,61,0.12)] backdrop-blur transition sm:p-5 ${
             dragActive
               ? "border-[#ff4b5c] ring-4 ring-brand-red/20"
               : "border-brand-red/45 ring-1 ring-white/5"

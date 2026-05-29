@@ -68,3 +68,49 @@ canvas {
   background: #4b5563;
   border: 2px solid #171b20;
 }
+
+.ghostmark-neon-frame {
+  position: relative;
+  isolation: isolate;
+}
+
+.ghostmark-neon-frame::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 45, 61, 0.18),
+    rgba(255, 75, 92, 0.82),
+    rgba(88, 116, 255, 0.56),
+    rgba(255, 45, 61, 0.18)
+  );
+  background-size: 260% 260%;
+  opacity: 0.72;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ghostmark-neon-border 9s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes ghostmark-neon-border {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 260% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghostmark-neon-frame::before {
+    animation: none;
+  }
+}

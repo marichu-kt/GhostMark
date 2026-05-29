@@ -13,7 +13,7 @@ interface EmptyStateProps {
 export function EmptyState({ onLoaded }: EmptyStateProps) {
   const { t } = useTranslation();
   const [privacyOpen, setPrivacyOpen] = useState(false);
-  const landingBackground = `${import.meta.env.BASE_URL}brand/landing-background.png`;
+  const landingBackground = `${import.meta.env.BASE_URL}brand/background.png`;
 
   return (
     <section className="relative h-full overflow-hidden bg-[#070c16]">
@@ -26,17 +26,13 @@ export function EmptyState({ onLoaded }: EmptyStateProps) {
 
       <div className="relative mx-auto grid h-full w-full max-w-7xl grid-rows-[1fr_auto] px-4 py-4 sm:px-6 lg:px-8">
         <div className="grid min-h-0 place-items-center">
-          <div className="mx-auto grid w-full max-w-4xl gap-[clamp(0.75rem,2vh,1.4rem)] text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-brand-red/45 bg-brand-red/10 text-brand-red shadow-[0_0_44px_rgba(255,45,61,0.28)] sm:h-16 sm:w-16">
-              <ShieldCheck size={30} aria-hidden="true" />
-            </div>
-
-            <div className="grid gap-2">
-              <h1 className="text-[clamp(3rem,7vh,4.8rem)] font-semibold leading-none tracking-normal text-white">
+          <div className="mx-auto grid w-full max-w-5xl gap-[clamp(0.85rem,2.2vh,1.55rem)] text-center">
+            <div className="grid gap-2.5">
+              <h1 className="text-[clamp(3.45rem,8.1vh,5.55rem)] font-semibold leading-none tracking-normal text-white">
                 <span>{t("app.nameGhost")}</span>
                 <span className="text-brand-red">{t("app.nameMark")}</span>
               </h1>
-              <p className="text-[clamp(1.05rem,2.4vh,1.55rem)] font-medium text-steel-200">
+              <p className="text-[clamp(1.18rem,2.65vh,1.72rem)] font-medium text-steel-100">
                 {t("app.heroTagline")}
               </p>
               <div className="mx-auto h-0.5 w-20 rounded-full bg-brand-red" />
@@ -54,7 +50,7 @@ export function EmptyState({ onLoaded }: EmptyStateProps) {
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <a
-              href={`${import.meta.env.BASE_URL}editor-pdf-marca-agua`}
+              href={`${import.meta.env.BASE_URL}editor-pdf-marca-agua/`}
               className="inline-flex min-h-10 items-center gap-2 rounded-md border border-graphite-700 bg-graphite-950/70 px-4 py-2 font-medium text-steel-200 transition-colors hover:border-steel-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-brand-red/60 focus:ring-offset-2 focus:ring-offset-graphite-950"
             >
               <FileText size={16} aria-hidden="true" />
