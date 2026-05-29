@@ -59,6 +59,18 @@ flowchart LR
 
 ---
 
+## Demo
+
+<p align="center">
+  <img src="./public/demo/demo-1.png" alt="GhostMark demo 1" width="760" />
+</p>
+
+<p align="center">
+  <img src="./public/demo/demo-2.png" alt="GhostMark demo 2" width="760" />
+</p>
+
+---
+
 ## Features
 
 * **Text watermark** — add custom text with size, opacity, color, rotation, and position controls.
