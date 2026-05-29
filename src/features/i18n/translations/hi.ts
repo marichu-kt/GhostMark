@@ -11,6 +11,7 @@ export const hi: TranslationDictionary = {
   "actions.export": "निर्यात",
   "actions.securityDetails": "सुरक्षा विवरण",
   "actions.privacy": "गोपनीयता",
+  "actions.moreOptions": "अधिक विकल्प",
   "brand.logoAlt": "GhostMark दस्तावेज़ भूत लोगो",
   "brand.aboutTitle": "GhostMark के बारे में",
   "brand.aboutBody":
@@ -29,6 +30,8 @@ export const hi: TranslationDictionary = {
   "privacy.processedLocally": "स्थानीय रूप से प्रोसेस किया गया। अपलोड नहीं।",
   "privacy.noUpload": "अपलोड नहीं",
   "privacy.noTracking": "ट्रैकिंग नहीं",
+  "privacy.modalSummary": "GhostMark इस browser session में आपका PDF process करता है। Files server पर नहीं भेजी जातीं।",
+  "privacy.hostedLogs": "Hosted GitHub Pages provider-level access logs बना सकता है।",
   "import.instructions": "इस डिवाइस से PDF चुनें।",
   "preview.livePreview": "पूर्वावलोकन",
   "preview.toggleWatermark": "पूर्वावलोकन",
@@ -73,6 +76,8 @@ export const hi: TranslationDictionary = {
   "layers.noLayers": "अभी कोई लेयर नहीं",
   "layers.addFirst": "पहली लेयर जोड़ें",
   "privacy.noFileUploads": "फ़ाइल अपलोड नहीं",
+  "privacy.noAccounts": "खाते नहीं",
+  "privacy.noAnalytics": "एनालिटिक्स नहीं",
   "security.title": "सुरक्षा केंद्र",
   "security.limitations": "सीमाएं",
 };

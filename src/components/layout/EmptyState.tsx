@@ -1,32 +1,28 @@
 import { Github, ShieldCheck } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { Button } from "../ui/Button";
 import { PdfImporter } from "../pdf/PdfImporter";
 import type { LoadedPdf } from "../../types/pdf";
-import { BrandMark } from "../brand/BrandMark";
+import { PrivacyModal } from "../security/PrivacyModal";
 
 interface EmptyStateProps {
   onLoaded: (document: LoadedPdf) => void;
-  onOpenSecurity: () => void;
 }
 
-export function EmptyState({ onLoaded, onOpenSecurity }: EmptyStateProps) {
+export function EmptyState({ onLoaded }: EmptyStateProps) {
   const { t } = useTranslation();
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const landingBackground = `${import.meta.env.BASE_URL}brand/landing-background.png`;
 
   return (
     <section className="relative h-full overflow-hidden bg-[#070c16]">
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-55"
+        className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${landingBackground})` }}
         aria-hidden="true"
       />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,45,61,0.18),transparent_32%),linear-gradient(90deg,rgba(7,12,22,0.96)_0%,rgba(7,12,22,0.82)_38%,rgba(7,12,22,0.42)_72%,rgba(7,12,22,0.82)_100%),linear-gradient(180deg,rgba(7,12,22,0.68)_0%,rgba(7,12,22,0.9)_100%)]" />
-      <div className="pointer-events-none absolute left-[13%] top-[22%] h-1.5 w-1.5 rounded-full bg-brand-red shadow-[0_0_22px_rgba(255,45,61,0.8)]" />
-      <div className="pointer-events-none absolute right-[27%] top-[19%] h-2 w-2 rounded-full bg-brand-red shadow-[0_0_24px_rgba(255,45,61,0.75)]" />
-      <div className="pointer-events-none absolute right-[9%] bottom-[25%] h-2 w-2 rounded-full bg-brand-red shadow-[0_0_28px_rgba(255,45,61,0.85)]" />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-red/50 to-transparent" />
-      <BrandMark variant="watermark" className="absolute right-0 top-20 hidden opacity-[0.08] xl:flex xl:scale-[2.1]" />
 
       <div className="relative mx-auto grid h-full w-full max-w-7xl grid-rows-[1fr_auto] px-4 py-4 sm:px-6 lg:px-8">
         <div className="grid min-h-0 place-items-center">
@@ -47,19 +43,15 @@ export function EmptyState({ onLoaded, onOpenSecurity }: EmptyStateProps) {
             </div>
 
             <PdfImporter onLoaded={onLoaded} mode="dropzone" />
-
-            <p className="mx-auto max-w-xl text-sm text-steel-300">
-              <ShieldCheck size={16} className="mr-2 inline text-steel-400" aria-hidden="true" />
-              {t("app.localProcessingLead")}{" "}
-              <span className="font-semibold text-brand-red">{t("app.localProcessingHighlight")}</span>
-            </p>
           </div>
         </div>
 
-        <div className="flex min-h-11 items-end justify-between gap-3 text-sm text-steel-400">
-          <span className="rounded-full border border-graphite-700 bg-graphite-950/70 px-4 py-2">
-            {t("app.version")}
-          </span>
+        <div className="flex min-h-11 flex-wrap items-end justify-center gap-3 text-sm text-steel-400 md:justify-between">
+          <p className="mx-auto max-w-xl text-center text-sm text-steel-300 md:mx-0">
+            <ShieldCheck size={16} className="mr-2 inline text-steel-400" aria-hidden="true" />
+            {t("app.localProcessingLead")}{" "}
+            <span className="font-semibold text-brand-red">{t("app.localProcessingHighlight")}</span>
+          </p>
           <div className="flex flex-wrap items-center gap-3">
             <a
               href="https://github.com/marichu-kt/GhostMark"
@@ -70,13 +62,14 @@ export function EmptyState({ onLoaded, onOpenSecurity }: EmptyStateProps) {
               <Github size={16} aria-hidden="true" />
               {t("actions.openSource")}
             </a>
-            <Button variant="ghost" size="sm" onClick={onOpenSecurity}>
+            <Button variant="ghost" size="sm" onClick={() => setPrivacyOpen(true)}>
               <ShieldCheck size={15} aria-hidden="true" />
               {t("actions.privacy")}
             </Button>
           </div>
         </div>
       </div>
+      <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </section>
   );
 }

@@ -14,12 +14,13 @@ import {
 import { useTranslation } from "../features/i18n/useTranslation";
 import { AppShell } from "../components/layout/AppShell";
 import { EmptyState } from "../components/layout/EmptyState";
-import type { WorkflowStep } from "../components/layout/Sidebar";
 import { PdfImporter } from "../components/pdf/PdfImporter";
 import { PdfPreview } from "../components/pdf/PdfPreview";
 import { SecurityCenter } from "../components/security/SecurityCenter";
 import { WatermarkDesigner } from "../components/watermark/WatermarkDesigner";
 import { ExportPanel } from "../components/export/ExportPanel";
+
+type WorkflowStep = "import" | "edit" | "export" | "security";
 
 function triggerDownload(result: PdfExportResult) {
   const link = document.createElement("a");
@@ -286,7 +287,6 @@ export function App() {
   }, [
     activeStep,
     clearSession,
-    classifiedMode,
     affectedPagesSummary,
     exportError,
     exportResult,
@@ -302,15 +302,13 @@ export function App() {
 
   return (
     <AppShell
-      activeStep={activeStep}
-      onStepChange={setActiveStep}
       fileName={loadedPdf?.fileName}
       canExport={watermarkReady}
       hasDocument={Boolean(loadedPdf)}
-      watermarkReady={watermarkReady}
-      showSidebar={Boolean(loadedPdf)}
       showRightPanel={Boolean(loadedPdf) || activeStep === "security"}
       onExport={() => setActiveStep("export")}
+      onImport={() => setActiveStep("import")}
+      onSecurity={() => setActiveStep("security")}
       rightPanelTitle={rightPanelTitle}
       rightPanel={rightPanel}
     >
@@ -327,7 +325,7 @@ export function App() {
           onPreviewEnabledChange={setPreviewEnabled}
         />
       ) : (
-        <EmptyState onLoaded={handleLoaded} onOpenSecurity={() => setActiveStep("security")} />
+        <EmptyState onLoaded={handleLoaded} />
       )}
     </AppShell>
   );
