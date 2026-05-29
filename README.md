@@ -1,7 +1,11 @@
 # GhostMark
 
 <p align="center">
-  <img src="./public/brand/banner-RD.png" alt="GhostMark banner" width="620" />
+  <img src="./public/brand/banner-TXT.png" alt="GhostMark banner" width="620" />
+</p>
+
+<p align="center">
+  <img src="./public/brand/banner-3D.png" alt="GhostMark banner" width="620" />
 </p>
 
 <p align="center">
