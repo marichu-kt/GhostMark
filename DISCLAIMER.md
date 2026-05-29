@@ -2,7 +2,7 @@
 
 ## English
 
-GhostMark is provided "as is", without warranties of any kind. The author and contributors are not responsible for misuse of this tool, unlawful document modification, unauthorized watermarking, data handling decisions, or any damages arising from use of the software.
+GhostMark is provided "as is", without warranties of any kind. The author, maintainers, and contributors are not responsible for misuse of this tool, unlawful document modification, unauthorized watermarking, data handling decisions, or any damages arising from use of the software.
 
 Users are responsible for ensuring they have the right to process, modify, watermark, export, or distribute any PDF used with GhostMark. Users are also responsible for complying with applicable laws, regulations, contracts, confidentiality duties, and organizational policies.
 

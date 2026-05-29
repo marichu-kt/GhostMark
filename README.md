@@ -11,10 +11,10 @@
 <p align="center">
   <a href="https://marichu-kt.github.io/GhostMark/">Open GhostMark</a>
   |
-  <a href="https://marichu-kt.github.io/GhostMark/editor-pdf-marca-agua/">PDF watermark editor</a>
+  <a href="https://marichu-kt.github.io/GhostMark/pdf-watermark-editor/">PDF watermark editor</a>
 </p>
 
-GhostMark is a private PDF watermark editor that runs in your browser. Add text, image, pattern, and professional seal watermarks locally. Your PDF is not uploaded.
+GhostMark is a free, privacy-first PDF watermark editor. Add text, image, pattern, and professional seal watermarks locally in your browser. Your PDF is not uploaded.
 
 ```mermaid
 flowchart LR
@@ -37,7 +37,7 @@ flowchart LR
 
 ## Privacy
 
-No backend. No upload endpoint. No accounts. No analytics. No cookies. No tracking.
+No backend, database, analytics, cookies, telemetry, accounts, upload endpoint, or cloud sync. Files stay in browser memory while you work.
 
 ## Run Locally
 

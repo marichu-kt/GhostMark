@@ -28,11 +28,11 @@ export function EmptyState({ onLoaded }: EmptyStateProps) {
         <div className="grid min-h-0 place-items-center">
           <div className="mx-auto grid w-full max-w-5xl gap-[clamp(0.85rem,2.2vh,1.55rem)] text-center">
             <div className="grid gap-2.5">
-              <h1 className="text-[clamp(3.45rem,8.1vh,5.55rem)] font-semibold leading-none tracking-normal text-white">
+              <h1 className="text-[clamp(3.6rem,8.45vh,5.75rem)] font-semibold leading-none tracking-normal text-white">
                 <span>{t("app.nameGhost")}</span>
                 <span className="text-brand-red">{t("app.nameMark")}</span>
               </h1>
-              <p className="text-[clamp(1.18rem,2.65vh,1.72rem)] font-medium text-steel-100">
+              <p className="text-[clamp(1.22rem,2.8vh,1.82rem)] font-medium text-steel-100">
                 {t("app.heroTagline")}
               </p>
               <div className="mx-auto h-0.5 w-20 rounded-full bg-brand-red" />
@@ -50,7 +50,7 @@ export function EmptyState({ onLoaded }: EmptyStateProps) {
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <a
-              href={`${import.meta.env.BASE_URL}editor-pdf-marca-agua/`}
+              href={`${import.meta.env.BASE_URL}pdf-watermark-editor/`}
               className="inline-flex min-h-10 items-center gap-2 rounded-md border border-graphite-700 bg-graphite-950/70 px-4 py-2 font-medium text-steel-200 transition-colors hover:border-steel-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-brand-red/60 focus:ring-offset-2 focus:ring-offset-graphite-950"
             >
               <FileText size={16} aria-hidden="true" />
