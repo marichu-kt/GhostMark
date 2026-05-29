@@ -4,7 +4,6 @@
 
 - Live app: https://marichu-kt.github.io/GhostMark/
 - SEO page: https://marichu-kt.github.io/GhostMark/pdf-watermark-editor/
-- Legacy redirect: https://marichu-kt.github.io/GhostMark/editor-pdf-marca-agua/
 - Sitemap: https://marichu-kt.github.io/GhostMark/sitemap.xml
 - Robots: https://marichu-kt.github.io/GhostMark/robots.txt
 
@@ -16,12 +15,6 @@ English discovery:
 - private PDF watermark tool
 - no upload PDF watermark
 - watermark PDF without installing
-
-Spanish discovery:
-- editor de pdfs para poner marcas de agua
-- añadir marca de agua a PDF online
-- poner marca de agua en PDF gratis
-- editor de PDF con marca de agua
 
 ## Post-Deploy Steps
 

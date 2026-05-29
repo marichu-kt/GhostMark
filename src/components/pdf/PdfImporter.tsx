@@ -98,19 +98,19 @@ export function PdfImporter({
 
   if (mode === "dropzone") {
     return (
-      <section className="grid gap-3">
+      <section className="mx-auto grid w-full max-w-4xl gap-3">
         {input}
         <div
-          className={`ghostmark-neon-frame rounded-2xl border bg-[#101728]/78 p-4 shadow-[0_24px_90px_rgba(0,0,0,0.45),0_0_42px_rgba(255,45,61,0.12)] backdrop-blur transition sm:p-5 ${
+          className={`ghostmark-neon-frame rounded-2xl border bg-[#101728]/78 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.45),0_0_48px_rgba(255,45,61,0.16)] backdrop-blur transition sm:p-6 ${
             dragActive
-              ? "border-[#ff4b5c] ring-4 ring-brand-red/20"
-              : "border-brand-red/45 ring-1 ring-white/5"
+              ? "border-[#ff4b5c] ring-4 ring-brand-red/25"
+              : "border-brand-red/55 ring-1 ring-white/10"
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <div className="grid place-items-center gap-[clamp(0.8rem,2vh,1.25rem)] rounded-xl border border-dashed border-steel-500/60 bg-[radial-gradient(circle_at_center,rgba(255,45,61,0.13),transparent_56%)] px-5 py-[clamp(1.4rem,4vh,3rem)] text-center">
+          <div className="grid place-items-center gap-[clamp(0.9rem,2.2vh,1.35rem)] rounded-xl border border-dashed border-steel-500/60 bg-[radial-gradient(circle_at_center,rgba(255,45,61,0.13),transparent_56%)] px-5 py-[clamp(1.9rem,4.8vh,3.8rem)] text-center">
             <div className="grid h-16 w-16 place-items-center rounded-2xl border border-brand-red/50 bg-brand-red/10 text-brand-red shadow-[0_0_36px_rgba(255,45,61,0.28)] sm:h-20 sm:w-20">
               <FileText size={38} aria-hidden="true" />
             </div>
