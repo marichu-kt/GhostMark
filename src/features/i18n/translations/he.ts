@@ -12,6 +12,7 @@ export const he: TranslationDictionary = {
   "actions.securityDetails": "פרטי אבטחה",
   "actions.privacy": "פרטיות",
   "actions.moreOptions": "אפשרויות נוספות",
+  "seo.spanishPageLink": "עורך סימני מים ל-PDF",
   "brand.logoAlt": "לוגו רוח מסמך של GhostMark",
   "brand.aboutTitle": "על GhostMark",
   "brand.aboutBody":

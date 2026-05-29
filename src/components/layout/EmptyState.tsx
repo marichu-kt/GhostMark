@@ -1,4 +1,4 @@
-import { Github, ShieldCheck } from "lucide-react";
+import { FileText, Github, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { Button } from "../ui/Button";
@@ -53,6 +53,13 @@ export function EmptyState({ onLoaded }: EmptyStateProps) {
             <span className="font-semibold text-brand-red">{t("app.localProcessingHighlight")}</span>
           </p>
           <div className="flex flex-wrap items-center gap-3">
+            <a
+              href={`${import.meta.env.BASE_URL}editor-pdf-marca-agua`}
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-graphite-700 bg-graphite-950/70 px-4 py-2 font-medium text-steel-200 transition-colors hover:border-steel-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-brand-red/60 focus:ring-offset-2 focus:ring-offset-graphite-950"
+            >
+              <FileText size={16} aria-hidden="true" />
+              {t("seo.spanishPageLink")}
+            </a>
             <a
               href="https://github.com/marichu-kt/GhostMark"
               target="_blank"

@@ -17,6 +17,7 @@ export const es: TranslationDictionary = {
   "actions.securityDetails": "Detalles de seguridad",
   "actions.privacy": "Privacidad",
   "actions.moreOptions": "Más opciones",
+  "seo.spanishPageLink": "Editor de PDFs con marca de agua",
   "brand.logoAlt": "Logotipo de fantasma documento de GhostMark",
   "brand.aboutTitle": "Acerca de GhostMark",
   "brand.aboutBody":

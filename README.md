@@ -5,10 +5,16 @@
 </p>
 
 <p align="center">
-  <strong>Private PDF watermarking in your browser.</strong>
+  <strong>Private PDF watermark editor in your browser.</strong>
 </p>
 
-GhostMark adds professional watermark layers to PDF files locally in your browser. Your PDF is not uploaded.
+<p align="center">
+  <a href="https://marichu-kt.github.io/GhostMark/">Open GhostMark</a>
+  ·
+  <a href="https://marichu-kt.github.io/GhostMark/editor-pdf-marca-agua">Editor de PDFs para poner marcas de agua</a>
+</p>
+
+GhostMark is a free, privacy-first PDF watermark editor. Add text, image, pattern, and professional seal watermarks locally in your browser. Your PDF is not uploaded.
 
 ```mermaid
 flowchart LR
@@ -29,7 +35,7 @@ flowchart LR
 | Local processing | Ready |
 | No upload | Ready |
 
-## How It Works
+## Use
 
 1. Import a PDF.
 2. Add one or more watermark layers.

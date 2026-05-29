@@ -36,6 +36,7 @@ export const en = {
   "actions.close": "Close",
   "actions.moreOptions": "More options",
   "actions.addLayer": "Add layer",
+  "seo.spanishPageLink": "PDF watermark editor",
   "brand.logoAlt": "GhostMark document ghost logo",
   "brand.aboutTitle": "About GhostMark",
   "brand.aboutBody":

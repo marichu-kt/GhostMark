@@ -12,6 +12,7 @@ export const zh: TranslationDictionary = {
   "actions.securityDetails": "安全详情",
   "actions.privacy": "隐私",
   "actions.moreOptions": "更多选项",
+  "seo.spanishPageLink": "PDF 水印编辑器",
   "brand.logoAlt": "GhostMark 文档幽灵标志",
   "brand.aboutTitle": "关于 GhostMark",
   "brand.aboutBody":

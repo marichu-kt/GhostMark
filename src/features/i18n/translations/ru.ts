@@ -12,6 +12,7 @@ export const ru: TranslationDictionary = {
   "actions.securityDetails": "Сведения о безопасности",
   "actions.privacy": "Конфиденциальность",
   "actions.moreOptions": "Еще",
+  "seo.spanishPageLink": "Редактор водяных знаков PDF",
   "brand.logoAlt": "Логотип GhostMark в виде документа-призрака",
   "brand.aboutTitle": "О GhostMark",
   "brand.aboutBody":

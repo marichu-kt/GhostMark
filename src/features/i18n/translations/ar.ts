@@ -12,6 +12,7 @@ export const ar: TranslationDictionary = {
   "actions.securityDetails": "تفاصيل الأمان",
   "actions.privacy": "الخصوصية",
   "actions.moreOptions": "خيارات أكثر",
+  "seo.spanishPageLink": "محرر علامات مائية لملفات PDF",
   "brand.logoAlt": "شعار GhostMark على شكل مستند شبح",
   "brand.aboutTitle": "حول GhostMark",
   "brand.aboutBody":

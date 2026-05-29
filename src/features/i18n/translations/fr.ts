@@ -12,6 +12,7 @@ export const fr: TranslationDictionary = {
   "actions.securityDetails": "Détails de sécurité",
   "actions.privacy": "Confidentialité",
   "actions.moreOptions": "Plus d'options",
+  "seo.spanishPageLink": "Éditeur de filigrane PDF",
   "brand.logoAlt": "Logo GhostMark de document fantôme",
   "brand.aboutTitle": "À propos de GhostMark",
   "brand.aboutBody":

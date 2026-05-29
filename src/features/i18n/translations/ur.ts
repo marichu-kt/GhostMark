@@ -12,6 +12,7 @@ export const ur: TranslationDictionary = {
   "actions.securityDetails": "سیکیورٹی تفصیلات",
   "actions.privacy": "رازداری",
   "actions.moreOptions": "مزید اختیارات",
+  "seo.spanishPageLink": "PDF واٹرمارک ایڈیٹر",
   "brand.logoAlt": "GhostMark دستاویزی بھوت لوگو",
   "brand.aboutTitle": "GhostMark کے بارے میں",
   "brand.aboutBody":

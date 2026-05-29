@@ -12,6 +12,7 @@ export const bn: TranslationDictionary = {
   "actions.securityDetails": "নিরাপত্তার বিবরণ",
   "actions.privacy": "গোপনীয়তা",
   "actions.moreOptions": "আরও বিকল্প",
+  "seo.spanishPageLink": "PDF জলছাপ সম্পাদক",
   "brand.logoAlt": "GhostMark ডকুমেন্ট ভূত লোগো",
   "brand.aboutTitle": "GhostMark সম্পর্কে",
   "brand.aboutBody":
