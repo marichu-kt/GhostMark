@@ -1,22 +1,6 @@
 # GhostMark
 
 <p align="center">
-  <img src="./public/brand/banner-RD.png" alt="GhostMark banner" width="560" />
-</p>
-
-<p align="center">
-  <strong>Private PDF watermark editor in your browser.</strong>
-</p>
-
-<p align="center">
-  <a href="https://marichu-kt.github.io/GhostMark/">Open GhostMark</a>
-  |
-  <a href="https://marichu-kt.github.io/GhostMark/pdf-watermark-editor/">PDF Watermark Editor</a>
-</p>
-
-# GhostMark
-
-<p align="center">
   <img src="./public/brand/banner-RD.png" alt="GhostMark banner" width="620" />
 </p>
 
