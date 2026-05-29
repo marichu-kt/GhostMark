@@ -14,24 +14,120 @@
   <a href="https://marichu-kt.github.io/GhostMark/pdf-watermark-editor/">PDF Watermark Editor</a>
 </p>
 
-## English
+# GhostMark
 
-GhostMark is a free, privacy-first PDF watermark editor. Add text, image, pattern, and professional seal watermarks locally in your browser. Your PDF is not uploaded.
+<p align="center">
+  <img src="./public/brand/banner-RD.png" alt="GhostMark banner" width="620" />
+</p>
+
+<p align="center">
+  <strong>Private PDF watermark editor in your browser.</strong>
+</p>
+
+<p align="center">
+  <a href="https://marichu-kt.github.io/GhostMark/">Open GhostMark</a>
+  ·
+  <a href="https://marichu-kt.github.io/GhostMark/pdf-watermark-editor/">PDF Watermark Editor</a>
+  ·
+  <a href="./DISCLAIMER.md">Disclaimer</a>
+</p>
+
+---
+
+## Overview
+
+GhostMark is a free, privacy-first PDF watermark editor.
+
+It lets you add **text**, **image**, **pattern**, and **professional seal** watermarks to PDF files directly in your browser.
+
+Your PDF is processed locally. It is not uploaded to a server.
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "transparent",
+    "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif",
+    "primaryTextColor": "#F8FAFC",
+    "lineColor": "#64748B"
+  }
+}}%%
 flowchart LR
     A[Import PDF] --> B[Add watermark layers]
     B --> C[Preview locally]
     C --> D[Export PDF]
+
+    classDef importNode fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#F8FAFC;
+    classDef editNode fill:#1E1B4B,stroke:#A78BFA,stroke-width:2px,color:#F8FAFC;
+    classDef previewNode fill:#3B0764,stroke:#F472B6,stroke-width:2px,color:#F8FAFC;
+    classDef exportNode fill:#450A0A,stroke:#FF4B5C,stroke-width:2px,color:#F8FAFC;
+
+    class A importNode;
+    class B editNode;
+    class C previewNode;
+    class D exportNode;
 ```
 
-**Features:** text watermark, image watermark, repeated pattern, professional seal, multi-layer editing, live preview, local export.
+> [!NOTE]
+> GhostMark is a static browser app. It has no backend, no upload endpoint, and no account system.
 
-**Use:** import a PDF, add one or more watermark layers, preview the document, and export a new PDF.
+---
 
-**Privacy:** no backend, database, analytics, cookies, telemetry, accounts, upload endpoint, or cloud sync. Files stay in browser memory while you work.
+## Features
 
-**Run locally:**
+* **Text watermark** — add custom text with size, opacity, color, rotation, and position controls.
+* **Image watermark** — place a logo or image over your PDF.
+* **Pattern watermark** — repeat text across pages as a subtle document mark.
+* **Professional seal** — add document-control style stamps.
+* **Multi-layer editing** — combine several watermark layers in one PDF.
+* **Live preview** — review changes before exporting.
+* **Local PDF export** — generate the final PDF in your browser.
+* **No upload** — files stay on your device while you work.
+
+> [!TIP]
+> Combine a subtle repeated pattern with a professional seal for documents that need both visibility and document-control style marking.
+
+---
+
+## How to use
+
+1. Open GhostMark.
+2. Import a PDF.
+3. Add one or more watermark layers.
+4. Preview the result locally.
+5. Export a new PDF.
+
+> [!IMPORTANT]
+> The preview is visual. The exported PDF is the authoritative final output.
+
+---
+
+## Privacy model
+
+GhostMark is designed to run without a backend.
+
+It does **not** include:
+
+* upload endpoints
+* user accounts
+* analytics
+* cookies
+* telemetry
+* tracking
+* cloud sync
+* databases
+
+Files stay in browser memory while you work.
+
+> [!WARNING]
+> Hosted GitHub Pages may still generate provider-level technical access logs, such as request time, IP address, browser metadata, or requested paths. This is outside GhostMark’s application code.
+
+> [!CAUTION]
+> For sensitive, regulated, confidential, or classified documents, use a local/offline build in a controlled environment. GhostMark is not a certified legal, compliance, forensic, records-management, or classified-document handling system.
+
+---
+
+## Run locally
 
 ```bash
 npm install
@@ -39,104 +135,165 @@ npm run dev
 npm run build
 ```
 
-**Limitations:** preview is visual; export is authoritative. Very large PDFs can be slower. Hosted GitHub Pages may create provider-level access logs. GhostMark is not a certified classified-document handling system.
+Preview the production build:
 
-## Languages
+```bash
+npm run preview
+```
 
-- [English](#english)
-- [Español](#español)
-- [Français](#français)
-- [Português](#português)
-- [中文](#中文)
-- [हिन्दी](#हिन्दी)
-- [العربية](#العربية)
-- [বাংলা](#বাংলা)
-- [Русский](#русский)
-- [اردو](#اردو)
-- [עברית](#עברית)
+> [!TIP]
+> For more private workflows, build the app locally and run it in an isolated environment with network access disabled.
 
-## Español
+---
 
-GhostMark es un editor privado y gratuito para poner marcas de agua en PDF desde el navegador. Puedes añadir texto, imagen, patrón y sellos profesionales sin subir el archivo.
+## Supported languages
 
-- Funciones: marca de texto, imagen, patrón repetido, sello profesional, varias capas y vista previa.
-- Privacidad: sin backend, sin cuentas, sin analítica, sin cookies y sin endpoint de subida.
-- Uso: importa un PDF, añade capas de marca de agua, revisa la vista previa y exporta un PDF nuevo.
+<details>
+<summary><strong>English</strong></summary>
 
-## Français
+GhostMark is a private PDF watermark editor that runs in your browser.
 
-GhostMark est un éditeur gratuit et privé de filigranes PDF dans le navigateur. Ajoutez du texte, une image, un motif ou un sceau professionnel sans téléverser le fichier.
+* Add text, image, pattern, and professional seal watermarks.
+* Preview the PDF locally before exporting.
+* Export a new watermarked PDF.
+* Files are not uploaded to a server.
 
-- Fonctions : filigrane texte, image, motif répété, sceau professionnel, couches multiples et aperçu.
-- Confidentialité : pas de backend, pas de comptes, pas d'analytics, pas de cookies et pas d'endpoint d'envoi.
-- Utilisation : importez un PDF, ajoutez des couches de filigrane, vérifiez l'aperçu et exportez un nouveau PDF.
+</details>
 
-## Português
+<details>
+<summary><strong>Español</strong></summary>
 
-GhostMark é um editor gratuito e privado de marcas d'água em PDF no navegador. Adicione texto, imagem, padrão e selo profissional sem enviar o arquivo.
+GhostMark es un editor privado para poner marcas de agua en PDF desde el navegador.
 
-- Recursos: marca de texto, imagem, padrão repetido, selo profissional, múltiplas camadas e pré-visualização.
-- Privacidade: sem backend, contas, analytics, cookies ou endpoint de upload.
-- Uso: importe um PDF, adicione camadas de marca d'água, revise a prévia e exporte um novo PDF.
+* Añade marcas de texto, imagen, patrón y sello profesional.
+* Revisa el PDF con vista previa local.
+* Exporta un nuevo PDF con marca de agua.
+* Los archivos no se suben a ningún servidor.
 
-## 中文
+</details>
 
-GhostMark 是一款免费的隐私优先 PDF 水印编辑器，可直接在浏览器中使用。你可以在本地添加文字、图片、重复图案和专业印章水印，PDF 不会上传。
+<details>
+<summary><strong>Français</strong></summary>
 
-- 功能：文字水印、图片水印、重复图案、专业印章、多图层编辑和实时预览。
-- 隐私：无后端、无账户、无分析、无 Cookie、无上传接口。
-- 使用：导入 PDF，添加水印图层，预览效果，然后导出新的 PDF。
+GhostMark est un éditeur privé de filigranes PDF dans le navigateur.
 
-## हिन्दी
+* Ajoutez du texte, des images, des motifs et des sceaux professionnels.
+* Prévisualisez le PDF localement avant l’export.
+* Exportez un nouveau PDF filigrané.
+* Les fichiers ne sont pas téléversés vers un serveur.
 
-GhostMark ब्राउज़र में चलने वाला मुफ़्त, privacy-first PDF watermark editor है। आप text, image, pattern और professional seal watermark स्थानीय रूप से जोड़ सकते हैं; PDF upload नहीं होता।
+</details>
 
-- सुविधाएँ: text watermark, image watermark, repeated pattern, professional seal, multi-layer editing और live preview।
-- गोपनीयता: कोई backend, account, analytics, cookies या upload endpoint नहीं।
-- उपयोग: PDF import करें, watermark layers जोड़ें, preview देखें और नया PDF export करें।
+<details>
+<summary><strong>Português</strong></summary>
 
-## العربية
+GhostMark é um editor privado de marcas d’água em PDF no navegador.
 
-GhostMark محرر مجاني وخاص لإضافة علامات مائية إلى ملفات PDF داخل المتصفح. يمكنك إضافة نص أو صورة أو نمط متكرر أو ختم مهني دون رفع الملف.
+* Adicione marcas de texto, imagem, padrão e selo profissional.
+* Visualize o PDF localmente antes de exportar.
+* Exporte um novo PDF com marca d’água.
+* Os arquivos não são enviados para um servidor.
 
-- الميزات: علامة نصية، علامة صورة، نمط متكرر، ختم مهني، طبقات متعددة ومعاينة مباشرة.
-- الخصوصية: لا يوجد خادم خلفي، ولا حسابات، ولا تحليلات، ولا ملفات تعريف ارتباط، ولا نقطة رفع.
-- الاستخدام: استورد ملف PDF، أضف طبقات العلامة المائية، راجع المعاينة، ثم صدّر ملف PDF جديدًا.
+</details>
 
-## বাংলা
+<details>
+<summary><strong>中文</strong></summary>
 
-GhostMark হলো ব্রাউজারে চলা একটি বিনামূল্যের privacy-first PDF watermark editor। আপনি টেক্সট, ছবি, প্যাটার্ন এবং পেশাদার সিল ওয়াটারমার্ক স্থানীয়ভাবে যোগ করতে পারেন; PDF আপলোড হয় না।
+GhostMark 是一个在浏览器中运行的私密 PDF 水印编辑器。
 
-- সুবিধা: টেক্সট ওয়াটারমার্ক, ছবি ওয়াটারমার্ক, পুনরাবৃত্ত প্যাটার্ন, পেশাদার সিল, বহু-স্তর সম্পাদনা এবং লাইভ প্রিভিউ।
-- গোপনীয়তা: কোনো backend, account, analytics, cookies বা upload endpoint নেই।
-- ব্যবহার: PDF import করুন, watermark layer যোগ করুন, preview দেখুন এবং নতুন PDF export করুন।
+* 添加文字、图片、图案和专业印章水印。
+* 在本地预览 PDF。
+* 导出新的带水印 PDF。
+* 文件不会上传到服务器。
 
-## Русский
+</details>
 
-GhostMark — бесплатный приватный редактор водяных знаков PDF в браузере. Добавляйте текст, изображение, повторяющийся шаблон и профессиональную печать без загрузки файла на сервер.
+<details>
+<summary><strong>हिन्दी</strong></summary>
 
-- Возможности: текстовый знак, изображение, повторяющийся шаблон, профессиональная печать, несколько слоев и предпросмотр.
-- Конфиденциальность: нет backend, аккаунтов, analytics, cookies и endpoint для загрузки.
-- Использование: импортируйте PDF, добавьте слои водяных знаков, проверьте предпросмотр и экспортируйте новый PDF.
+GhostMark ब्राउज़र में चलने वाला निजी PDF वॉटरमार्क एडिटर है।
 
-## اردو
+* टेक्स्ट, इमेज, पैटर्न और प्रोफेशनल सील वॉटरमार्क जोड़ें।
+* एक्सपोर्ट से पहले PDF को स्थानीय रूप से प्रीव्यू करें।
+* नया वॉटरमार्क वाला PDF एक्सपोर्ट करें।
+* फ़ाइलें किसी सर्वर पर अपलोड नहीं होतीं।
 
-GhostMark براؤزر میں چلنے والا مفت، privacy-first PDF watermark editor ہے۔ آپ text، image، pattern اور professional seal watermark مقامی طور پر شامل کر سکتے ہیں؛ PDF upload نہیں ہوتا۔
+</details>
 
-- خصوصیات: text watermark، image watermark، repeated pattern، professional seal، multi-layer editing اور live preview۔
-- رازداری: کوئی backend، account، analytics، cookies یا upload endpoint نہیں۔
-- استعمال: PDF import کریں، watermark layers شامل کریں، preview دیکھیں اور نیا PDF export کریں۔
+<details>
+<summary><strong>العربية</strong></summary>
 
-## עברית
+GhostMark محرر خاص لإضافة العلامات المائية إلى ملفات PDF داخل المتصفح.
 
-GhostMark הוא עורך סימני מים חינמי ופרטי ל-PDF שפועל בדפדפן. ניתן להוסיף טקסט, תמונה, תבנית חוזרת וחותמת מקצועית באופן מקומי, בלי להעלות את הקובץ.
+* أضف علامات مائية نصية أو صورية أو نمطية أو أختامًا احترافية.
+* عاين ملف PDF محليًا قبل التصدير.
+* صدّر ملف PDF جديدًا بعلامة مائية.
+* لا يتم رفع الملفات إلى أي خادم.
 
-- יכולות: סימן מים טקסטואלי, תמונה, תבנית חוזרת, חותמת מקצועית, עריכת שכבות ותצוגה מקדימה.
-- פרטיות: ללא backend, חשבונות, analytics, cookies או נקודת העלאה.
-- שימוש: ייבאו PDF, הוסיפו שכבות סימן מים, בדקו תצוגה מקדימה וייצאו PDF חדש.
+</details>
+
+<details>
+<summary><strong>বাংলা</strong></summary>
+
+GhostMark হলো ব্রাউজারে চলা একটি ব্যক্তিগত PDF ওয়াটারমার্ক সম্পাদক।
+
+* টেক্সট, ছবি, প্যাটার্ন এবং পেশাদার সিল ওয়াটারমার্ক যোগ করুন।
+* এক্সপোর্টের আগে PDF স্থানীয়ভাবে প্রিভিউ করুন।
+* নতুন ওয়াটারমার্কযুক্ত PDF এক্সপোর্ট করুন।
+* ফাইল কোনো সার্ভারে আপলোড হয় না।
+
+</details>
+
+<details>
+<summary><strong>Русский</strong></summary>
+
+GhostMark — приватный редактор водяных знаков PDF в браузере.
+
+* Добавляйте текстовые, графические, шаблонные и профессиональные водяные знаки.
+* Просматривайте PDF локально перед экспортом.
+* Экспортируйте новый PDF с водяным знаком.
+* Файлы не загружаются на сервер.
+
+</details>
+
+<details>
+<summary><strong>اردو</strong></summary>
+
+GhostMark براؤزر میں چلنے والا نجی PDF واٹرمارک ایڈیٹر ہے۔
+
+* متن، تصویر، پیٹرن اور پروفیشنل سیل واٹرمارک شامل کریں۔
+* ایکسپورٹ سے پہلے PDF کا مقامی پریویو دیکھیں۔
+* نیا واٹرمارک شدہ PDF ایکسپورٹ کریں۔
+* فائلیں کسی سرور پر اپلوڈ نہیں ہوتیں۔
+
+</details>
+
+<details>
+<summary><strong>עברית</strong></summary>
+
+GhostMark הוא עורך פרטי להוספת סימני מים לקובצי PDF בדפדפן.
+
+* הוספת סימני מים מסוג טקסט, תמונה, תבנית וחותמת מקצועית.
+* תצוגה מקדימה מקומית לפני ייצוא.
+* ייצוא קובץ PDF חדש עם סימן מים.
+* הקבצים אינם מועלים לשרת.
+
+</details>
+
+---
+
+## Notes
+
+* Preview is visual; export is authoritative.
+* Very large PDFs may be slower to preview or export.
+* The hosted GitHub Pages version is public static hosting.
+* For sensitive files, prefer a local/offline build.
+* Vite is configured for GitHub Pages with `base: "/GhostMark/"`.
+
+---
 
 ## License
 
 GhostMark is released under the MIT License. See [LICENSE](LICENSE).
 
-Additional usage and liability notes are available in [DISCLAIMER.md](DISCLAIMER.md).
+Responsible use, liability, and legal notes are available in [DISCLAIMER.md](DISCLAIMER.md).
