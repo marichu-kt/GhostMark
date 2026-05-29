@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Download } from "lucide-react";
 import type { PdfExportResult, LoadedPdf } from "../types/pdf";
 import type { DocumentLayer } from "../types/watermark";
 import { useAppSettings } from "./AppProviders";
@@ -19,6 +20,7 @@ import { PdfPreview } from "../components/pdf/PdfPreview";
 import { SecurityCenter } from "../components/security/SecurityCenter";
 import { WatermarkDesigner } from "../components/watermark/WatermarkDesigner";
 import { ExportPanel } from "../components/export/ExportPanel";
+import { Button } from "../components/ui/Button";
 
 type WorkflowStep = "import" | "edit" | "export" | "security";
 
@@ -256,10 +258,8 @@ export function App() {
             layers={layers}
             selectedLayerId={selectedLayerId}
             totalPages={loadedPdf?.pageCount ?? 1}
-            canExport={watermarkReady}
             onChange={setLayers}
             onSelectedLayerChange={setSelectedLayerId}
-            onExport={() => setActiveStep("export")}
           />
         );
       case "security":
@@ -270,14 +270,12 @@ export function App() {
             outputFileName={outputFileName}
             onOutputFileNameChange={setOutputFileName}
             disabled={!watermarkReady}
-            generating={generating}
             error={exportError}
             result={exportResult}
             watermarkSummary={watermarkSummary}
             affectedPagesSummary={affectedPagesSummary}
             validationMessage={validationMessage}
             filenameError={!outputFileName.trim() ? t("validation.outputFilename") : undefined}
-            onGenerate={() => void handleGenerateExport()}
             onStartNew={() => clearSession()}
           />
         );
@@ -290,7 +288,6 @@ export function App() {
     affectedPagesSummary,
     exportError,
     exportResult,
-    generating,
     loadedPdf,
     outputFileName,
     layers,
@@ -300,17 +297,48 @@ export function App() {
     watermarkSummary,
   ]);
 
+  const rightPanelFooter = (() => {
+    if (!loadedPdf || activeStep === "security" || activeStep === "import") {
+      return null;
+    }
+
+    if (activeStep === "export") {
+      const exportDisabled = !watermarkReady || generating || !outputFileName.trim();
+
+      return (
+        <Button
+          variant="primary"
+          className="w-full"
+          disabled={exportDisabled}
+          onClick={() => void handleGenerateExport()}
+        >
+          <Download size={16} aria-hidden="true" />
+          {generating ? t("preview.loading") : t("actions.exportPdf")}
+        </Button>
+      );
+    }
+
+    return (
+      <Button
+        variant="primary"
+        className="w-full"
+        disabled={!watermarkReady}
+        onClick={() => setActiveStep("export")}
+      >
+        {t("actions.exportPdf")}
+      </Button>
+    );
+  })();
+
   return (
     <AppShell
       fileName={loadedPdf?.fileName}
-      canExport={watermarkReady}
       hasDocument={Boolean(loadedPdf)}
       showRightPanel={Boolean(loadedPdf) || activeStep === "security"}
-      onExport={() => setActiveStep("export")}
-      onImport={() => setActiveStep("import")}
       onSecurity={() => setActiveStep("security")}
       rightPanelTitle={rightPanelTitle}
       rightPanel={rightPanel}
+      rightPanelFooter={rightPanelFooter}
     >
       {loadedPdf ? (
         <PdfPreview

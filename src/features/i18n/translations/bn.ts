@@ -28,6 +28,7 @@ export const bn: TranslationDictionary = {
   "workflow.export": "রপ্তানি",
   "workflow.complete": "সম্পন্ন",
   "badges.localMode": "স্থানীয়",
+  "badges.localOnly": "শুধু স্থানীয়",
   "privacy.processedLocally": "স্থানীয়ভাবে প্রক্রিয়াকৃত। আপলোড নেই।",
   "privacy.noUpload": "আপলোড নেই",
   "privacy.noTracking": "ট্র্যাকিং নেই",

@@ -36,10 +36,8 @@ interface WatermarkDesignerProps {
   layers: DocumentLayer[];
   selectedLayerId: string | null;
   totalPages: number;
-  canExport: boolean;
   onChange: (layers: DocumentLayer[]) => void;
   onSelectedLayerChange: (layerId: string | null) => void;
-  onExport: () => void;
 }
 
 const layerTypes: LayerType[] = ["text", "image", "pattern", "seal"];
@@ -68,10 +66,8 @@ export function WatermarkDesigner({
   layers,
   selectedLayerId,
   totalPages,
-  canExport,
   onChange,
   onSelectedLayerChange,
-  onExport,
 }: WatermarkDesignerProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -476,12 +472,6 @@ export function WatermarkDesigner({
           </Collapsible>
         </>
       ) : null}
-
-      <div className="sticky bottom-0 -mx-4 border-t border-graphite-700 bg-graphite-900/95 px-4 pb-2 pt-3 lg:-mx-5 lg:px-5">
-        <Button variant="primary" className="w-full" disabled={!canExport} onClick={onExport}>
-          {t("actions.exportPdf")}
-        </Button>
-      </div>
     </>
   );
 }

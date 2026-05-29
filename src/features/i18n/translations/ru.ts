@@ -28,6 +28,7 @@ export const ru: TranslationDictionary = {
   "workflow.export": "Экспорт",
   "workflow.complete": "Готово",
   "badges.localMode": "Локально",
+  "badges.localOnly": "Только локально",
   "privacy.processedLocally": "Обрабатывается локально. Без загрузки.",
   "privacy.noUpload": "Без загрузки",
   "privacy.noTracking": "Без отслеживания",

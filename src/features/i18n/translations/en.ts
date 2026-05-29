@@ -44,6 +44,7 @@ export const en = {
   "brand.aboutLimit":
     "GhostMark is not a certified classified-document handling system. For sensitive workflows, use the offline build in an isolated environment.",
   "badges.localMode": "Local",
+  "badges.localOnly": "Local only",
   "badges.classifiedMode": "Classified Mode",
   "badges.loadedLocally": "Loaded locally",
   "workflow.import": "Import",

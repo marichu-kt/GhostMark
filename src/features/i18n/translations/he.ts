@@ -27,6 +27,7 @@ export const he: TranslationDictionary = {
   "workflow.export": "ייצוא",
   "workflow.complete": "הושלם",
   "badges.localMode": "מקומי",
+  "badges.localOnly": "מקומי בלבד",
   "privacy.processedLocally": "מעובד מקומית. ללא העלאה.",
   "privacy.noUpload": "ללא העלאה",
   "privacy.noTracking": "ללא מעקב",

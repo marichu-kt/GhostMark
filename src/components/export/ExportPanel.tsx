@@ -1,7 +1,5 @@
-import { Download } from "lucide-react";
 import type { PdfExportResult } from "../../types/pdf";
 import { useTranslation } from "../../features/i18n/useTranslation";
-import { Button } from "../ui/Button";
 import { FieldGroup } from "../ui/FieldGroup";
 import { Input } from "../ui/Input";
 import { Notice } from "../ui/Notice";
@@ -11,14 +9,12 @@ interface ExportPanelProps {
   outputFileName: string;
   onOutputFileNameChange: (value: string) => void;
   disabled: boolean;
-  generating: boolean;
   error: string | null;
   result: PdfExportResult | null;
   watermarkSummary: string;
   affectedPagesSummary: string;
   validationMessage?: string;
   filenameError?: string;
-  onGenerate: () => void;
   onStartNew: () => void;
 }
 
@@ -26,14 +22,12 @@ export function ExportPanel({
   outputFileName,
   onOutputFileNameChange,
   disabled,
-  generating,
   error,
   result,
   watermarkSummary,
   affectedPagesSummary,
   validationMessage,
   filenameError,
-  onGenerate,
   onStartNew,
 }: ExportPanelProps) {
   const { t } = useTranslation();
@@ -62,10 +56,6 @@ export function ExportPanel({
         </div>
         {disabled && validationMessage ? <Notice tone="warning">{validationMessage}</Notice> : null}
         {error ? <Notice tone="danger">{error}</Notice> : null}
-        <Button variant="primary" disabled={disabled || generating} onClick={onGenerate}>
-          <Download size={16} aria-hidden="true" />
-          {generating ? t("preview.loading") : t("actions.exportPdf")}
-        </Button>
       </FieldGroup>
 
       <ExportSummary result={result} onStartNew={onStartNew} />

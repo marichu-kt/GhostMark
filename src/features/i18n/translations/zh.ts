@@ -28,6 +28,7 @@ export const zh: TranslationDictionary = {
   "workflow.export": "导出",
   "workflow.complete": "已完成",
   "badges.localMode": "本地",
+  "badges.localOnly": "仅本地",
   "privacy.processedLocally": "本地处理。不会上传。",
   "privacy.noUpload": "不上传",
   "privacy.noTracking": "不跟踪",

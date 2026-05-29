@@ -28,6 +28,7 @@ export const ar: TranslationDictionary = {
   "workflow.export": "تصدير",
   "workflow.complete": "مكتمل",
   "badges.localMode": "محلي",
+  "badges.localOnly": "محلي فقط",
   "privacy.processedLocally": "تتم المعالجة محليا. لا رفع.",
   "privacy.noUpload": "لا رفع",
   "privacy.noTracking": "لا تتبع",

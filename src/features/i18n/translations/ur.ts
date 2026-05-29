@@ -28,6 +28,7 @@ export const ur: TranslationDictionary = {
   "workflow.export": "برآمد",
   "workflow.complete": "مکمل",
   "badges.localMode": "مقامی",
+  "badges.localOnly": "صرف مقامی",
   "privacy.processedLocally": "مقامی طور پر کارروائی۔ اپ لوڈ نہیں۔",
   "privacy.noUpload": "اپ لوڈ نہیں",
   "privacy.noTracking": "ٹریکنگ نہیں",

@@ -28,6 +28,7 @@ export const hi: TranslationDictionary = {
   "workflow.export": "निर्यात",
   "workflow.complete": "पूर्ण",
   "badges.localMode": "स्थानीय",
+  "badges.localOnly": "केवल स्थानीय",
   "privacy.processedLocally": "स्थानीय रूप से प्रोसेस किया गया। अपलोड नहीं।",
   "privacy.noUpload": "अपलोड नहीं",
   "privacy.noTracking": "ट्रैकिंग नहीं",
