@@ -98,21 +98,21 @@ export function PdfImporter({
 
   if (mode === "dropzone") {
     return (
-      <section className="grid gap-5">
+      <section className="grid gap-3">
         {input}
         <div
-          className={`rounded-xl border bg-graphite-950/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)] transition sm:p-7 ${
+          className={`rounded-2xl border bg-[#101728]/78 p-4 shadow-[0_24px_90px_rgba(0,0,0,0.45),0_0_42px_rgba(255,45,61,0.12)] backdrop-blur transition sm:p-5 ${
             dragActive
-              ? "border-brand-red ring-4 ring-brand-red/20"
-              : "border-brand-red/55 ring-1 ring-white/5"
+              ? "border-[#ff4b5c] ring-4 ring-brand-red/20"
+              : "border-brand-red/45 ring-1 ring-white/5"
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <div className="grid place-items-center gap-5 rounded-lg border border-dashed border-steel-500/60 bg-[radial-gradient(circle_at_center,rgba(198,40,40,0.12),transparent_55%)] px-5 py-10 text-center sm:py-12">
-            <div className="grid h-20 w-20 place-items-center rounded-2xl border border-brand-red/50 bg-brand-red/10 text-brand-red shadow-[0_0_36px_rgba(198,40,40,0.28)]">
-              <FileText size={42} aria-hidden="true" />
+          <div className="grid place-items-center gap-[clamp(0.8rem,2vh,1.25rem)] rounded-xl border border-dashed border-steel-500/60 bg-[radial-gradient(circle_at_center,rgba(255,45,61,0.13),transparent_56%)] px-5 py-[clamp(1.4rem,4vh,3rem)] text-center">
+            <div className="grid h-16 w-16 place-items-center rounded-2xl border border-brand-red/50 bg-brand-red/10 text-brand-red shadow-[0_0_36px_rgba(255,45,61,0.28)] sm:h-20 sm:w-20">
+              <FileText size={38} aria-hidden="true" />
             </div>
             <div className="grid gap-2">
               <h2 className="text-xl font-semibold text-white">{t("import.dropTitle")}</h2>
@@ -123,33 +123,32 @@ export function PdfImporter({
               {loading ? t("preview.loading") : t("actions.selectPdf")}
             </Button>
           </div>
-        </div>
 
+          <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:divide-x sm:divide-graphite-700">
+            <div className="flex items-start gap-3 px-2 py-1">
+              <ShieldCheck size={20} className="mt-0.5 text-brand-red" aria-hidden="true" />
+              <div className="grid gap-0.5">
+                <div className="text-sm font-semibold text-white">{t("trust.local")}</div>
+                <div className="text-xs text-steel-400">{t("trust.localDetail")}</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 px-2 py-1 sm:pl-6">
+              <LockKeyhole size={20} className="mt-0.5 text-[#8b7cf6]" aria-hidden="true" />
+              <div className="grid gap-0.5">
+                <div className="text-sm font-semibold text-white">{t("trust.private")}</div>
+                <div className="text-xs text-steel-400">{t("trust.privateDetail")}</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 px-2 py-1 sm:pl-6">
+              <Sparkles size={20} className="mt-0.5 text-[#34d399]" aria-hidden="true" />
+              <div className="grid gap-0.5">
+                <div className="text-sm font-semibold text-white">{t("trust.fast")}</div>
+                <div className="text-xs text-steel-400">{t("trust.fastDetail")}</div>
+              </div>
+            </div>
+          </div>
+        </div>
         {error ? <Notice tone="danger">{error}</Notice> : null}
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="flex items-start gap-3 rounded-md border border-graphite-700 bg-graphite-950/70 p-3">
-            <ShieldCheck size={20} className="mt-0.5 text-brand-red" aria-hidden="true" />
-            <div className="grid gap-0.5">
-              <div className="text-sm font-semibold text-white">{t("trust.local")}</div>
-              <div className="text-xs text-steel-400">{t("trust.localDetail")}</div>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-md border border-graphite-700 bg-graphite-950/70 p-3">
-            <LockKeyhole size={20} className="mt-0.5 text-brand-red" aria-hidden="true" />
-            <div className="grid gap-0.5">
-              <div className="text-sm font-semibold text-white">{t("trust.private")}</div>
-              <div className="text-xs text-steel-400">{t("trust.privateDetail")}</div>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-md border border-graphite-700 bg-graphite-950/70 p-3">
-            <Sparkles size={20} className="mt-0.5 text-local-500" aria-hidden="true" />
-            <div className="grid gap-0.5">
-              <div className="text-sm font-semibold text-white">{t("trust.fast")}</div>
-              <div className="text-xs text-steel-400">{t("trust.fastDetail")}</div>
-            </div>
-          </div>
-        </div>
       </section>
     );
   }

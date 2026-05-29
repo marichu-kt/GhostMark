@@ -193,80 +193,43 @@ export function WatermarkPreviewOverlay({
           ));
         }
 
-        if (layer.type === "classification-banner") {
-          const text = (layer.classificationText || layer.text || "CONFIDENTIAL").trim().toUpperCase();
-          const bannerHeight = Math.max(26, fontSize + 14);
-          const margin = Math.max(0, layer.bannerMargin * zoom);
-
-          return (
-            <div key={layer.id}>
-              {layer.bannerEnabledTop ? (
-                <div
-                  className="absolute left-0 right-0 flex items-center justify-center border-y font-bold uppercase"
-                  style={{
-                    top: margin,
-                    height: bannerHeight,
-                    marginInline: margin,
-                    borderColor: "rgba(125, 52, 50, 0.85)",
-                    background: "rgba(125, 52, 50, 0.1)",
-                    color: "#7d3432",
-                    fontSize,
-                    opacity,
-                  }}
-                >
-                  {text}
-                </div>
-              ) : null}
-              {layer.bannerEnabledBottom ? (
-                <div
-                  className="absolute left-0 right-0 flex items-center justify-center border-y font-bold uppercase"
-                  style={{
-                    bottom: margin,
-                    height: bannerHeight,
-                    marginInline: margin,
-                    borderColor: "rgba(125, 52, 50, 0.85)",
-                    background: "rgba(125, 52, 50, 0.1)",
-                    color: "#7d3432",
-                    fontSize,
-                    opacity,
-                  }}
-                >
-                  {text}
-                </div>
-              ) : null}
-            </div>
-          );
-        }
-
         if (layer.type === "seal") {
-          const width = 190 * zoom;
-          const height = (layer.sealShowDate ? 82 : 66) * zoom;
+          const sealScale = Math.min(1.8, Math.max(0.55, layer.scale || 1));
+          const width = (layer.sealStyle === "circular" ? 150 : 220) * sealScale * zoom;
+          const height = (layer.sealStyle === "circular" ? 150 : 92) * sealScale * zoom;
           const position = resolvePdfLikePosition(layer, pageWidth, pageHeight, width, height, zoom, layer.rotation);
+          const documentId = layer.sealDocumentId.trim().toUpperCase();
 
           return (
             <div
               key={layer.id}
-              className="absolute grid content-center gap-1 border text-center uppercase"
+              className="absolute grid content-center gap-1 border text-center uppercase shadow-[0_0_0_1px_rgba(255,255,255,0.08)_inset]"
               style={{
                 ...position,
                 width,
                 height,
                 borderColor: textColor,
                 borderWidth: Math.max(1, layer.sealBorderThickness),
+                borderRadius: layer.sealStyle === "circular" ? "9999px" : 8 * zoom,
                 color: textColor,
                 opacity,
                 transformOrigin: "center",
               }}
             >
-              <div className="font-bold" style={{ fontSize: Math.max(12, 18 * zoom) }}>
-                {layer.sealTitle || "REVIEWED"}
+              <div className="mx-auto w-[82%] border-b" style={{ borderColor: textColor, opacity: 0.65 }} />
+              <div className="font-bold tracking-[0.08em]" style={{ fontSize: Math.max(12, 21 * sealScale * zoom) }}>
+                {(layer.sealTitle || "REVIEWED").toUpperCase()}
               </div>
-              <div style={{ fontSize: Math.max(9, 10 * zoom) }}>
-                {layer.sealSubtitle || "DOCUMENT CONTROL"}
+              <div className="tracking-[0.18em]" style={{ fontSize: Math.max(8, 9.5 * sealScale * zoom) }}>
+                {(layer.sealSubtitle || "DOCUMENT CONTROL").toUpperCase()}
               </div>
-              {layer.sealShowDate ? (
-                <div style={{ fontSize: Math.max(9, 10 * zoom) }}>{new Date().toISOString().slice(0, 10)}</div>
+              {documentId ? (
+                <div style={{ fontSize: Math.max(8, 8.5 * sealScale * zoom) }}>{documentId}</div>
               ) : null}
+              {layer.sealShowDate ? (
+                <div style={{ fontSize: Math.max(8, 8.5 * sealScale * zoom) }}>{new Date().toISOString().slice(0, 10)}</div>
+              ) : null}
+              <div className="mx-auto w-[82%] border-t" style={{ borderColor: textColor, opacity: 0.65 }} />
             </div>
           );
         }

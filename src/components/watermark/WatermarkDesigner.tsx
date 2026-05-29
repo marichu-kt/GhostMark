@@ -2,11 +2,9 @@ import { useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  Bookmark,
   Copy,
   Grid3X3,
   ImagePlus,
-  Plus,
   Stamp,
   Trash2,
   Type,
@@ -20,7 +18,7 @@ import type {
 } from "../../types/watermark";
 import type { TranslationKey } from "../../features/i18n/i18n";
 import { createLayerForType } from "../../features/watermark/defaults";
-import { duplicateLayer, getDefaultLayerName, getLayerDisplayName } from "../../features/watermark/layers";
+import { duplicateLayer, getLayerDisplayName } from "../../features/watermark/layers";
 import { getLayerListSummary } from "../../features/watermark/validation";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { Button } from "../ui/Button";
@@ -32,27 +30,24 @@ import { Select } from "../ui/Select";
 import { Slider } from "../ui/Slider";
 import { Toggle } from "../ui/Toggle";
 import { PageRulesPanel } from "./PageRulesPanel";
-import { PresetSelector } from "./PresetSelector";
 import { layerOptions, positionPresets } from "./sharedOptions";
 
 interface WatermarkDesignerProps {
   layers: DocumentLayer[];
   selectedLayerId: string | null;
   totalPages: number;
-  currentPage: number;
   canExport: boolean;
   onChange: (layers: DocumentLayer[]) => void;
   onSelectedLayerChange: (layerId: string | null) => void;
   onExport: () => void;
 }
 
-const layerTypes: LayerType[] = ["text", "image", "pattern", "classification-banner", "seal"];
+const layerTypes: LayerType[] = ["text", "image", "pattern", "seal"];
 
 const layerIcons: Record<LayerType, typeof Type> = {
   text: Type,
   image: ImagePlus,
   pattern: Grid3X3,
-  "classification-banner": Bookmark,
   seal: Stamp,
 };
 
@@ -62,8 +57,6 @@ function getLayerTypeTranslationKey(type: LayerType): TranslationKey {
       return "layers.image";
     case "pattern":
       return "layers.pattern";
-    case "classification-banner":
-      return "layers.banner";
     case "seal":
       return "layers.seal";
     default:
@@ -71,15 +64,10 @@ function getLayerTypeTranslationKey(type: LayerType): TranslationKey {
   }
 }
 
-function isCurrentPageOnly(layer: DocumentLayer, currentPage: number): boolean {
-  return layer.pages.mode === "specific" && layer.pages.selection.trim() === String(currentPage);
-}
-
 export function WatermarkDesigner({
   layers,
   selectedLayerId,
   totalPages,
-  currentPage,
   canExport,
   onChange,
   onSelectedLayerChange,
@@ -99,7 +87,16 @@ export function WatermarkDesigner({
   }
 
   function addLayer(type: LayerType) {
-    const layer = createLayerForType(type);
+    const layer = {
+      ...createLayerForType(type),
+      name: t(getLayerTypeTranslationKey(type)),
+      ...(type === "seal"
+        ? {
+            sealTitle: t("watermark.sealDefaultReviewed").toUpperCase(),
+            sealSubtitle: t("watermark.sealDefaultDocumentControl").toUpperCase(),
+          }
+        : {}),
+    };
     replaceLayers([...layers, layer]);
     onSelectedLayerChange(layer.id);
   }
@@ -158,23 +155,15 @@ export function WatermarkDesigner({
     setImageError(null);
   }
 
-  function setQuickPages(mode: "current" | "all") {
-    patchSelectedLayer({
-      pages: mode === "current" ? { mode: "specific", selection: String(currentPage) } : { mode: "all", selection: "" },
-    });
-  }
-
   const positionOptions = positionPresets.map((option) => ({
     value: option.value,
     label: t(option.labelKey),
   }));
 
-  const quickPageMode = selectedLayer && isCurrentPageOnly(selectedLayer, currentPage) ? "current" : "all";
-
   return (
     <>
       <FieldGroup title={t("layers.addWatermark")}>
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2">
           {layerTypes.map((type) => {
             const Icon = layerIcons[type];
 
@@ -270,15 +259,6 @@ export function WatermarkDesigner({
       {selectedLayer ? (
         <>
           <FieldGroup title={t("layers.currentMark")}>
-            <PresetSelector
-              onApply={(patch) =>
-                patchSelectedLayer({
-                  ...patch,
-                  name: patch.type ? getDefaultLayerName(patch.type) : selectedLayer.name,
-                })
-              }
-            />
-
             {selectedLayer.type === "text" || selectedLayer.type === "pattern" ? (
               <Input
                 label={t("watermark.textValue")}
@@ -286,33 +266,6 @@ export function WatermarkDesigner({
                 error={!selectedLayer.text.trim() ? t("validation.addWatermarkText") : undefined}
                 onChange={(event) => patchSelectedLayer({ text: event.target.value })}
               />
-            ) : null}
-
-            {selectedLayer.type === "classification-banner" ? (
-              <>
-                <Input
-                  label={t("watermark.classificationText")}
-                  value={selectedLayer.classificationText}
-                  error={!selectedLayer.classificationText.trim() ? t("validation.addWatermarkText") : undefined}
-                  onChange={(event) =>
-                    patchSelectedLayer({ classificationText: event.target.value, text: event.target.value })
-                  }
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <Toggle
-                    label={t("watermark.topBanner")}
-                    checked={selectedLayer.bannerEnabledTop}
-                    onChange={(enabled) => patchSelectedLayer({ bannerEnabledTop: enabled, classificationTop: enabled })}
-                  />
-                  <Toggle
-                    label={t("watermark.bottomBanner")}
-                    checked={selectedLayer.bannerEnabledBottom}
-                    onChange={(enabled) =>
-                      patchSelectedLayer({ bannerEnabledBottom: enabled, classificationBottom: enabled })
-                    }
-                  />
-                </div>
-              </>
             ) : null}
 
             {selectedLayer.type === "seal" ? (
@@ -327,6 +280,17 @@ export function WatermarkDesigner({
                   label={t("watermark.sealSubtitle")}
                   value={selectedLayer.sealSubtitle}
                   onChange={(event) => patchSelectedLayer({ sealSubtitle: event.target.value })}
+                />
+                <Select
+                  label={t("watermark.sealStyle")}
+                  value={selectedLayer.sealStyle}
+                  onChange={(event) =>
+                    patchSelectedLayer({ sealStyle: event.target.value as DocumentLayer["sealStyle"] })
+                  }
+                  options={[
+                    { value: "rectangular", label: t("watermark.sealStyleRectangular") },
+                    { value: "circular", label: t("watermark.sealStyleCircular") },
+                  ]}
                 />
               </>
             ) : null}
@@ -360,7 +324,7 @@ export function WatermarkDesigner({
               />
             ) : null}
 
-            {selectedLayer.type === "text" ? (
+            {selectedLayer.type === "text" || selectedLayer.type === "pattern" ? (
               <Slider
                 label={t("watermark.fontSize")}
                 min={10}
@@ -371,11 +335,11 @@ export function WatermarkDesigner({
               />
             ) : null}
 
-            {selectedLayer.type === "image" ? (
+            {selectedLayer.type === "image" || selectedLayer.type === "seal" ? (
               <Slider
                 label={t("watermark.scale")}
-                min={0.05}
-                max={1.5}
+                min={selectedLayer.type === "seal" ? 0.55 : 0.05}
+                max={selectedLayer.type === "seal" ? 1.8 : 1.5}
                 step={0.05}
                 value={selectedLayer.scale}
                 displayValue={`${Math.round(selectedLayer.scale * 100)}%`}
@@ -393,11 +357,14 @@ export function WatermarkDesigner({
               onChange={(opacity) => patchSelectedLayer({ opacity })}
             />
 
-            {selectedLayer.type === "text" || selectedLayer.type === "pattern" || selectedLayer.type === "image" ? (
+            {selectedLayer.type === "text" ||
+            selectedLayer.type === "pattern" ||
+            selectedLayer.type === "image" ||
+            selectedLayer.type === "seal" ? (
               <Slider
                 label={t("watermark.rotation")}
-                min={-90}
-                max={90}
+                min={selectedLayer.type === "seal" ? -30 : -90}
+                max={selectedLayer.type === "seal" ? 30 : 90}
                 value={selectedLayer.rotation}
                 displayValue={`${selectedLayer.rotation}°`}
                 onChange={(rotation) => patchSelectedLayer({ rotation })}
@@ -414,31 +381,6 @@ export function WatermarkDesigner({
             ) : null}
           </FieldGroup>
 
-          <FieldGroup title={t("pages.applyTo")}>
-            <div className="grid gap-2">
-              <label className="flex items-center gap-3 rounded-md border border-graphite-700 bg-graphite-950/75 px-3 py-2 text-sm text-steel-100">
-                <input
-                  type="radio"
-                  name="quick-pages"
-                  className="h-4 w-4 accent-brand-red"
-                  checked={quickPageMode === "current"}
-                  onChange={() => setQuickPages("current")}
-                />
-                {t("pages.currentPage")}
-              </label>
-              <label className="flex items-center gap-3 rounded-md border border-graphite-700 bg-graphite-950/75 px-3 py-2 text-sm text-steel-100">
-                <input
-                  type="radio"
-                  name="quick-pages"
-                  className="h-4 w-4 accent-brand-red"
-                  checked={quickPageMode === "all"}
-                  onChange={() => setQuickPages("all")}
-                />
-                {t("pages.allPages")}
-              </label>
-            </div>
-          </FieldGroup>
-
           <Collapsible title={t("pages.moreOptions")}>
             <PageRulesPanel
               value={selectedLayer.pages}
@@ -450,14 +392,6 @@ export function WatermarkDesigner({
           <Collapsible title={t("watermark.advanced")}>
             {selectedLayer.type === "pattern" ? (
               <>
-                <Slider
-                  label={t("watermark.fontSize")}
-                  min={10}
-                  max={140}
-                  value={selectedLayer.fontSize}
-                  displayValue={`${selectedLayer.fontSize}px`}
-                  onChange={(fontSize) => patchSelectedLayer({ fontSize })}
-                />
                 <Input
                   label={t("watermark.color")}
                   type="color"
@@ -486,26 +420,6 @@ export function WatermarkDesigner({
               </>
             ) : null}
 
-            {selectedLayer.type === "classification-banner" ? (
-              <>
-                <Slider
-                  label={t("watermark.fontSize")}
-                  min={10}
-                  max={32}
-                  value={selectedLayer.fontSize}
-                  displayValue={`${selectedLayer.fontSize}px`}
-                  onChange={(fontSize) => patchSelectedLayer({ fontSize })}
-                />
-                <Slider
-                  label={t("watermark.bannerMargin")}
-                  min={0}
-                  max={72}
-                  value={selectedLayer.bannerMargin}
-                  onChange={(bannerMargin) => patchSelectedLayer({ bannerMargin })}
-                />
-              </>
-            ) : null}
-
             {selectedLayer.type === "seal" ? (
               <>
                 <Toggle
@@ -513,13 +427,10 @@ export function WatermarkDesigner({
                   checked={selectedLayer.sealShowDate}
                   onChange={(sealShowDate) => patchSelectedLayer({ sealShowDate })}
                 />
-                <Slider
-                  label={t("watermark.rotation")}
-                  min={-25}
-                  max={25}
-                  value={selectedLayer.rotation}
-                  displayValue={`${selectedLayer.rotation}°`}
-                  onChange={(rotation) => patchSelectedLayer({ rotation })}
+                <Input
+                  label={t("watermark.sealDocumentId")}
+                  value={selectedLayer.sealDocumentId}
+                  onChange={(event) => patchSelectedLayer({ sealDocumentId: event.target.value })}
                 />
                 <Input
                   label={t("watermark.color")}
@@ -537,35 +448,31 @@ export function WatermarkDesigner({
               </>
             ) : null}
 
-            {selectedLayer.type !== "classification-banner" ? (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    label={t("watermark.customX")}
-                    type="number"
-                    value={selectedLayer.x}
-                    onChange={(event) => patchSelectedLayer({ x: Number(event.target.value) })}
-                  />
-                  <Input
-                    label={t("watermark.customY")}
-                    type="number"
-                    value={selectedLayer.y}
-                    onChange={(event) => patchSelectedLayer({ y: Number(event.target.value) })}
-                  />
-                </div>
-                <Select
-                  label={t("watermark.layer")}
-                  value={selectedLayer.layer}
-                  onChange={(event) => patchSelectedLayer({ layer: event.target.value as WatermarkLayer })}
-                  helpText={t("watermark.layerTodo")}
-                  options={layerOptions.map((option) => ({
-                    value: option.value,
-                    label: t(option.labelKey),
-                    disabled: option.disabled,
-                  }))}
-                />
-              </>
-            ) : null}
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label={t("watermark.customX")}
+                type="number"
+                value={selectedLayer.x}
+                onChange={(event) => patchSelectedLayer({ x: Number(event.target.value) })}
+              />
+              <Input
+                label={t("watermark.customY")}
+                type="number"
+                value={selectedLayer.y}
+                onChange={(event) => patchSelectedLayer({ y: Number(event.target.value) })}
+              />
+            </div>
+            <Select
+              label={t("watermark.layer")}
+              value={selectedLayer.layer}
+              onChange={(event) => patchSelectedLayer({ layer: event.target.value as WatermarkLayer })}
+              helpText={t("watermark.layerTodo")}
+              options={layerOptions.map((option) => ({
+                value: option.value,
+                label: t(option.labelKey),
+                disabled: option.disabled,
+              }))}
+            />
           </Collapsible>
         </>
       ) : null}

@@ -42,9 +42,6 @@ export function App() {
   const [layers, setLayers] = useState<DocumentLayer[]>(() => createDefaultDocumentLayers());
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(() => layers[0]?.id ?? null);
   const [outputFileName, setOutputFileName] = useState("ghostmark-watermarked.pdf");
-  const [cleanupMetadata, setCleanupMetadata] = useState(true);
-  const [removePreviewData, setRemovePreviewData] = useState(true);
-  const [clearAfterDownload, setClearAfterDownload] = useState(false);
   const [exportResult, setExportResult] = useState<PdfExportResult | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -189,17 +186,15 @@ export function App() {
       revokeExportResult();
       const result = await exportPdf(loadedPdf.bytes, layers, {
         outputFileName,
-        cleanupMetadata,
+        cleanupMetadata: true,
       });
       setExportResult(result);
       exportResultRef.current = result;
       triggerDownload(result);
 
-      if (removePreviewData) {
-        setCurrentPage(1);
-      }
+      setCurrentPage(1);
 
-      if (clearAfterDownload || classifiedMode) {
+      if (classifiedMode) {
         wipeBytes(loadedPdf.bytes);
         for (const layer of layers) {
           if (layer.imageData) {
@@ -260,7 +255,6 @@ export function App() {
             layers={layers}
             selectedLayerId={selectedLayerId}
             totalPages={loadedPdf?.pageCount ?? 1}
-            currentPage={currentPage}
             canExport={watermarkReady}
             onChange={setLayers}
             onSelectedLayerChange={setSelectedLayerId}
@@ -274,12 +268,6 @@ export function App() {
           <ExportPanel
             outputFileName={outputFileName}
             onOutputFileNameChange={setOutputFileName}
-            cleanupMetadata={cleanupMetadata}
-            onCleanupMetadataChange={setCleanupMetadata}
-            clearAfterDownload={clearAfterDownload || classifiedMode}
-            onClearAfterDownloadChange={setClearAfterDownload}
-            removePreviewData={removePreviewData}
-            onRemovePreviewDataChange={setRemovePreviewData}
             disabled={!watermarkReady}
             generating={generating}
             error={exportError}
@@ -297,8 +285,6 @@ export function App() {
     }
   }, [
     activeStep,
-    cleanupMetadata,
-    clearAfterDownload,
     clearSession,
     classifiedMode,
     affectedPagesSummary,
@@ -307,8 +293,6 @@ export function App() {
     generating,
     loadedPdf,
     outputFileName,
-    removePreviewData,
-    currentPage,
     layers,
     selectedLayerId,
     t,

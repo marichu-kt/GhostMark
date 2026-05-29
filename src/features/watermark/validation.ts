@@ -21,10 +21,6 @@ export function validateWatermarkConfig(
     return { isValid: false, messageKey: "validation.addWatermarkText" };
   }
 
-  if (config.type === "classification-banner" && !config.classificationText.trim()) {
-    return { isValid: false, messageKey: "validation.addWatermarkText" };
-  }
-
   if (config.type === "seal" && !config.sealTitle.trim()) {
     return { isValid: false, messageKey: "validation.addSealTitle" };
   }
@@ -73,8 +69,6 @@ export function getWatermarkSummary(config: WatermarkConfig): string {
       return `Text: ${config.text.trim() || "Not set"}`;
     case "pattern":
       return `Pattern: ${config.text.trim() || "Not set"}`;
-    case "classification-banner":
-      return `Classification: ${config.classificationText.trim() || "Not set"}`;
     case "seal":
       return `Seal: ${config.sealTitle.trim() || "Not set"}`;
     case "image":

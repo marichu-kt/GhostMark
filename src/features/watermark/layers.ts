@@ -5,12 +5,7 @@ export function getEnabledLayers(layers: DocumentLayer[]): DocumentLayer[] {
 }
 
 export function getLayerTypeLabel(type: LayerType): string {
-  switch (type) {
-    case "classification-banner":
-      return "Banner";
-    default:
-      return type.charAt(0).toUpperCase() + type.slice(1);
-  }
+  return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 export function getDefaultLayerName(type: LayerType): string {

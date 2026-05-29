@@ -25,14 +25,10 @@ export function createDefaultLayer(type: LayerType = "text"): DocumentLayer {
     patternSpacingX: 220,
     patternSpacingY: 160,
     patternStaggered: true,
-    classificationTop: true,
-    classificationBottom: true,
-    classificationText: "CONFIDENTIAL",
-    bannerEnabledTop: true,
-    bannerEnabledBottom: true,
-    bannerMargin: 18,
     sealTitle: "REVIEWED",
     sealSubtitle: "DOCUMENT CONTROL",
+    sealDocumentId: "",
+    sealStyle: "rectangular",
     sealShowDate: true,
     sealBorderThickness: 2,
   };
@@ -54,18 +50,16 @@ export function createLayerForType(type: LayerType): DocumentLayer {
       return { ...layer, name: "Image", opacity: 0.22, scale: 0.35, rotation: 0 };
     case "pattern":
       return { ...layer, name: "Pattern", text: "DRAFT", opacity: 0.12, fontSize: 38 };
-    case "classification-banner":
+    case "seal":
       return {
         ...layer,
-        name: "Banner",
-        text: "CONFIDENTIAL",
-        classificationText: "CONFIDENTIAL",
-        opacity: 0.92,
-        fontSize: 14,
-        rotation: 0,
+        name: "Seal",
+        color: "#7d3432",
+        opacity: 0.72,
+        rotation: -8,
+        scale: 1,
+        positionPreset: "bottom-right",
       };
-    case "seal":
-      return { ...layer, name: "Seal", opacity: 0.75, rotation: 0, positionPreset: "bottom-right" };
     default:
       return { ...layer, name: "Text" };
   }

@@ -9,6 +9,16 @@ import {
   validateDocumentLayers,
   validateWatermarkConfig,
 } from "./validation";
+import { createLayerForType } from "./defaults";
+
+if (!globalThis.crypto) {
+  let randomId = 0;
+  Object.defineProperty(globalThis, "crypto", {
+    value: {
+      randomUUID: () => `test-layer-${(randomId += 1)}`,
+    } as Crypto,
+  });
+}
 
 const loadedPdf: LoadedPdf = {
   id: "test-pdf",
@@ -39,14 +49,10 @@ function makeConfig(patch: Partial<WatermarkConfig> = {}): WatermarkConfig {
     patternSpacingX: 220,
     patternSpacingY: 160,
     patternStaggered: true,
-    classificationTop: true,
-    classificationBottom: true,
-    classificationText: "CONFIDENTIAL",
-    bannerEnabledTop: true,
-    bannerEnabledBottom: true,
-    bannerMargin: 18,
     sealTitle: "REVIEWED",
     sealSubtitle: "DOCUMENT CONTROL",
+    sealDocumentId: "",
+    sealStyle: "rectangular",
     sealShowDate: true,
     sealBorderThickness: 2,
     ...patch,
@@ -82,7 +88,6 @@ describe("validateWatermarkConfig", () => {
       isValid: true,
     });
   });
-
 });
 
 describe("validateDocumentLayers", () => {
@@ -137,5 +142,17 @@ describe("watermark summaries", () => {
         6,
       ),
     ).toBe("3 pages");
+  });
+});
+
+describe("seal defaults", () => {
+  it("creates a professional document-control seal", () => {
+    const seal = createLayerForType("seal");
+
+    expect(seal.sealTitle).toBe("REVIEWED");
+    expect(seal.sealSubtitle).toBe("DOCUMENT CONTROL");
+    expect(seal.sealStyle).toBe("rectangular");
+    expect(seal.positionPreset).toBe("bottom-right");
+    expect(seal.scale).toBe(1);
   });
 });

@@ -83,47 +83,11 @@ function drawPatternWatermark(page: PDFPage, font: PDFFont, config: WatermarkCon
   }
 }
 
-function drawClassificationBanner(page: PDFPage, font: PDFFont, config: WatermarkConfig) {
-  const { width, height } = page.getSize();
-  const text = (config.classificationText || config.text || "CONFIDENTIAL").trim().toUpperCase();
-  const margin = Math.max(0, config.bannerMargin);
-  const bannerHeight = Math.max(24, config.fontSize + 14);
-  const textWidth = font.widthOfTextAtSize(text, config.fontSize);
-  const color = rgb(0.49, 0.2, 0.2);
-  const drawBanner = (y: number) => {
-    page.drawRectangle({
-      x: margin,
-      y,
-      width: width - margin * 2,
-      height: bannerHeight,
-      borderColor: color,
-      borderWidth: 1,
-      color,
-      opacity: clampOpacity(config.opacity) * 0.12,
-    });
-    page.drawText(text, {
-      x: width / 2 - textWidth / 2,
-      y: y + bannerHeight / 2 - config.fontSize / 3,
-      size: config.fontSize,
-      font,
-      color,
-      opacity: clampOpacity(config.opacity),
-    });
-  };
-
-  if (config.bannerEnabledTop) {
-    drawBanner(height - margin - bannerHeight);
-  }
-
-  if (config.bannerEnabledBottom) {
-    drawBanner(margin);
-  }
-}
-
 function drawSeal(page: PDFPage, font: PDFFont, boldFont: PDFFont, config: WatermarkConfig) {
   const { width, height } = page.getSize();
-  const sealWidth = 190;
-  const sealHeight = config.sealShowDate ? 82 : 66;
+  const sealScale = Math.min(1.8, Math.max(0.55, config.scale || 1));
+  const sealWidth = config.sealStyle === "circular" ? 150 * sealScale : 220 * sealScale;
+  const sealHeight = config.sealStyle === "circular" ? 150 * sealScale : 92 * sealScale;
   const position = resolveWatermarkPosition({
     preset: config.positionPreset,
     pageWidth: width,
@@ -137,49 +101,80 @@ function drawSeal(page: PDFPage, font: PDFFont, boldFont: PDFFont, config: Water
   const opacity = clampOpacity(config.opacity);
   const dateText = new Date().toISOString().slice(0, 10);
   const title = (config.sealTitle || "REVIEWED").trim().toUpperCase();
-  const subtitle = (config.sealSubtitle || "DOCUMENT CONTROL").trim();
+  const subtitle = (config.sealSubtitle || "DOCUMENT CONTROL").trim().toUpperCase();
+  const documentId = config.sealDocumentId.trim().toUpperCase();
+  const borderWidth = Math.max(1, config.sealBorderThickness);
+  const rotation = degrees(config.rotation);
 
-  page.drawRectangle({
-    x: position.x,
-    y: position.y,
-    width: sealWidth,
-    height: sealHeight,
-    borderColor: color,
-    borderWidth: Math.max(1, config.sealBorderThickness),
-    opacity,
-    rotate: degrees(config.rotation),
-  });
+  if (config.sealStyle === "circular") {
+    page.drawEllipse({
+      x: position.x + sealWidth / 2,
+      y: position.y + sealHeight / 2,
+      xScale: sealWidth / 2,
+      yScale: sealHeight / 2,
+      borderColor: color,
+      borderWidth,
+      opacity,
+      rotate: rotation,
+    });
+    page.drawEllipse({
+      x: position.x + sealWidth / 2,
+      y: position.y + sealHeight / 2,
+      xScale: sealWidth / 2 - 10 * sealScale,
+      yScale: sealHeight / 2 - 10 * sealScale,
+      borderColor: color,
+      borderWidth: Math.max(1, borderWidth * 0.65),
+      opacity: opacity * 0.7,
+      rotate: rotation,
+    });
+  } else {
+    page.drawRectangle({
+      x: position.x,
+      y: position.y,
+      width: sealWidth,
+      height: sealHeight,
+      borderColor: color,
+      borderWidth,
+      opacity,
+      rotate: rotation,
+    });
+    page.drawRectangle({
+      x: position.x + 14 * sealScale,
+      y: position.y + sealHeight - 34 * sealScale,
+      width: sealWidth - 28 * sealScale,
+      height: Math.max(1, borderWidth * 0.55),
+      color,
+      opacity: opacity * 0.75,
+      rotate: rotation,
+    });
+  }
 
-  page.drawText(title, {
-    x: position.x + 18,
-    y: position.y + sealHeight - 28,
-    size: 18,
-    font: boldFont,
-    color,
-    opacity,
-    rotate: degrees(config.rotation),
-  });
-
-  page.drawText(subtitle, {
-    x: position.x + 18,
-    y: position.y + sealHeight - 48,
-    size: 10,
-    font,
-    color,
-    opacity,
-    rotate: degrees(config.rotation),
-  });
-
-  if (config.sealShowDate) {
-    page.drawText(dateText, {
-      x: position.x + 18,
-      y: position.y + 16,
-      size: 10,
-      font,
+  const centerX = position.x + sealWidth / 2;
+  const titleSize = (config.sealStyle === "circular" ? 19 : 22) * sealScale;
+  const subtitleSize = 9.5 * sealScale;
+  const metaSize = 8.5 * sealScale;
+  const drawCenteredText = (text: string, y: number, size: number, textFont: PDFFont) => {
+    const textWidth = textFont.widthOfTextAtSize(text, size);
+    page.drawText(text, {
+      x: centerX - textWidth / 2,
+      y,
+      size,
+      font: textFont,
       color,
       opacity,
-      rotate: degrees(config.rotation),
+      rotate: rotation,
     });
+  };
+
+  drawCenteredText(title, position.y + sealHeight / 2 + 8 * sealScale, titleSize, boldFont);
+  drawCenteredText(subtitle, position.y + sealHeight / 2 - 12 * sealScale, subtitleSize, font);
+
+  if (documentId) {
+    drawCenteredText(documentId, position.y + 16 * sealScale, metaSize, font);
+  }
+
+  if (config.sealShowDate) {
+    drawCenteredText(dateText, position.y + (documentId ? 30 : 16) * sealScale, metaSize, font);
   }
 }
 
@@ -220,9 +215,6 @@ async function drawLayer(
       break;
     case "pattern":
       drawPatternWatermark(page, boldFont, layer);
-      break;
-    case "classification-banner":
-      drawClassificationBanner(page, boldFont, layer);
       break;
     case "seal":
       drawSeal(page, regularFont, boldFont, layer);

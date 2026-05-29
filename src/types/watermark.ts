@@ -2,7 +2,6 @@ export type LayerType =
   | "text"
   | "image"
   | "pattern"
-  | "classification-banner"
   | "seal";
 
 export type WatermarkType = LayerType;
@@ -56,14 +55,10 @@ export interface DocumentLayer {
   patternSpacingX: number;
   patternSpacingY: number;
   patternStaggered: boolean;
-  classificationTop: boolean;
-  classificationBottom: boolean;
-  classificationText: string;
-  bannerEnabledTop: boolean;
-  bannerEnabledBottom: boolean;
-  bannerMargin: number;
   sealTitle: string;
   sealSubtitle: string;
+  sealDocumentId: string;
+  sealStyle: "rectangular" | "circular";
   sealShowDate: boolean;
   sealBorderThickness: number;
 }
@@ -73,12 +68,4 @@ export type WatermarkConfig = DocumentLayer;
 export type TextLayerConfig = DocumentLayer & { type: "text" };
 export type ImageLayerConfig = DocumentLayer & { type: "image" };
 export type PatternLayerConfig = DocumentLayer & { type: "pattern" };
-export type ClassificationBannerLayerConfig = DocumentLayer & { type: "classification-banner" };
 export type SealLayerConfig = DocumentLayer & { type: "seal" };
-
-export interface WatermarkPreset {
-  id: string;
-  name: string;
-  description: string;
-  config: Partial<WatermarkConfig>;
-}

@@ -5,18 +5,11 @@ import { Button } from "../ui/Button";
 import { FieldGroup } from "../ui/FieldGroup";
 import { Input } from "../ui/Input";
 import { Notice } from "../ui/Notice";
-import { Toggle } from "../ui/Toggle";
 import { ExportSummary } from "./ExportSummary";
 
 interface ExportPanelProps {
   outputFileName: string;
   onOutputFileNameChange: (value: string) => void;
-  cleanupMetadata: boolean;
-  onCleanupMetadataChange: (value: boolean) => void;
-  clearAfterDownload: boolean;
-  onClearAfterDownloadChange: (value: boolean) => void;
-  removePreviewData: boolean;
-  onRemovePreviewDataChange: (value: boolean) => void;
   disabled: boolean;
   generating: boolean;
   error: string | null;
@@ -32,12 +25,6 @@ interface ExportPanelProps {
 export function ExportPanel({
   outputFileName,
   onOutputFileNameChange,
-  cleanupMetadata,
-  onCleanupMetadataChange,
-  clearAfterDownload,
-  onClearAfterDownloadChange,
-  removePreviewData,
-  onRemovePreviewDataChange,
   disabled,
   generating,
   error,
@@ -80,29 +67,6 @@ export function ExportPanel({
           {generating ? t("preview.loading") : t("actions.exportPdf")}
         </Button>
       </FieldGroup>
-
-      <details className="rounded-md border border-graphite-700 bg-graphite-950/70">
-        <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-white">
-          {t("export.details")}
-        </summary>
-        <div className="grid gap-3 border-t border-graphite-700 p-3">
-          <Toggle
-            label={t("export.clearAfterDownload")}
-            checked={clearAfterDownload}
-            onChange={onClearAfterDownloadChange}
-          />
-          <Toggle
-            label={t("export.metadataCleanup")}
-            checked={cleanupMetadata}
-            onChange={onCleanupMetadataChange}
-          />
-          <Toggle
-            label={t("export.removePreviewData")}
-            checked={removePreviewData}
-            onChange={onRemovePreviewDataChange}
-          />
-        </div>
-      </details>
 
       <ExportSummary result={result} onStartNew={onStartNew} />
     </>
