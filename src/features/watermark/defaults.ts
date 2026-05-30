@@ -29,6 +29,7 @@ export function createDefaultLayer(type: LayerType = "text"): DocumentLayer {
     sealSubtitle: "DOCUMENT CONTROL",
     sealDocumentId: "",
     sealStyle: "rectangular",
+    sealInkStyle: "clean",
     sealShowDate: true,
     sealBorderThickness: 2,
   };

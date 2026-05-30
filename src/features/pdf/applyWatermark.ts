@@ -10,6 +10,11 @@ import {
 } from "pdf-lib";
 import type { DocumentLayer, WatermarkConfig } from "../../types/watermark";
 import { resolveWatermarkPosition } from "../watermark/positioning";
+import {
+  getSealInkProfile,
+  getSealInkSegments,
+  getSealSeed,
+} from "../watermark/sealInk";
 import { resolvePageRules } from "./pageRules";
 
 interface ApplyWatermarkOptions {
@@ -32,6 +37,61 @@ function parseHexColor(hex: string): RGB {
 
 function clampOpacity(opacity: number): number {
   return Math.min(1, Math.max(0, opacity));
+}
+
+function rotatePoint(
+  point: { x: number; y: number },
+  center: { x: number; y: number },
+  rotationDegrees: number,
+) {
+  const radians = (rotationDegrees * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = point.x - center.x;
+  const dy = point.y - center.y;
+
+  return {
+    x: center.x + dx * cos - dy * sin,
+    y: center.y + dx * sin + dy * cos,
+  };
+}
+
+function getSealSegmentPoints(
+  side: "top" | "right" | "bottom" | "left",
+  startRatio: number,
+  endRatio: number,
+  offset: number,
+  origin: { x: number; y: number },
+  sealWidth: number,
+  sealHeight: number,
+) {
+  switch (side) {
+    case "top":
+      return {
+        start: { x: origin.x + startRatio * sealWidth, y: origin.y + sealHeight + offset },
+        end: { x: origin.x + endRatio * sealWidth, y: origin.y + sealHeight + offset },
+      };
+    case "right":
+      return {
+        start: { x: origin.x + sealWidth + offset, y: origin.y + startRatio * sealHeight },
+        end: { x: origin.x + sealWidth + offset, y: origin.y + endRatio * sealHeight },
+      };
+    case "bottom":
+      return {
+        start: { x: origin.x + startRatio * sealWidth, y: origin.y + offset },
+        end: { x: origin.x + endRatio * sealWidth, y: origin.y + offset },
+      };
+    case "left":
+      return {
+        start: { x: origin.x + offset, y: origin.y + startRatio * sealHeight },
+        end: { x: origin.x + offset, y: origin.y + endRatio * sealHeight },
+      };
+    default:
+      return {
+        start: origin,
+        end: { x: origin.x + sealWidth, y: origin.y },
+      };
+  }
 }
 
 function drawTextWatermark(page: PDFPage, font: PDFFont, config: WatermarkConfig) {
@@ -105,6 +165,15 @@ function drawSeal(page: PDFPage, font: PDFFont, boldFont: PDFFont, config: Water
   const documentId = config.sealDocumentId.trim().toUpperCase();
   const borderWidth = Math.max(1, config.sealBorderThickness);
   const rotation = degrees(config.rotation);
+  const rotationCenter = { x: position.x + sealWidth / 2, y: position.y + sealHeight / 2 };
+  const sealInkStyle = config.sealInkStyle ?? "clean";
+  const inkProfile = getSealInkProfile(sealInkStyle);
+  const inkSeed = getSealSeed({
+    id: config.id,
+    title,
+    subtitle,
+    documentId,
+  });
 
   if (config.sealStyle === "circular") {
     page.drawEllipse({
@@ -127,7 +196,7 @@ function drawSeal(page: PDFPage, font: PDFFont, boldFont: PDFFont, config: Water
       opacity: opacity * 0.7,
       rotate: rotation,
     });
-  } else {
+  } else if (sealInkStyle === "clean") {
     page.drawRectangle({
       x: position.x,
       y: position.y,
@@ -147,6 +216,46 @@ function drawSeal(page: PDFPage, font: PDFFont, boldFont: PDFFont, config: Water
       opacity: opacity * 0.75,
       rotate: rotation,
     });
+  } else {
+    const segments = getSealInkSegments(sealInkStyle, inkSeed);
+
+    for (const segment of segments) {
+      const points = getSealSegmentPoints(
+        segment.side,
+        segment.startRatio,
+        segment.endRatio,
+        segment.offset * sealScale,
+        position,
+        sealWidth,
+        sealHeight,
+      );
+      const start = rotatePoint(points.start, rotationCenter, config.rotation);
+      const end = rotatePoint(points.end, rotationCenter, config.rotation);
+
+      page.drawLine({
+        start,
+        end,
+        thickness: borderWidth,
+        color,
+        opacity: opacity * segment.opacity,
+      });
+    }
+
+    const dividerY = position.y + sealHeight - 34 * sealScale;
+    const dividerStart = rotatePoint({ x: position.x + 14 * sealScale, y: dividerY }, rotationCenter, config.rotation);
+    const dividerEnd = rotatePoint(
+      { x: position.x + sealWidth - 14 * sealScale, y: dividerY },
+      rotationCenter,
+      config.rotation,
+    );
+
+    page.drawLine({
+      start: dividerStart,
+      end: dividerEnd,
+      thickness: Math.max(1, borderWidth * 0.55),
+      color,
+      opacity: opacity * inkProfile.borderOpacity * 0.72,
+    });
   }
 
   const centerX = position.x + sealWidth / 2;
@@ -155,13 +264,27 @@ function drawSeal(page: PDFPage, font: PDFFont, boldFont: PDFFont, config: Water
   const metaSize = 8.5 * sealScale;
   const drawCenteredText = (text: string, y: number, size: number, textFont: PDFFont) => {
     const textWidth = textFont.widthOfTextAtSize(text, size);
+    const x = centerX - textWidth / 2;
+
+    if (inkProfile.ghostOpacity > 0) {
+      page.drawText(text, {
+        x: x + 0.65 * sealScale,
+        y: y - 0.4 * sealScale,
+        size,
+        font: textFont,
+        color,
+        opacity: opacity * inkProfile.ghostOpacity,
+        rotate: rotation,
+      });
+    }
+
     page.drawText(text, {
-      x: centerX - textWidth / 2,
+      x,
       y,
       size,
       font: textFont,
       color,
-      opacity,
+      opacity: opacity * inkProfile.textOpacity,
       rotate: rotation,
     });
   };

@@ -13,7 +13,6 @@ import type {
   DocumentLayer,
   LayerType,
   PageRuleConfig,
-  PositionPreset,
   WatermarkLayer,
 } from "../../types/watermark";
 import type { TranslationKey } from "../../features/i18n/i18n";
@@ -30,7 +29,8 @@ import { Select } from "../ui/Select";
 import { Slider } from "../ui/Slider";
 import { Toggle } from "../ui/Toggle";
 import { PageRulesPanel } from "./PageRulesPanel";
-import { layerOptions, positionPresets } from "./sharedOptions";
+import { PositionGridPicker } from "./PositionGridPicker";
+import { layerOptions } from "./sharedOptions";
 
 interface WatermarkDesignerProps {
   layers: DocumentLayer[];
@@ -150,11 +150,6 @@ export function WatermarkDesigner({
     patchSelectedLayer({ imageData: bytes, imageMimeType: mimeType });
     setImageError(null);
   }
-
-  const positionOptions = positionPresets.map((option) => ({
-    value: option.value,
-    label: t(option.labelKey),
-  }));
 
   return (
     <>
@@ -288,6 +283,18 @@ export function WatermarkDesigner({
                     { value: "circular", label: t("watermark.sealStyleCircular") },
                   ]}
                 />
+                <Select
+                  label={t("watermark.sealInkStyle")}
+                  value={selectedLayer.sealInkStyle ?? "clean"}
+                  onChange={(event) =>
+                    patchSelectedLayer({ sealInkStyle: event.target.value as DocumentLayer["sealInkStyle"] })
+                  }
+                  options={[
+                    { value: "clean", label: t("watermark.sealInkClean") },
+                    { value: "real-ink", label: t("watermark.sealInkReal") },
+                    { value: "faded-ink", label: t("watermark.sealInkFaded") },
+                  ]}
+                />
               </>
             ) : null}
 
@@ -312,11 +319,10 @@ export function WatermarkDesigner({
             ) : null}
 
             {selectedLayer.type === "text" || selectedLayer.type === "seal" || selectedLayer.type === "image" ? (
-              <Select
+              <PositionGridPicker
                 label={t("watermark.position")}
                 value={selectedLayer.positionPreset}
-                onChange={(event) => patchSelectedLayer({ positionPreset: event.target.value as PositionPreset })}
-                options={positionOptions}
+                onChange={(positionPreset) => patchSelectedLayer({ positionPreset })}
               />
             ) : null}
 

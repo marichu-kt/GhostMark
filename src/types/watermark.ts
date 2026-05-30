@@ -10,6 +10,8 @@ export type WatermarkLayer = "above-content" | "below-content";
 
 export type PositionPreset =
   | "center"
+  | "center-left"
+  | "center-right"
   | "top-left"
   | "top-center"
   | "top-right"
@@ -17,6 +19,8 @@ export type PositionPreset =
   | "bottom-center"
   | "bottom-right"
   | "diagonal-center";
+
+export type SealInkStyle = "clean" | "real-ink" | "faded-ink";
 
 export type PageRuleMode =
   | "all"
@@ -59,6 +63,7 @@ export interface DocumentLayer {
   sealSubtitle: string;
   sealDocumentId: string;
   sealStyle: "rectangular" | "circular";
+  sealInkStyle: SealInkStyle;
   sealShowDate: boolean;
   sealBorderThickness: number;
 }

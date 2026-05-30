@@ -1,6 +1,11 @@
 import { useMemo } from "react";
 import type { DocumentLayer } from "../../types/watermark";
 import { resolvePageRules } from "../../features/pdf/pageRules";
+import {
+  getSealInkProfile,
+  getSealInkSegments,
+  getSealSeed,
+} from "../../features/watermark/sealInk";
 
 interface WatermarkPreviewOverlayProps {
   layers: DocumentLayer[];
@@ -35,6 +40,20 @@ function estimateTextWidth(text: string, fontSize: number): number {
   return Math.max(fontSize, text.length * fontSize * 0.62);
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = hex.replace("#", "").trim();
+
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return `rgba(47,52,58,${alpha})`;
+  }
+
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+
+  return `rgba(${red},${green},${blue},${alpha})`;
+}
+
 function resolvePdfLikePosition(
   layer: DocumentLayer,
   pageWidth: number,
@@ -59,6 +78,8 @@ function resolvePdfLikePosition(
   const margin = 48 * zoom;
   const map: Record<typeof layer.positionPreset, { x: number; y: number }> = {
     center: { x: pageWidth / 2 - elementWidth / 2, y: pageHeight / 2 - elementHeight / 2 },
+    "center-left": { x: margin, y: pageHeight / 2 - elementHeight / 2 },
+    "center-right": { x: pageWidth - margin - elementWidth, y: pageHeight / 2 - elementHeight / 2 },
     "diagonal-center": { x: pageWidth / 2 - elementWidth / 2, y: pageHeight / 2 - elementHeight / 2 },
     "top-left": { x: margin, y: pageHeight - margin - elementHeight },
     "top-center": { x: pageWidth / 2 - elementWidth / 2, y: pageHeight - margin - elementHeight },
@@ -74,6 +95,48 @@ function resolvePdfLikePosition(
     top: pageHeight - position.y - elementHeight,
     transform: `rotate(${rotation}deg)`,
   };
+}
+
+function getSealSegmentCoordinates(
+  side: "top" | "right" | "bottom" | "left",
+  startRatio: number,
+  endRatio: number,
+  offset: number,
+  width: number,
+  height: number,
+) {
+  switch (side) {
+    case "top":
+      return {
+        x1: startRatio * width,
+        y1: offset,
+        x2: endRatio * width,
+        y2: offset,
+      };
+    case "right":
+      return {
+        x1: width + offset,
+        y1: startRatio * height,
+        x2: width + offset,
+        y2: endRatio * height,
+      };
+    case "bottom":
+      return {
+        x1: startRatio * width,
+        y1: height + offset,
+        x2: endRatio * width,
+        y2: height + offset,
+      };
+    case "left":
+      return {
+        x1: offset,
+        y1: startRatio * height,
+        x2: offset,
+        y2: endRatio * height,
+      };
+    default:
+      return { x1: 0, y1: 0, x2: width, y2: 0 };
+  }
 }
 
 function layerAppliesToPage(layer: DocumentLayer, pageIndex: number, totalPages: number): boolean {
@@ -199,37 +262,108 @@ export function WatermarkPreviewOverlay({
           const height = (layer.sealStyle === "circular" ? 150 : 92) * sealScale * zoom;
           const position = resolvePdfLikePosition(layer, pageWidth, pageHeight, width, height, zoom, layer.rotation);
           const documentId = layer.sealDocumentId.trim().toUpperCase();
+          const sealInkStyle = layer.sealInkStyle ?? "clean";
+          const inkProfile = getSealInkProfile(sealInkStyle);
+          const inkSeed = getSealSeed({
+            id: layer.id,
+            title: layer.sealTitle,
+            subtitle: layer.sealSubtitle,
+            documentId,
+          });
+          const inkSegments =
+            sealInkStyle !== "clean" && layer.sealStyle !== "circular"
+              ? getSealInkSegments(sealInkStyle, inkSeed)
+              : [];
+          const borderWidth = Math.max(1, layer.sealBorderThickness);
+          const textOpacity = opacity * inkProfile.textOpacity;
+          const ghostOpacity = opacity * inkProfile.ghostOpacity;
 
           return (
             <div
               key={layer.id}
-              className="absolute grid content-center gap-1 border text-center uppercase shadow-[0_0_0_1px_rgba(255,255,255,0.08)_inset]"
+              className="absolute grid content-center gap-1 text-center uppercase"
               style={{
                 ...position,
                 width,
                 height,
-                borderColor: textColor,
-                borderWidth: Math.max(1, layer.sealBorderThickness),
+                borderColor: inkSegments.length ? "transparent" : textColor,
+                borderWidth,
+                borderStyle: "solid",
                 borderRadius: layer.sealStyle === "circular" ? "9999px" : 8 * zoom,
                 color: textColor,
                 opacity,
                 transformOrigin: "center",
+                filter: sealInkStyle === "faded-ink" ? "saturate(0.84)" : undefined,
               }}
             >
-              <div className="mx-auto w-[82%] border-b" style={{ borderColor: textColor, opacity: 0.65 }} />
-              <div className="font-bold tracking-[0.08em]" style={{ fontSize: Math.max(12, 21 * sealScale * zoom) }}>
+              {inkSegments.length ? (
+                <svg
+                  className="absolute inset-0 overflow-visible"
+                  width={width}
+                  height={height}
+                  viewBox={`0 0 ${width} ${height}`}
+                  aria-hidden="true"
+                >
+                  {inkSegments.map((segment, index) => {
+                    const line = getSealSegmentCoordinates(
+                      segment.side,
+                      segment.startRatio,
+                      segment.endRatio,
+                      segment.offset * zoom,
+                      width,
+                      height,
+                    );
+
+                    return (
+                      <line
+                        key={`${segment.side}-${index}`}
+                        x1={line.x1}
+                        y1={line.y1}
+                        x2={line.x2}
+                        y2={line.y2}
+                        stroke={textColor}
+                        strokeWidth={borderWidth}
+                        strokeLinecap="butt"
+                        opacity={Math.min(1, opacity * segment.opacity)}
+                      />
+                    );
+                  })}
+                </svg>
+              ) : null}
+              <div
+                className="mx-auto w-[82%] border-b"
+                style={{ borderColor: textColor, opacity: 0.65 * inkProfile.borderOpacity }}
+              />
+              <div
+                className="relative font-bold tracking-[0.08em]"
+                style={{
+                  fontSize: Math.max(12, 21 * sealScale * zoom),
+                  opacity: textOpacity,
+                  textShadow: ghostOpacity
+                    ? `${0.75 * zoom}px ${0.35 * zoom}px 0 ${hexToRgba(textColor, ghostOpacity)}`
+                    : undefined,
+                }}
+              >
                 {(layer.sealTitle || "REVIEWED").toUpperCase()}
               </div>
-              <div className="tracking-[0.18em]" style={{ fontSize: Math.max(8, 9.5 * sealScale * zoom) }}>
+              <div
+                className="tracking-[0.18em]"
+                style={{ fontSize: Math.max(8, 9.5 * sealScale * zoom), opacity: textOpacity }}
+              >
                 {(layer.sealSubtitle || "DOCUMENT CONTROL").toUpperCase()}
               </div>
               {documentId ? (
-                <div style={{ fontSize: Math.max(8, 8.5 * sealScale * zoom) }}>{documentId}</div>
+                <div style={{ fontSize: Math.max(8, 8.5 * sealScale * zoom), opacity: textOpacity }}>{documentId}</div>
               ) : null}
               {layer.sealShowDate ? (
-                <div style={{ fontSize: Math.max(8, 8.5 * sealScale * zoom) }}>{new Date().toISOString().slice(0, 10)}</div>
+                <div style={{ fontSize: Math.max(8, 8.5 * sealScale * zoom), opacity: textOpacity }}>
+                  {new Date().toISOString().slice(0, 10)}
+                </div>
               ) : null}
-              <div className="mx-auto w-[82%] border-t" style={{ borderColor: textColor, opacity: 0.65 }} />
+              <div
+                className="mx-auto w-[82%] border-t"
+                style={{ borderColor: textColor, opacity: 0.65 * inkProfile.borderOpacity }}
+              />
             </div>
           );
         }

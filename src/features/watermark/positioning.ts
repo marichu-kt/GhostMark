@@ -30,6 +30,8 @@ export function resolveWatermarkPosition({
 
   const positions: Record<PositionPreset, { x: number; y: number }> = {
     center: { x: centerX, y: centerY },
+    "center-left": { x: margin, y: centerY },
+    "center-right": { x: pageWidth - margin - elementWidth, y: centerY },
     "diagonal-center": { x: centerX, y: centerY },
     "top-left": { x: margin, y: pageHeight - margin - elementHeight },
     "top-center": { x: centerX, y: pageHeight - margin - elementHeight },
