@@ -17,7 +17,7 @@ export function validateWatermarkConfig(
     return { isValid: false, messageKey: "validation.selectPdf" };
   }
 
-  if ((config.type === "text" || config.type === "pattern") && !config.text.trim()) {
+  if ((config.type === "text" || config.type === "pattern" || config.type === "safelayer") && !config.text.trim()) {
     return { isValid: false, messageKey: "validation.addWatermarkText" };
   }
 
@@ -27,6 +27,10 @@ export function validateWatermarkConfig(
 
   if (config.type === "image" && !config.imageData) {
     return { isValid: false, messageKey: "validation.uploadImage" };
+  }
+
+  if (config.type === "blackout" && config.blackoutRects.length === 0) {
+    return { isValid: false, messageKey: "validation.addBlackoutRect" };
   }
 
   try {
@@ -71,6 +75,10 @@ export function getWatermarkSummary(config: WatermarkConfig): string {
       return `Pattern: ${config.text.trim() || "Not set"}`;
     case "seal":
       return `Seal: ${config.sealTitle.trim() || "Not set"}`;
+    case "safelayer":
+      return `SafeLayer: ${config.text.trim() || "Not set"}`;
+    case "blackout":
+      return `Blackout: ${config.blackoutRects.length} rectangles`;
     case "image":
       return config.imageData ? "Image watermark ready" : "Image watermark missing";
     default:

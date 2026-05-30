@@ -7,7 +7,7 @@ export function createDefaultLayer(type: LayerType = "text"): DocumentLayer {
     type,
     name: getDefaultLayerName(type),
     enabled: true,
-    text: type === "pattern" ? "DRAFT" : "CONFIDENTIAL",
+    text: type === "pattern" ? "DRAFT" : type === "safelayer" ? "ONLY VALID FOR REVIEW" : "CONFIDENTIAL",
     fontSize: 64,
     color: "#2f343a",
     opacity: 0.18,
@@ -32,6 +32,15 @@ export function createDefaultLayer(type: LayerType = "text"): DocumentLayer {
     sealInkStyle: "clean",
     sealShowDate: true,
     sealBorderThickness: 2,
+    safeLayerStyle: "mixed",
+    safeLayerDensity: "medium",
+    safeLayerDistortion: "medium",
+    safeLayerSeed: "",
+    safeLayerTextSpacing: 150,
+    safeLayerLineSpacing: 84,
+    safeLayerWaveStrength: 18,
+    safeLayerContourStrength: 16,
+    blackoutRects: [],
   };
 }
 
@@ -60,6 +69,35 @@ export function createLayerForType(type: LayerType): DocumentLayer {
         rotation: -8,
         scale: 1,
         positionPreset: "bottom-right",
+      };
+    case "safelayer":
+      return {
+        ...layer,
+        name: "SafeLayer",
+        color: "#7d3432",
+        opacity: 0.22,
+        rotation: -24,
+        fontSize: 22,
+        safeLayerSeed: crypto.randomUUID(),
+      };
+    case "blackout":
+      return {
+        ...layer,
+        name: "Blackout",
+        opacity: 1,
+        rotation: 0,
+        color: "#000000",
+        text: "",
+        blackoutRects: [
+          {
+            id: crypto.randomUUID(),
+            page: 1,
+            x: 72,
+            y: 650,
+            width: 180,
+            height: 28,
+          },
+        ],
       };
     default:
       return { ...layer, name: "Text" };

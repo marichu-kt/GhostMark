@@ -68,6 +68,9 @@ export function ExportPanel({
             })}
           </Notice>
         ) : null}
+        <Notice tone="info">
+          {t("metadata.cleanupApplied")} {t("metadata.notCertified")}
+        </Notice>
         {disabled && validationMessage ? <Notice tone="warning">{validationMessage}</Notice> : null}
         {error ? <Notice tone="danger">{error}</Notice> : null}
       </FieldGroup>

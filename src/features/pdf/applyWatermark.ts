@@ -9,13 +9,17 @@ import {
   type RGB,
 } from "pdf-lib";
 import type { DocumentLayer, WatermarkConfig } from "../../types/watermark";
+import { getBlackoutRectsForExport } from "../watermark/blackout";
 import { resolveWatermarkPosition } from "../watermark/positioning";
+import { createSafeLayerPattern } from "../watermark/safelayerPattern";
 import {
   getSealInkProfile,
   getSealInkSegments,
   getSealSeed,
 } from "../watermark/sealInk";
+import { sanitizePdfMetadata } from "./metadataSanitizer";
 import { resolvePageRules } from "./pageRules";
+import { renderPdfPageToCanvas } from "./renderPdfPreview";
 
 interface ApplyWatermarkOptions {
   cleanupMetadata?: boolean;
@@ -140,6 +144,69 @@ function drawPatternWatermark(page: PDFPage, font: PDFFont, config: WatermarkCon
         rotate: degrees(config.rotation),
       });
     }
+  }
+}
+
+function drawPolyline(page: PDFPage, points: Array<{ x: number; y: number }>, color: RGB, opacity: number) {
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const start = points[index];
+    const end = points[index + 1];
+
+    if (
+      Number.isFinite(start.x) &&
+      Number.isFinite(start.y) &&
+      Number.isFinite(end.x) &&
+      Number.isFinite(end.y)
+    ) {
+      page.drawLine({
+        start,
+        end,
+        thickness: 0.65,
+        color,
+        opacity,
+      });
+    }
+  }
+}
+
+function drawSafeLayer(page: PDFPage, font: PDFFont, config: WatermarkConfig) {
+  const { width, height } = page.getSize();
+  const text = config.text.trim() || "ONLY VALID FOR REVIEW";
+  const color = parseHexColor(config.color || "#7d3432");
+  const opacity = clampOpacity(config.opacity);
+  const pattern = createSafeLayerPattern({
+    seed: config.safeLayerSeed || config.id,
+    text,
+    style: config.safeLayerStyle,
+    density: config.safeLayerDensity,
+    distortion: config.safeLayerDistortion,
+    width,
+    height,
+    opacity,
+    textSpacing: config.safeLayerTextSpacing,
+    lineSpacing: config.safeLayerLineSpacing,
+    waveStrength: config.safeLayerWaveStrength,
+    contourStrength: config.safeLayerContourStrength,
+  });
+
+  for (const line of pattern.waveLines) {
+    drawPolyline(page, line.points, color, line.opacity);
+  }
+
+  for (const line of pattern.contourLines) {
+    drawPolyline(page, line.points, color, line.opacity);
+  }
+
+  for (const mark of pattern.textMarks) {
+    page.drawText(mark.text, {
+      x: mark.x,
+      y: mark.y,
+      size: config.fontSize,
+      font,
+      color,
+      opacity: mark.opacity,
+      rotate: degrees(mark.rotation),
+    });
   }
 }
 
@@ -339,6 +406,9 @@ async function drawLayer(
     case "pattern":
       drawPatternWatermark(page, boldFont, layer);
       break;
+    case "safelayer":
+      drawSafeLayer(page, boldFont, layer);
+      break;
     case "seal":
       drawSeal(page, regularFont, boldFont, layer);
       break;
@@ -347,34 +417,56 @@ async function drawLayer(
         await drawImageWatermark(page, embeddedImage, layer);
       }
       break;
+    case "blackout":
+      break;
     default:
       break;
   }
 }
 
-export async function applyDocumentLayers(
-  inputBytes: Uint8Array,
-  layers: DocumentLayer[],
-  options: ApplyWatermarkOptions = {},
-): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.load(inputBytes.slice(), { updateMetadata: false });
-  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const pages = pdfDoc.getPages();
+function dataUrlToBytes(dataUrl: string): Uint8Array {
+  const base64 = dataUrl.split(",")[1] ?? "";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes;
+}
+
+async function embedImagesForLayers(pdfDoc: PDFDocument, layers: DocumentLayer[]): Promise<Map<string, PDFImage>> {
   const embeddedImages = new Map<string, PDFImage>();
 
   for (const layer of layers) {
-    if (!layer.enabled) {
+    if (!layer.enabled || layer.type !== "image" || !layer.imageData || !layer.imageMimeType) {
       continue;
     }
 
-    let embeddedImage: PDFImage | null = null;
-    if (layer.type === "image" && layer.imageData && layer.imageMimeType) {
-      embeddedImage =
-        layer.imageMimeType === "image/png"
-          ? await pdfDoc.embedPng(layer.imageData)
-          : await pdfDoc.embedJpg(layer.imageData);
-      embeddedImages.set(layer.id, embeddedImage);
+    embeddedImages.set(
+      layer.id,
+      layer.imageMimeType === "image/png"
+        ? await pdfDoc.embedPng(layer.imageData)
+        : await pdfDoc.embedJpg(layer.imageData),
+    );
+  }
+
+  return embeddedImages;
+}
+
+async function applyRenderableLayers(
+  pdfDoc: PDFDocument,
+  layers: DocumentLayer[],
+  pages: PDFPage[],
+): Promise<void> {
+  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const embeddedImages = await embedImagesForLayers(pdfDoc, layers);
+
+  for (const layer of layers) {
+    if (!layer.enabled || layer.type === "blackout") {
+      continue;
     }
 
     const selectedPages = resolvePageRules(layer.pages, pages.length);
@@ -383,15 +475,87 @@ export async function applyDocumentLayers(
       await drawLayer(pages[pageIndex], regularFont, boldFont, layer, embeddedImages.get(layer.id) ?? null);
     }
   }
+}
+
+async function createBlackoutFlattenedPdf(
+  inputBytes: Uint8Array,
+  layers: DocumentLayer[],
+  options: ApplyWatermarkOptions,
+): Promise<Uint8Array> {
+  const sourceDoc = await PDFDocument.load(inputBytes.slice(), { updateMetadata: false });
+  const outputDoc = await PDFDocument.create();
+  const sourcePages = sourceDoc.getPages();
+  const blackoutRectsByPage = getBlackoutRectsForExport(layers, sourcePages.length);
+
+  for (let pageIndex = 0; pageIndex < sourcePages.length; pageIndex += 1) {
+    const sourcePage = sourcePages[pageIndex];
+    const { width, height } = sourcePage.getSize();
+    const blackoutRects = blackoutRectsByPage.get(pageIndex);
+
+    if (!blackoutRects?.length) {
+      const [copiedPage] = await outputDoc.copyPages(sourceDoc, [pageIndex]);
+      outputDoc.addPage(copiedPage);
+      continue;
+    }
+
+    const canvas = document.createElement("canvas");
+    await renderPdfPageToCanvas(inputBytes, canvas, pageIndex + 1, 2, {
+      maxCanvasPixels: 14_000_000,
+    });
+    const context = canvas.getContext("2d", { alpha: false });
+
+    if (!context) {
+      throw new Error("Canvas rendering context is not available.");
+    }
+
+    const scaleX = canvas.width / width;
+    const scaleY = canvas.height / height;
+    context.save();
+    context.fillStyle = "#000000";
+
+    for (const rect of blackoutRects) {
+      context.fillRect(
+        rect.x * scaleX,
+        canvas.height - (rect.y + rect.height) * scaleY,
+        rect.width * scaleX,
+        rect.height * scaleY,
+      );
+    }
+
+    context.restore();
+
+    const imageBytes = dataUrlToBytes(canvas.toDataURL("image/png"));
+    const embeddedPage = await outputDoc.embedPng(imageBytes);
+    const page = outputDoc.addPage([width, height]);
+    page.drawImage(embeddedPage, { x: 0, y: 0, width, height });
+  }
+
+  await applyRenderableLayers(outputDoc, layers, outputDoc.getPages());
 
   if (options.cleanupMetadata) {
-    pdfDoc.setTitle("");
-    pdfDoc.setAuthor("");
-    pdfDoc.setSubject("");
-    pdfDoc.setKeywords([]);
-    pdfDoc.setProducer("GhostMark");
-    pdfDoc.setCreator("GhostMark");
-    pdfDoc.setModificationDate(new Date());
+    sanitizePdfMetadata(outputDoc);
+  }
+
+  return outputDoc.save();
+}
+
+export async function applyDocumentLayers(
+  inputBytes: Uint8Array,
+  layers: DocumentLayer[],
+  options: ApplyWatermarkOptions = {},
+): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.load(inputBytes.slice(), { updateMetadata: false });
+  const pages = pdfDoc.getPages();
+  const blackoutRectsByPage = getBlackoutRectsForExport(layers, pages.length);
+
+  if (blackoutRectsByPage.size > 0) {
+    return createBlackoutFlattenedPdf(inputBytes, layers, options);
+  }
+
+  await applyRenderableLayers(pdfDoc, layers, pages);
+
+  if (options.cleanupMetadata) {
+    sanitizePdfMetadata(pdfDoc);
   }
 
   return pdfDoc.save();

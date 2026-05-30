@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { DocumentLayer } from "../../types/watermark";
 import { resolvePageRules } from "../../features/pdf/pageRules";
+import { createSafeLayerPattern } from "../../features/watermark/safelayerPattern";
 import {
   getSealInkProfile,
   getSealInkSegments,
@@ -148,6 +149,10 @@ function layerAppliesToPage(layer: DocumentLayer, pageIndex: number, totalPages:
   }
 }
 
+function pointsToSvg(points: Array<{ x: number; y: number }>, pageHeight: number): string {
+  return points.map((point) => `${point.x},${pageHeight - point.y}`).join(" ");
+}
+
 export function WatermarkPreviewOverlay({
   layers,
   enabled,
@@ -254,6 +259,89 @@ export function WatermarkPreviewOverlay({
               {baseText}
             </div>
           ));
+        }
+
+        if (layer.type === "safelayer" && baseText) {
+          const pattern = createSafeLayerPattern({
+            seed: layer.safeLayerSeed || layer.id,
+            text: baseText,
+            style: layer.safeLayerStyle,
+            density: layer.safeLayerDensity,
+            distortion: layer.safeLayerDistortion,
+            width: pageWidth,
+            height: pageHeight,
+            opacity,
+            textSpacing: layer.safeLayerTextSpacing * zoom,
+            lineSpacing: layer.safeLayerLineSpacing * zoom,
+            waveStrength: layer.safeLayerWaveStrength * zoom,
+            contourStrength: layer.safeLayerContourStrength * zoom,
+          });
+
+          return (
+            <svg
+              key={layer.id}
+              className="absolute inset-0"
+              width={pageWidth}
+              height={pageHeight}
+              viewBox={`0 0 ${pageWidth} ${pageHeight}`}
+              aria-hidden="true"
+              style={{ outline: selected ? "1px solid rgba(198,40,40,0.45)" : undefined }}
+            >
+              {pattern.waveLines.map((line, index) => (
+                <polyline
+                  key={`wave-${index}`}
+                  points={pointsToSvg(line.points, pageHeight)}
+                  fill="none"
+                  stroke={textColor}
+                  strokeWidth={0.8 * zoom}
+                  opacity={line.opacity}
+                />
+              ))}
+              {pattern.contourLines.map((line, index) => (
+                <polyline
+                  key={`contour-${index}`}
+                  points={pointsToSvg(line.points, pageHeight)}
+                  fill="none"
+                  stroke={textColor}
+                  strokeWidth={0.65 * zoom}
+                  opacity={line.opacity}
+                />
+              ))}
+              {pattern.textMarks.map((mark, index) => (
+                <text
+                  key={`text-${index}`}
+                  x={mark.x}
+                  y={pageHeight - mark.y}
+                  fill={textColor}
+                  opacity={mark.opacity}
+                  fontSize={Math.max(8, layer.fontSize * zoom)}
+                  fontWeight={700}
+                  textAnchor="middle"
+                  transform={`rotate(${mark.rotation} ${mark.x} ${pageHeight - mark.y})`}
+                >
+                  {mark.text}
+                </text>
+              ))}
+            </svg>
+          );
+        }
+
+        if (layer.type === "blackout") {
+          return layer.blackoutRects
+            .filter((rect) => rect.page === currentPage)
+            .map((rect) => (
+              <div
+                key={`${layer.id}-${rect.id}`}
+                className="absolute bg-black"
+                style={{
+                  left: rect.x * zoom,
+                  top: pageHeight - (rect.y + rect.height) * zoom,
+                  width: Math.max(1, rect.width * zoom),
+                  height: Math.max(1, rect.height * zoom),
+                  outline: selected ? "1px solid rgba(255,255,255,0.65)" : undefined,
+                }}
+              />
+            ));
         }
 
         if (layer.type === "seal") {

@@ -5,6 +5,10 @@ export function getEnabledLayers(layers: DocumentLayer[]): DocumentLayer[] {
 }
 
 export function getLayerTypeLabel(type: LayerType): string {
+  if (type === "safelayer") {
+    return "SafeLayer";
+  }
+
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
@@ -26,5 +30,6 @@ export function duplicateLayer(layer: DocumentLayer): DocumentLayer {
     id: crypto.randomUUID(),
     name: `${getLayerDisplayName(layer)} copy`,
     imageData: layer.imageData ? new Uint8Array(layer.imageData) : undefined,
+    blackoutRects: layer.blackoutRects.map((rect) => ({ ...rect, id: crypto.randomUUID() })),
   };
 }

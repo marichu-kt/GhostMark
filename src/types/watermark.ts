@@ -2,7 +2,9 @@ export type LayerType =
   | "text"
   | "image"
   | "pattern"
-  | "seal";
+  | "seal"
+  | "safelayer"
+  | "blackout";
 
 export type WatermarkType = LayerType;
 
@@ -21,6 +23,18 @@ export type PositionPreset =
   | "diagonal-center";
 
 export type SealInkStyle = "clean" | "real-ink" | "faded-ink";
+export type SafeLayerStyle = "mixed" | "waves" | "contours" | "text-mesh";
+export type SafeLayerDensity = "low" | "medium" | "high";
+export type SafeLayerDistortion = "soft" | "medium" | "strong";
+
+export interface BlackoutRect {
+  id: string;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 export type PageRuleMode =
   | "all"
@@ -66,6 +80,15 @@ export interface DocumentLayer {
   sealInkStyle: SealInkStyle;
   sealShowDate: boolean;
   sealBorderThickness: number;
+  safeLayerStyle: SafeLayerStyle;
+  safeLayerDensity: SafeLayerDensity;
+  safeLayerDistortion: SafeLayerDistortion;
+  safeLayerSeed: string;
+  safeLayerTextSpacing: number;
+  safeLayerLineSpacing: number;
+  safeLayerWaveStrength: number;
+  safeLayerContourStrength: number;
+  blackoutRects: BlackoutRect[];
 }
 
 export type WatermarkConfig = DocumentLayer;
@@ -74,3 +97,5 @@ export type TextLayerConfig = DocumentLayer & { type: "text" };
 export type ImageLayerConfig = DocumentLayer & { type: "image" };
 export type PatternLayerConfig = DocumentLayer & { type: "pattern" };
 export type SealLayerConfig = DocumentLayer & { type: "seal" };
+export type SafeLayerConfig = DocumentLayer & { type: "safelayer" };
+export type BlackoutLayerConfig = DocumentLayer & { type: "blackout" };

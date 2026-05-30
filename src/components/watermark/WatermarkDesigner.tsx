@@ -5,6 +5,8 @@ import {
   Copy,
   Grid3X3,
   ImagePlus,
+  Layers3,
+  RectangleHorizontal,
   Stamp,
   Trash2,
   Type,
@@ -40,13 +42,15 @@ interface WatermarkDesignerProps {
   onSelectedLayerChange: (layerId: string | null) => void;
 }
 
-const layerTypes: LayerType[] = ["text", "image", "pattern", "seal"];
+const layerTypes: LayerType[] = ["text", "image", "pattern", "seal", "safelayer", "blackout"];
 
 const layerIcons: Record<LayerType, typeof Type> = {
   text: Type,
   image: ImagePlus,
   pattern: Grid3X3,
   seal: Stamp,
+  safelayer: Layers3,
+  blackout: RectangleHorizontal,
 };
 
 function getLayerTypeTranslationKey(type: LayerType): TranslationKey {
@@ -57,6 +61,10 @@ function getLayerTypeTranslationKey(type: LayerType): TranslationKey {
       return "layers.pattern";
     case "seal":
       return "layers.seal";
+    case "safelayer":
+      return "layers.safelayer";
+    case "blackout":
+      return "layers.blackout";
     default:
       return "layers.text";
   }
@@ -149,6 +157,66 @@ export function WatermarkDesigner({
     const bytes = new Uint8Array(await file.arrayBuffer());
     patchSelectedLayer({ imageData: bytes, imageMimeType: mimeType });
     setImageError(null);
+  }
+
+  function patchBlackoutRect(rectId: string, patch: Partial<DocumentLayer["blackoutRects"][number]>) {
+    if (!selectedLayer) {
+      return;
+    }
+
+    patchSelectedLayer({
+      blackoutRects: selectedLayer.blackoutRects.map((rect) =>
+        rect.id === rectId ? { ...rect, ...patch } : rect,
+      ),
+    });
+  }
+
+  function addBlackoutRect() {
+    if (!selectedLayer) {
+      return;
+    }
+
+    patchSelectedLayer({
+      blackoutRects: [
+        ...selectedLayer.blackoutRects,
+        {
+          id: crypto.randomUUID(),
+          page: 1,
+          x: 72,
+          y: 650,
+          width: 180,
+          height: 28,
+        },
+      ],
+    });
+  }
+
+  function removeBlackoutRect(rectId: string) {
+    if (!selectedLayer) {
+      return;
+    }
+
+    patchSelectedLayer({
+      blackoutRects: selectedLayer.blackoutRects.filter((rect) => rect.id !== rectId),
+    });
+  }
+
+  function duplicateBlackoutRect(rectId: string) {
+    if (!selectedLayer) {
+      return;
+    }
+
+    const rect = selectedLayer.blackoutRects.find((item) => item.id === rectId);
+    if (!rect) {
+      return;
+    }
+
+    patchSelectedLayer({
+      blackoutRects: [
+        ...selectedLayer.blackoutRects,
+        { ...rect, id: crypto.randomUUID(), x: rect.x + 12, y: rect.y - 12 },
+      ],
+    });
   }
 
   return (
@@ -250,13 +318,58 @@ export function WatermarkDesigner({
       {selectedLayer ? (
         <>
           <FieldGroup title={t("layers.currentMark")}>
-            {selectedLayer.type === "text" || selectedLayer.type === "pattern" ? (
+            {selectedLayer.type === "text" || selectedLayer.type === "pattern" || selectedLayer.type === "safelayer" ? (
               <Input
-                label={t("watermark.textValue")}
+                label={selectedLayer.type === "safelayer" ? t("safelayer.text") : t("watermark.textValue")}
                 value={selectedLayer.text}
                 error={!selectedLayer.text.trim() ? t("validation.addWatermarkText") : undefined}
                 onChange={(event) => patchSelectedLayer({ text: event.target.value })}
               />
+            ) : null}
+
+            {selectedLayer.type === "safelayer" ? (
+              <>
+                <Select
+                  label={t("safelayer.style")}
+                  value={selectedLayer.safeLayerStyle}
+                  onChange={(event) =>
+                    patchSelectedLayer({ safeLayerStyle: event.target.value as DocumentLayer["safeLayerStyle"] })
+                  }
+                  options={[
+                    { value: "mixed", label: t("safelayer.styleMixed") },
+                    { value: "waves", label: t("safelayer.styleWaves") },
+                    { value: "contours", label: t("safelayer.styleContours") },
+                    { value: "text-mesh", label: t("safelayer.styleTextMesh") },
+                  ]}
+                />
+                <Select
+                  label={t("safelayer.density")}
+                  value={selectedLayer.safeLayerDensity}
+                  onChange={(event) =>
+                    patchSelectedLayer({ safeLayerDensity: event.target.value as DocumentLayer["safeLayerDensity"] })
+                  }
+                  options={[
+                    { value: "low", label: t("safelayer.low") },
+                    { value: "medium", label: t("safelayer.medium") },
+                    { value: "high", label: t("safelayer.high") },
+                  ]}
+                />
+                <Select
+                  label={t("safelayer.distortion")}
+                  value={selectedLayer.safeLayerDistortion}
+                  onChange={(event) =>
+                    patchSelectedLayer({
+                      safeLayerDistortion: event.target.value as DocumentLayer["safeLayerDistortion"],
+                    })
+                  }
+                  options={[
+                    { value: "soft", label: t("safelayer.soft") },
+                    { value: "medium", label: t("safelayer.medium") },
+                    { value: "strong", label: t("safelayer.strong") },
+                  ]}
+                />
+                <p className="text-xs leading-5 text-steel-300">{t("safelayer.limitNote")}</p>
+              </>
             ) : null}
 
             {selectedLayer.type === "seal" ? (
@@ -318,6 +431,66 @@ export function WatermarkDesigner({
               </>
             ) : null}
 
+            {selectedLayer.type === "blackout" ? (
+              <>
+                <Notice tone="warning">{t("blackout.flattenWarning")}</Notice>
+                <Button variant="secondary" onClick={addBlackoutRect}>
+                  {t("blackout.addRectangle")}
+                </Button>
+                <div className="grid gap-3">
+                  {selectedLayer.blackoutRects.map((rect, index) => (
+                    <div key={rect.id} className="grid gap-3 rounded-md border border-graphite-700 bg-graphite-950 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-white">
+                          {t("blackout.rectangle")} {index + 1}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="quiet" aria-label={t("layers.duplicate")} onClick={() => duplicateBlackoutRect(rect.id)}>
+                            <Copy size={13} aria-hidden="true" />
+                          </Button>
+                          <Button size="icon" variant="quiet" aria-label={t("blackout.deleteRectangle")} onClick={() => removeBlackoutRect(rect.id)}>
+                            <Trash2 size={13} aria-hidden="true" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input
+                          label={t("blackout.page")}
+                          type="number"
+                          value={rect.page}
+                          onChange={(event) => patchBlackoutRect(rect.id, { page: Number(event.target.value) })}
+                        />
+                        <Input
+                          label={t("watermark.customX")}
+                          type="number"
+                          value={rect.x}
+                          onChange={(event) => patchBlackoutRect(rect.id, { x: Number(event.target.value) })}
+                        />
+                        <Input
+                          label={t("watermark.customY")}
+                          type="number"
+                          value={rect.y}
+                          onChange={(event) => patchBlackoutRect(rect.id, { y: Number(event.target.value) })}
+                        />
+                        <Input
+                          label={t("blackout.width")}
+                          type="number"
+                          value={rect.width}
+                          onChange={(event) => patchBlackoutRect(rect.id, { width: Number(event.target.value) })}
+                        />
+                        <Input
+                          label={t("blackout.height")}
+                          type="number"
+                          value={rect.height}
+                          onChange={(event) => patchBlackoutRect(rect.id, { height: Number(event.target.value) })}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
             {selectedLayer.type === "text" || selectedLayer.type === "seal" || selectedLayer.type === "image" ? (
               <PositionGridPicker
                 label={t("watermark.position")}
@@ -326,7 +499,7 @@ export function WatermarkDesigner({
               />
             ) : null}
 
-            {selectedLayer.type === "text" || selectedLayer.type === "pattern" ? (
+            {selectedLayer.type === "text" || selectedLayer.type === "pattern" || selectedLayer.type === "safelayer" ? (
               <Slider
                 label={t("watermark.fontSize")}
                 min={10}
@@ -349,20 +522,23 @@ export function WatermarkDesigner({
               />
             ) : null}
 
-            <Slider
-              label={t("watermark.opacity")}
-              min={0.02}
-              max={1}
-              step={0.01}
-              value={selectedLayer.opacity}
-              displayValue={`${Math.round(selectedLayer.opacity * 100)}%`}
-              onChange={(opacity) => patchSelectedLayer({ opacity })}
-            />
+            {selectedLayer.type !== "blackout" ? (
+              <Slider
+                label={t("watermark.opacity")}
+                min={0.02}
+                max={1}
+                step={0.01}
+                value={selectedLayer.opacity}
+                displayValue={`${Math.round(selectedLayer.opacity * 100)}%`}
+                onChange={(opacity) => patchSelectedLayer({ opacity })}
+              />
+            ) : null}
 
             {selectedLayer.type === "text" ||
             selectedLayer.type === "pattern" ||
             selectedLayer.type === "image" ||
-            selectedLayer.type === "seal" ? (
+            selectedLayer.type === "seal" ||
+            selectedLayer.type === "safelayer" ? (
               <Slider
                 label={t("watermark.rotation")}
                 min={selectedLayer.type === "seal" ? -30 : -90}
@@ -373,7 +549,7 @@ export function WatermarkDesigner({
               />
             ) : null}
 
-            {selectedLayer.type === "text" ? (
+            {selectedLayer.type === "text" || selectedLayer.type === "safelayer" ? (
               <Input
                 label={t("watermark.color")}
                 type="color"
@@ -422,6 +598,44 @@ export function WatermarkDesigner({
               </>
             ) : null}
 
+            {selectedLayer.type === "safelayer" ? (
+              <>
+                <Input
+                  label={t("safelayer.seed")}
+                  value={selectedLayer.safeLayerSeed}
+                  onChange={(event) => patchSelectedLayer({ safeLayerSeed: event.target.value })}
+                />
+                <Slider
+                  label={t("safelayer.textSpacing")}
+                  min={80}
+                  max={260}
+                  value={selectedLayer.safeLayerTextSpacing}
+                  onChange={(safeLayerTextSpacing) => patchSelectedLayer({ safeLayerTextSpacing })}
+                />
+                <Slider
+                  label={t("safelayer.lineSpacing")}
+                  min={40}
+                  max={180}
+                  value={selectedLayer.safeLayerLineSpacing}
+                  onChange={(safeLayerLineSpacing) => patchSelectedLayer({ safeLayerLineSpacing })}
+                />
+                <Slider
+                  label={t("safelayer.waveStrength")}
+                  min={0}
+                  max={48}
+                  value={selectedLayer.safeLayerWaveStrength}
+                  onChange={(safeLayerWaveStrength) => patchSelectedLayer({ safeLayerWaveStrength })}
+                />
+                <Slider
+                  label={t("safelayer.contourStrength")}
+                  min={0}
+                  max={48}
+                  value={selectedLayer.safeLayerContourStrength}
+                  onChange={(safeLayerContourStrength) => patchSelectedLayer({ safeLayerContourStrength })}
+                />
+              </>
+            ) : null}
+
             {selectedLayer.type === "seal" ? (
               <>
                 <Toggle
@@ -450,31 +664,35 @@ export function WatermarkDesigner({
               </>
             ) : null}
 
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label={t("watermark.customX")}
-                type="number"
-                value={selectedLayer.x}
-                onChange={(event) => patchSelectedLayer({ x: Number(event.target.value) })}
-              />
-              <Input
-                label={t("watermark.customY")}
-                type="number"
-                value={selectedLayer.y}
-                onChange={(event) => patchSelectedLayer({ y: Number(event.target.value) })}
-              />
-            </div>
-            <Select
-              label={t("watermark.layer")}
-              value={selectedLayer.layer}
-              onChange={(event) => patchSelectedLayer({ layer: event.target.value as WatermarkLayer })}
-              helpText={t("watermark.layerTodo")}
-              options={layerOptions.map((option) => ({
-                value: option.value,
-                label: t(option.labelKey),
-                disabled: option.disabled,
-              }))}
-            />
+            {selectedLayer.type !== "blackout" ? (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label={t("watermark.customX")}
+                    type="number"
+                    value={selectedLayer.x}
+                    onChange={(event) => patchSelectedLayer({ x: Number(event.target.value) })}
+                  />
+                  <Input
+                    label={t("watermark.customY")}
+                    type="number"
+                    value={selectedLayer.y}
+                    onChange={(event) => patchSelectedLayer({ y: Number(event.target.value) })}
+                  />
+                </div>
+                <Select
+                  label={t("watermark.layer")}
+                  value={selectedLayer.layer}
+                  onChange={(event) => patchSelectedLayer({ layer: event.target.value as WatermarkLayer })}
+                  helpText={t("watermark.layerTodo")}
+                  options={layerOptions.map((option) => ({
+                    value: option.value,
+                    label: t(option.labelKey),
+                    disabled: option.disabled,
+                  }))}
+                />
+              </>
+            ) : null}
           </Collapsible>
         </>
       ) : null}

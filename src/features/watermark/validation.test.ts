@@ -56,6 +56,15 @@ function makeConfig(patch: Partial<WatermarkConfig> = {}): WatermarkConfig {
     sealInkStyle: "clean",
     sealShowDate: true,
     sealBorderThickness: 2,
+    safeLayerStyle: "mixed",
+    safeLayerDensity: "medium",
+    safeLayerDistortion: "medium",
+    safeLayerSeed: "test-seed",
+    safeLayerTextSpacing: 150,
+    safeLayerLineSpacing: 84,
+    safeLayerWaveStrength: 18,
+    safeLayerContourStrength: 16,
+    blackoutRects: [],
     ...patch,
   };
 }
@@ -81,6 +90,14 @@ describe("validateWatermarkConfig", () => {
     expect(validateWatermarkConfig(config, loadedPdf)).toEqual({
       isValid: false,
       messageKey: "validation.uploadImage",
+    });
+  });
+
+  it("requires a blackout rectangle for blackout layers", () => {
+    const config = makeConfig({ type: "blackout", blackoutRects: [] });
+    expect(validateWatermarkConfig(config, loadedPdf)).toEqual({
+      isValid: false,
+      messageKey: "validation.addBlackoutRect",
     });
   });
 
