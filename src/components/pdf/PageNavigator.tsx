@@ -4,11 +4,19 @@ import { Button } from "../ui/Button";
 
 interface PageNavigatorProps {
   currentPage: number;
+  visiblePages: number;
   totalPages: number;
+  largePdfMode?: boolean;
   onChange: (page: number) => void;
 }
 
-export function PageNavigator({ currentPage, totalPages, onChange }: PageNavigatorProps) {
+export function PageNavigator({
+  currentPage,
+  visiblePages,
+  totalPages,
+  largePdfMode = false,
+  onChange,
+}: PageNavigatorProps) {
   const { t } = useTranslation();
 
   return (
@@ -22,14 +30,20 @@ export function PageNavigator({ currentPage, totalPages, onChange }: PageNavigat
       >
         <ChevronLeft size={17} aria-hidden="true" />
       </Button>
-      <span className="min-w-24 text-center text-xs text-steel-200">
-        {t("preview.page")} {currentPage} {t("preview.of")} {totalPages}
+      <span className="min-w-24 text-center text-xs text-steel-200 sm:min-w-36">
+        {largePdfMode
+          ? t("largePdf.pageIndicator", {
+              current: currentPage,
+              visible: visiblePages,
+              total: totalPages,
+            })
+          : `${t("preview.page")} ${currentPage} ${t("preview.of")} ${totalPages}`}
       </span>
       <Button
         size="icon"
         variant="quiet"
         aria-label={t("actions.nextPage")}
-        disabled={currentPage >= totalPages}
+        disabled={currentPage >= visiblePages}
         onClick={() => onChange(currentPage + 1)}
       >
         <ChevronRight size={17} aria-hidden="true" />

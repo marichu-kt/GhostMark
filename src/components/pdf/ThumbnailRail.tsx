@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import type { LoadedPdf } from "../../types/pdf";
+import {
+  getVisiblePageCount,
+  shouldUseLargePdfMode,
+} from "../../features/pdf/largePdf";
 import { renderPdfPageToCanvas } from "../../features/pdf/renderPdfPreview";
 import { useTranslation } from "../../features/i18n/useTranslation";
 
@@ -23,14 +27,20 @@ function PageThumbnail({ document, page, selected, onSelect }: PageThumbnailProp
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     async function renderThumbnail() {
       if (!canvasRef.current) {
         return;
       }
 
+      setFailed(false);
+
       try {
-        await renderPdfPageToCanvas(document.bytes, canvasRef.current, page, 0.18);
+        await renderPdfPageToCanvas(document.bytes, canvasRef.current, page, 0.18, {
+          signal: controller.signal,
+          maxCanvasPixels: 900_000,
+        });
       } catch {
         if (!cancelled) {
           setFailed(true);
@@ -42,6 +52,12 @@ function PageThumbnail({ document, page, selected, onSelect }: PageThumbnailProp
 
     return () => {
       cancelled = true;
+      controller.abort();
+
+      if (canvasRef.current) {
+        canvasRef.current.width = 0;
+        canvasRef.current.height = 0;
+      }
     };
   }, [document.bytes, page]);
 
@@ -75,7 +91,9 @@ function PageThumbnail({ document, page, selected, onSelect }: PageThumbnailProp
 
 export function ThumbnailRail({ document, currentPage, onSelectPage }: ThumbnailRailProps) {
   const { t } = useTranslation();
-  const visiblePages = Array.from({ length: document.pageCount }, (_, index) => index + 1);
+  const largePdfMode = shouldUseLargePdfMode(document.pageCount);
+  const visiblePageCount = getVisiblePageCount(document.pageCount);
+  const visiblePages = Array.from({ length: visiblePageCount }, (_, index) => index + 1);
 
   return (
     <aside className="hidden w-56 shrink-0 flex-col border-r border-graphite-700 bg-[#111820] lg:flex">
@@ -84,6 +102,15 @@ export function ThumbnailRail({ document, currentPage, onSelectPage }: Thumbnail
         <SlidersHorizontal size={18} className="text-steel-400" aria-hidden="true" />
       </div>
       <div className="control-scrollbar min-h-0 flex-1 overflow-y-auto p-3">
+        {largePdfMode ? (
+          <div className="mb-3 rounded-md border border-graphite-700 bg-graphite-950/70 p-2 text-xs leading-5 text-steel-200">
+            <strong className="block font-semibold text-white">{t("largePdf.mode")}</strong>
+            {t("largePdf.thumbnailNote", {
+              visible: visiblePageCount,
+              total: document.pageCount,
+            })}
+          </div>
+        ) : null}
         <div className="grid gap-3">
           {visiblePages.map((page) => (
             <PageThumbnail

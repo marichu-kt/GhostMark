@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { LoadedPdf } from "../../types/pdf";
 import type { DocumentLayer } from "../../types/watermark";
+import {
+  clampPreviewPage,
+  getVisiblePageCount,
+  shouldUseLargePdfMode,
+} from "../../features/pdf/largePdf";
 import { getPdfPageSize, renderPdfPageToCanvas } from "../../features/pdf/renderPdfPreview";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { Notice } from "../ui/Notice";
@@ -38,9 +43,19 @@ export function PdfPreview({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
+  const largePdfMode = shouldUseLargePdfMode(document.pageCount);
+  const visiblePageCount = getVisiblePageCount(document.pageCount);
+  const safeCurrentPage = clampPreviewPage(currentPage, document.pageCount);
+
+  useEffect(() => {
+    if (currentPage !== safeCurrentPage) {
+      onPageChange(safeCurrentPage);
+    }
+  }, [currentPage, onPageChange, safeCurrentPage]);
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     async function render() {
       if (!canvasRef.current) {
@@ -51,7 +66,9 @@ export function PdfPreview({
       setError(null);
 
       try {
-        await renderPdfPageToCanvas(document.bytes, canvasRef.current, currentPage, zoom);
+        await renderPdfPageToCanvas(document.bytes, canvasRef.current, safeCurrentPage, zoom, {
+          signal: controller.signal,
+        });
         const rect = canvasRef.current.getBoundingClientRect();
         setPageDisplaySize({ width: rect.width, height: rect.height });
       } catch {
@@ -69,8 +86,9 @@ export function PdfPreview({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [currentPage, document.bytes, t, zoom]);
+  }, [document.bytes, safeCurrentPage, t, zoom]);
 
   async function fitWidth() {
     if (!viewportRef.current) {
@@ -78,7 +96,7 @@ export function PdfPreview({
     }
 
     try {
-      const pageSize = await getPdfPageSize(document.bytes, currentPage);
+      const pageSize = await getPdfPageSize(document.bytes, safeCurrentPage);
       const availableWidth = Math.max(320, viewportRef.current.clientWidth - 64);
       onZoomChange(Number(Math.min(2.5, Math.max(0.35, availableWidth / pageSize.width)).toFixed(2)));
     } catch {
@@ -92,11 +110,18 @@ export function PdfPreview({
       <section className="flex min-w-0 flex-1 flex-col bg-[#151b22]">
         <div className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-graphite-700 bg-[#111820]/95 px-4">
           <PageNavigator
-            currentPage={currentPage}
+            currentPage={safeCurrentPage}
+            visiblePages={visiblePageCount}
             totalPages={document.pageCount}
+            largePdfMode={largePdfMode}
             onChange={onPageChange}
           />
           <div className="flex flex-wrap items-center gap-3">
+            {largePdfMode ? (
+              <span className="hidden rounded-md border border-graphite-700 bg-graphite-900 px-3 py-2 text-xs font-medium text-steel-200 xl:inline-flex">
+                {t("largePdf.optimized")}
+              </span>
+            ) : null}
             <ZoomControls zoom={zoom} onZoomChange={onZoomChange} onFitWidth={() => void fitWidth()} />
             <label className="flex min-h-9 items-center gap-2 rounded-md border border-graphite-700 bg-graphite-900 px-3 text-xs font-medium text-steel-100">
               <input
@@ -118,13 +143,13 @@ export function PdfPreview({
             <canvas
               ref={canvasRef}
               className="rounded-sm bg-document-50 shadow-[0_18px_42px_rgba(0,0,0,0.48)] ring-1 ring-black/20"
-              aria-label={`${t("preview.page")} ${currentPage}`}
+              aria-label={`${t("preview.page")} ${safeCurrentPage}`}
             />
             <WatermarkPreviewOverlay
               layers={layers}
               enabled={previewEnabled}
               zoom={zoom}
-              currentPage={currentPage}
+              currentPage={safeCurrentPage}
               totalPages={document.pageCount}
               pageWidth={pageDisplaySize.width}
               pageHeight={pageDisplaySize.height}

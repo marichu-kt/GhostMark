@@ -5,6 +5,11 @@ import type { DocumentLayer } from "../types/watermark";
 import { useAppSettings } from "./AppProviders";
 import { createDownloadFileName } from "../features/pdf/fileFormatting";
 import { exportPdf } from "../features/pdf/exportPdf";
+import {
+  clampPreviewPage,
+  getVisiblePageCount,
+  shouldUseLargePdfMode,
+} from "../features/pdf/largePdf";
 import { cleanupSessionReferences, wipeBytes } from "../features/security/sessionCleanup";
 import { createDefaultDocumentLayers } from "../features/watermark/defaults";
 import {
@@ -90,13 +95,23 @@ export function App() {
   }, [classifiedMode, loadedPdf]);
 
   const pageCount = loadedPdf?.pageCount ?? 1;
+  const visiblePageCount = loadedPdf ? getVisiblePageCount(loadedPdf.pageCount) : 1;
+  const largePdfMode = loadedPdf ? shouldUseLargePdfMode(loadedPdf.pageCount) : false;
 
   const setPageSafely = useCallback(
     (page: number) => {
-      setCurrentPage(Math.min(Math.max(page, 1), pageCount));
+      setCurrentPage(clampPreviewPage(page, pageCount));
     },
     [pageCount],
   );
+
+  useEffect(() => {
+    if (!loadedPdf) {
+      return;
+    }
+
+    setCurrentPage((page) => clampPreviewPage(page, loadedPdf.pageCount));
+  }, [loadedPdf]);
 
   function revokeExportResult() {
     if (exportResultRef.current) {
@@ -276,6 +291,9 @@ export function App() {
             affectedPagesSummary={affectedPagesSummary}
             validationMessage={validationMessage}
             filenameError={!outputFileName.trim() ? t("validation.outputFilename") : undefined}
+            largePdfMode={largePdfMode}
+            visiblePageCount={visiblePageCount}
+            totalPageCount={loadedPdf?.pageCount ?? 1}
             onStartNew={() => clearSession()}
           />
         );
@@ -291,9 +309,12 @@ export function App() {
     loadedPdf,
     outputFileName,
     layers,
+    largePdfMode,
     selectedLayerId,
     t,
+    visiblePageCount,
     validationMessage,
+    watermarkReady,
     watermarkSummary,
   ]);
 

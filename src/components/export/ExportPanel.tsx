@@ -15,6 +15,9 @@ interface ExportPanelProps {
   affectedPagesSummary: string;
   validationMessage?: string;
   filenameError?: string;
+  largePdfMode?: boolean;
+  visiblePageCount?: number;
+  totalPageCount?: number;
   onStartNew: () => void;
 }
 
@@ -28,6 +31,9 @@ export function ExportPanel({
   affectedPagesSummary,
   validationMessage,
   filenameError,
+  largePdfMode = false,
+  visiblePageCount,
+  totalPageCount,
   onStartNew,
 }: ExportPanelProps) {
   const { t } = useTranslation();
@@ -54,6 +60,14 @@ export function ExportPanel({
             <span className="text-right font-medium text-white">{affectedPagesSummary}</span>
           </div>
         </div>
+        {largePdfMode && visiblePageCount && totalPageCount ? (
+          <Notice tone="info">
+            {t("largePdf.exportNote", {
+              visible: visiblePageCount,
+              total: totalPageCount,
+            })}
+          </Notice>
+        ) : null}
         {disabled && validationMessage ? <Notice tone="warning">{validationMessage}</Notice> : null}
         {error ? <Notice tone="danger">{error}</Notice> : null}
       </FieldGroup>

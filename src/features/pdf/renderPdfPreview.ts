@@ -8,6 +8,32 @@ export interface PdfPageSize {
   height: number;
 }
 
+export interface RenderPdfPageOptions {
+  signal?: AbortSignal;
+  maxCanvasPixels?: number;
+}
+
+const DEFAULT_MAX_CANVAS_PIXELS = 16_000_000;
+
+function ensureNotAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw new Error("PDF rendering was cancelled.");
+  }
+}
+
+function getPixelRatioForCanvas(width: number, height: number, maxCanvasPixels: number) {
+  const deviceScale = window.devicePixelRatio || 1;
+  const requestedPixels = width * height * deviceScale * deviceScale;
+
+  if (requestedPixels <= maxCanvasPixels) {
+    return deviceScale;
+  }
+
+  // Keep the CSS preview size stable, but cap the backing canvas pixels so
+  // oversized pages do not create huge render surfaces in the browser.
+  return Math.max(1, deviceScale * Math.sqrt(maxCanvasPixels / requestedPixels));
+}
+
 export async function getPdfPageSize(bytes: Uint8Array, pageNumber: number): Promise<PdfPageSize> {
   const loadingTask = pdfjsLib.getDocument({ data: bytes.slice() });
   const pdf = await loadingTask.promise;
@@ -26,12 +52,24 @@ export async function renderPdfPageToCanvas(
   canvas: HTMLCanvasElement,
   pageNumber: number,
   scale: number,
+  options: RenderPdfPageOptions = {},
 ): Promise<void> {
+  ensureNotAborted(options.signal);
+
   const loadingTask = pdfjsLib.getDocument({ data: bytes.slice() });
-  const pdf = await loadingTask.promise;
+  const cancelLoad = () => {
+    void loadingTask.destroy();
+  };
+
+  options.signal?.addEventListener("abort", cancelLoad, { once: true });
+  const pdf = await loadingTask.promise.finally(() => {
+    options.signal?.removeEventListener("abort", cancelLoad);
+  });
 
   try {
+    ensureNotAborted(options.signal);
     const page = await pdf.getPage(pageNumber);
+    ensureNotAborted(options.signal);
     const viewport = page.getViewport({ scale });
     const context = canvas.getContext("2d", { alpha: false });
 
@@ -39,23 +77,40 @@ export async function renderPdfPageToCanvas(
       throw new Error("Canvas rendering context is not available.");
     }
 
-    const deviceScale = window.devicePixelRatio || 1;
-    canvas.width = Math.floor(viewport.width * deviceScale);
-    canvas.height = Math.floor(viewport.height * deviceScale);
-    canvas.style.width = `${Math.floor(viewport.width)}px`;
-    canvas.style.height = `${Math.floor(viewport.height)}px`;
+    const displayWidth = Math.floor(viewport.width);
+    const displayHeight = Math.floor(viewport.height);
+    const deviceScale = getPixelRatioForCanvas(
+      displayWidth,
+      displayHeight,
+      options.maxCanvasPixels ?? DEFAULT_MAX_CANVAS_PIXELS,
+    );
+
+    canvas.width = Math.max(1, Math.floor(viewport.width * deviceScale));
+    canvas.height = Math.max(1, Math.floor(viewport.height * deviceScale));
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
 
     context.save();
     context.fillStyle = "#f7f5ef";
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.restore();
 
-    await page.render({
+    const renderTask = page.render({
       canvasContext: context,
       viewport,
       transform: deviceScale !== 1 ? [deviceScale, 0, 0, deviceScale, 0, 0] : undefined,
-    }).promise;
+    });
+    const cancelRender = () => renderTask.cancel();
+
+    options.signal?.addEventListener("abort", cancelRender, { once: true });
+
+    try {
+      await renderTask.promise;
+    } finally {
+      options.signal?.removeEventListener("abort", cancelRender);
+    }
   } finally {
+    options.signal?.removeEventListener("abort", cancelLoad);
     await pdf.destroy();
   }
 }
