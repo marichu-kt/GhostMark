@@ -11,6 +11,11 @@ import {
 import type { DocumentLayer, WatermarkConfig } from "../../types/watermark";
 import { resolveWatermarkPosition } from "../watermark/positioning";
 import { createSafeLayerPattern } from "../watermark/safelayerPattern";
+import {
+  buildFlattenedExportPlan,
+  FLATTENED_EXPORT_SCALE,
+  MAX_EXPORT_CANVAS_PIXELS,
+} from "./flattenedExportPlan";
 import { sanitizePdfMetadata } from "./metadataSanitizer";
 import { resolvePageRules } from "./pageRules";
 import { renderPdfPageToCanvas } from "./renderPdfPreview";
@@ -19,9 +24,6 @@ interface ApplyWatermarkOptions {
   cleanupMetadata?: boolean;
   onProgress?: (progress: { current: number; total: number }) => void;
 }
-
-const FLATTENED_EXPORT_SCALE = 1.65;
-const MAX_EXPORT_CANVAS_PIXELS = 18_000_000;
 
 function parseHexColor(hex: string): RGB {
   const normalized = hex.replace("#", "").trim();
@@ -841,21 +843,15 @@ async function createFlattenedPdf(
   const outputDoc = await PDFDocument.create();
   const sourcePages = sourceDoc.getPages();
   const canvasImages = await createCanvasImagesForLayers(layers);
-  const selectedPagesByLayer = new Map<string, number[]>();
-
-  for (const layer of layers) {
-    if (!layer.enabled) {
-      continue;
-    }
-
-    selectedPagesByLayer.set(layer.id, resolvePageRules(layer.pages, sourcePages.length));
-  }
+  const pagePlans = buildFlattenedExportPlan(layers, sourcePages.length);
+  const layersById = new Map(layers.map((layer) => [layer.id, layer]));
 
   try {
-    for (let pageIndex = 0; pageIndex < sourcePages.length; pageIndex += 1) {
+    for (const pagePlan of pagePlans) {
+      const pageIndex = pagePlan.pageIndex;
       const sourcePage = sourcePages[pageIndex];
       const { width, height } = sourcePage.getSize();
-      const pageNumber = pageIndex + 1;
+      const pageNumber = pagePlan.pageNumber;
 
       const canvas = document.createElement("canvas");
       await renderPdfPageToCanvas(inputBytes, canvas, pageNumber, FLATTENED_EXPORT_SCALE, {
@@ -871,14 +867,10 @@ async function createFlattenedPdf(
       const scaleY = canvas.height / height;
       const pagePixels = context.getImageData(0, 0, canvas.width, canvas.height);
 
-      for (const layer of layers.filter((candidate) => candidate.type === "blackout")) {
-        if (!layer.enabled) {
-          continue;
-        }
+      for (const layerId of pagePlan.layerIds) {
+        const layer = layersById.get(layerId);
 
-        const selectedPages = selectedPagesByLayer.get(layer.id) ?? [];
-
-        if (!selectedPages.includes(pageIndex)) {
+        if (!layer || layer.type !== "blackout") {
           continue;
         }
 
@@ -896,14 +888,10 @@ async function createFlattenedPdf(
         });
       }
 
-      for (const layer of layers.filter((candidate) => candidate.type !== "blackout")) {
-        if (!layer.enabled) {
-          continue;
-        }
+      for (const layerId of pagePlan.layerIds) {
+        const layer = layersById.get(layerId);
 
-        const selectedPages = selectedPagesByLayer.get(layer.id) ?? [];
-
-        if (!selectedPages.includes(pageIndex)) {
+        if (!layer || layer.type === "blackout") {
           continue;
         }
 
@@ -939,9 +927,7 @@ async function createFlattenedPdf(
     }
   }
 
-  if (options.cleanupMetadata) {
-    sanitizePdfMetadata(outputDoc);
-  }
+  sanitizePdfMetadata(outputDoc);
 
   return outputDoc.save();
 }
