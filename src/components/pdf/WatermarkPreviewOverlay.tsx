@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import type { DocumentLayer } from "../../types/watermark";
 import { resolvePageRules } from "../../features/pdf/pageRules";
-import { createSafeLayerPattern, SAFELAYER_PREVIEW_PAGE_LIMIT } from "../../features/watermark/safelayerPattern";
+import {
+  createSafeLayerRenderModel,
+  SAFELAYER_PREVIEW_PAGE_LIMIT,
+} from "../../features/watermark/safelayerRenderer";
 
 interface WatermarkPreviewOverlayProps {
   layers: DocumentLayer[];
@@ -86,10 +89,6 @@ function layerAppliesToPage(layer: DocumentLayer, pageIndex: number, totalPages:
   } catch {
     return false;
   }
-}
-
-function pointsToSvg(points: Array<{ x: number; y: number }>, pageHeight: number): string {
-  return points.map((point) => `${point.x},${pageHeight - point.y}`).join(" ");
 }
 
 export function WatermarkPreviewOverlay({
@@ -205,7 +204,7 @@ export function WatermarkPreviewOverlay({
             return null;
           }
 
-          const pattern = createSafeLayerPattern({
+          const model = createSafeLayerRenderModel({
             seed: layer.safeLayerSeed || layer.id,
             text: baseText,
             style: layer.safeLayerStyle,
@@ -237,52 +236,40 @@ export function WatermarkPreviewOverlay({
               aria-hidden="true"
               style={{ outline: selected ? "1px solid rgba(198,40,40,0.45)" : undefined }}
             >
-              {pattern.waveLines.map((line, index) => (
-                <polyline
-                  key={`wave-${index}`}
-                  points={pointsToSvg(line.points, pageHeight)}
-                  fill="none"
-                  stroke={toneColor[line.tone ?? "primary"]}
-                  strokeWidth={0.8 * zoom}
-                  opacity={line.opacity}
-                />
-              ))}
-              {pattern.contourLines.map((line, index) => (
-                <polyline
+              <defs>
+                {model.textRows.map((row) => (
+                  <path key={row.id} id={row.id} d={row.path} fill="none" />
+                ))}
+              </defs>
+              {model.contourSegments.map((line, index) => (
+                <line
                   key={`contour-${index}`}
-                  points={pointsToSvg(line.points, pageHeight)}
-                  fill="none"
-                  stroke={toneColor[line.tone ?? "primary"]}
-                  strokeWidth={0.65 * zoom}
-                  opacity={line.opacity}
-                />
-              ))}
-              {pattern.holographicLines.map((line, index) => (
-                <polyline
-                  key={`holo-${index}`}
-                  points={pointsToSvg(line.points, pageHeight)}
-                  fill="none"
-                  stroke={toneColor[line.tone ?? "blue"]}
-                  strokeWidth={1.1 * zoom}
+                  x1={line.start.x}
+                  y1={line.start.y}
+                  x2={line.end.x}
+                  y2={line.end.y}
+                  stroke={toneColor[line.tone]}
+                  strokeWidth={0.55 * zoom}
                   opacity={line.opacity}
                   strokeLinecap="round"
                 />
               ))}
-              {pattern.textMarks.map((mark, index) => (
-                <text
-                  key={`text-${index}`}
-                  x={mark.x}
-                  y={pageHeight - mark.y}
-                  fill={textColor}
-                  opacity={mark.opacity}
-                  fontSize={Math.max(8, layer.fontSize * zoom)}
-                  fontWeight={700}
-                  textAnchor="middle"
-                  transform={`rotate(${mark.rotation} ${mark.x} ${pageHeight - mark.y})`}
-                >
-                  {mark.text}
-                </text>
-              ))}
+              <g transform={model.textTransform} opacity={model.textOpacity}>
+                {model.textRows.map((row) => (
+                  <text
+                    key={`text-${row.id}`}
+                    fill={textColor}
+                    opacity={row.opacity}
+                    fontSize={Math.max(8, layer.fontSize * zoom * 0.78, model.fontSize)}
+                    fontWeight={700}
+                    letterSpacing="0.02em"
+                  >
+                    <textPath href={`#${row.id}`} startOffset={row.startOffset}>
+                      {row.text}
+                    </textPath>
+                  </text>
+                ))}
+              </g>
             </svg>
           );
         }

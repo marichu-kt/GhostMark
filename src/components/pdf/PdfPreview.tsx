@@ -8,7 +8,7 @@ import {
 } from "../../features/pdf/largePdf";
 import { getPdfPageSize, renderPdfPageToCanvas } from "../../features/pdf/renderPdfPreview";
 import { createBlackoutRectFromDrag } from "../../features/watermark/blackoutDrawing";
-import { SAFELAYER_PREVIEW_PAGE_LIMIT } from "../../features/watermark/safelayerPattern";
+import { SAFELAYER_PREVIEW_PAGE_LIMIT } from "../../features/watermark/safelayerRenderer";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { Notice } from "../ui/Notice";
 import { PageNavigator } from "./PageNavigator";

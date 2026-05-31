@@ -1,42 +1,18 @@
-import {
-  degrees,
-  PDFDocument,
-  PDFImage,
-  PDFPage,
-  rgb,
-  StandardFonts,
-  type PDFFont,
-  type RGB,
-} from "pdf-lib";
+import { PDFDocument } from "pdf-lib";
 import type { DocumentLayer, WatermarkConfig } from "../../types/watermark";
 import { resolveWatermarkPosition } from "../watermark/positioning";
-import { createSafeLayerPattern } from "../watermark/safelayerPattern";
+import { createSafeLayerRenderModel } from "../watermark/safelayerRenderer";
 import {
   buildFlattenedExportPlan,
   FLATTENED_EXPORT_SCALE,
   MAX_EXPORT_CANVAS_PIXELS,
 } from "./flattenedExportPlan";
 import { sanitizePdfMetadata } from "./metadataSanitizer";
-import { resolvePageRules } from "./pageRules";
 import { renderPdfPageToCanvas } from "./renderPdfPreview";
 
 interface ApplyWatermarkOptions {
   cleanupMetadata?: boolean;
   onProgress?: (progress: { current: number; total: number }) => void;
-}
-
-function parseHexColor(hex: string): RGB {
-  const normalized = hex.replace("#", "").trim();
-
-  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
-    return rgb(0.18, 0.2, 0.23);
-  }
-
-  const red = Number.parseInt(normalized.slice(0, 2), 16) / 255;
-  const green = Number.parseInt(normalized.slice(2, 4), 16) / 255;
-  const blue = Number.parseInt(normalized.slice(4, 6), 16) / 255;
-
-  return rgb(red, green, blue);
 }
 
 function clampOpacity(opacity: number): number {
@@ -81,288 +57,6 @@ function drawCanvasRotatedText(input: {
   input.context.restore();
 }
 
-function drawTextWatermark(page: PDFPage, font: PDFFont, config: WatermarkConfig) {
-  const { width, height } = page.getSize();
-  const text = config.text.trim() || "CONFIDENTIAL";
-  const textWidth = font.widthOfTextAtSize(text, config.fontSize);
-  const position = resolveWatermarkPosition({
-    preset: config.positionPreset,
-    pageWidth: width,
-    pageHeight: height,
-    elementWidth: textWidth,
-    elementHeight: config.fontSize,
-    customX: config.x,
-    customY: config.y,
-  });
-
-  page.drawText(text, {
-    x: position.x,
-    y: position.y,
-    size: config.fontSize,
-    font,
-    color: parseHexColor(config.color),
-    opacity: clampOpacity(config.opacity),
-    rotate: degrees(config.rotation),
-  });
-}
-
-function drawPatternWatermark(page: PDFPage, font: PDFFont, config: WatermarkConfig) {
-  const { width, height } = page.getSize();
-  const text = config.text.trim() || "DRAFT";
-  const spacingX = Math.max(80, config.patternSpacingX);
-  const spacingY = Math.max(80, config.patternSpacingY);
-  const textWidth = font.widthOfTextAtSize(text, config.fontSize);
-
-  for (let row = -1; row <= Math.ceil(height / spacingY) + 1; row += 1) {
-    const offsetX = config.patternStaggered && row % 2 !== 0 ? spacingX / 2 : 0;
-
-    for (let x = -textWidth; x <= width + spacingX; x += spacingX) {
-      page.drawText(text, {
-        x: x + offsetX,
-        y: row * spacingY,
-        size: config.fontSize,
-        font,
-        color: parseHexColor(config.color),
-        opacity: clampOpacity(config.opacity),
-        rotate: degrees(config.rotation),
-      });
-    }
-  }
-}
-
-function drawPolyline(
-  page: PDFPage,
-  points: Array<{ x: number; y: number }>,
-  color: RGB,
-  opacity: number,
-  thickness = 0.65,
-) {
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const start = points[index];
-    const end = points[index + 1];
-
-    if (
-      Number.isFinite(start.x) &&
-      Number.isFinite(start.y) &&
-      Number.isFinite(end.x) &&
-      Number.isFinite(end.y)
-    ) {
-      page.drawLine({
-        start,
-        end,
-        thickness,
-        color,
-        opacity,
-      });
-    }
-  }
-}
-
-function drawSafeLayer(page: PDFPage, font: PDFFont, config: WatermarkConfig) {
-  const { width, height } = page.getSize();
-  const text = config.text.trim() || "PROTECTED";
-  const color = parseHexColor(config.color || "#7d3432");
-  const opacity = clampOpacity(config.opacity);
-  const pattern = createSafeLayerPattern({
-    seed: config.safeLayerSeed || config.id,
-    text,
-    style: config.safeLayerStyle,
-    distortion: config.safeLayerDistortion,
-    width,
-    height,
-    opacity,
-    rotation: config.rotation,
-    textSpacing: config.safeLayerTextSpacing,
-    lineSpacing: config.safeLayerLineSpacing,
-    waveStrength: config.safeLayerWaveStrength,
-    contourStrength: config.safeLayerContourStrength,
-    holographicIntensity: config.safeLayerHolographicIntensity,
-  });
-  const holographicColors: Record<"red" | "blue" | "violet", RGB> = {
-    red: rgb(0.86, 0.18, 0.2),
-    blue: rgb(0.18, 0.58, 0.88),
-    violet: rgb(0.56, 0.36, 0.92),
-  };
-
-  for (const line of pattern.waveLines) {
-    drawPolyline(page, line.points, color, line.opacity, 0.58);
-  }
-
-  for (const line of pattern.contourLines) {
-    drawPolyline(page, line.points, color, line.opacity, 0.45);
-  }
-
-  for (const line of pattern.holographicLines) {
-    const tone = line.tone && line.tone !== "primary" ? line.tone : "blue";
-    drawPolyline(page, line.points, holographicColors[tone], line.opacity, 0.72);
-  }
-
-  for (const mark of pattern.textMarks) {
-    page.drawText(mark.text, {
-      x: mark.x,
-      y: mark.y,
-      size: config.fontSize,
-      font,
-      color,
-      opacity: mark.opacity,
-      rotate: degrees(mark.rotation),
-    });
-  }
-}
-
-function drawSeal(page: PDFPage, font: PDFFont, boldFont: PDFFont, config: WatermarkConfig) {
-  const { width, height } = page.getSize();
-  const sealScale = Math.min(1.8, Math.max(0.55, config.scale || 1));
-  const sealWidth = config.sealStyle === "circular" ? 150 * sealScale : 220 * sealScale;
-  const sealHeight = config.sealStyle === "circular" ? 150 * sealScale : 92 * sealScale;
-  const position = resolveWatermarkPosition({
-    preset: config.positionPreset,
-    pageWidth: width,
-    pageHeight: height,
-    elementWidth: sealWidth,
-    elementHeight: sealHeight,
-    customX: config.x,
-    customY: config.y,
-  });
-  const color = parseHexColor(config.color);
-  const opacity = clampOpacity(config.opacity);
-  const dateText = new Date().toISOString().slice(0, 10);
-  const title = (config.sealTitle || "REVIEWED").trim().toUpperCase();
-  const subtitle = (config.sealSubtitle || "DOCUMENT CONTROL").trim().toUpperCase();
-  const documentId = config.sealDocumentId.trim().toUpperCase();
-  const borderWidth = Math.max(1, config.sealBorderThickness);
-  const rotation = degrees(config.rotation);
-
-  if (config.sealStyle === "circular") {
-    page.drawEllipse({
-      x: position.x + sealWidth / 2,
-      y: position.y + sealHeight / 2,
-      xScale: sealWidth / 2,
-      yScale: sealHeight / 2,
-      borderColor: color,
-      borderWidth,
-      opacity,
-      rotate: rotation,
-    });
-    page.drawEllipse({
-      x: position.x + sealWidth / 2,
-      y: position.y + sealHeight / 2,
-      xScale: sealWidth / 2 - 10 * sealScale,
-      yScale: sealHeight / 2 - 10 * sealScale,
-      borderColor: color,
-      borderWidth: Math.max(1, borderWidth * 0.65),
-      opacity: opacity * 0.7,
-      rotate: rotation,
-    });
-  } else {
-    page.drawRectangle({
-      x: position.x,
-      y: position.y,
-      width: sealWidth,
-      height: sealHeight,
-      borderColor: color,
-      borderWidth,
-      opacity,
-      rotate: rotation,
-    });
-    page.drawRectangle({
-      x: position.x + 14 * sealScale,
-      y: position.y + sealHeight - 34 * sealScale,
-      width: sealWidth - 28 * sealScale,
-      height: Math.max(1, borderWidth * 0.55),
-      color,
-      opacity: opacity * 0.75,
-      rotate: rotation,
-    });
-  }
-
-  const centerX = position.x + sealWidth / 2;
-  const titleSize = (config.sealStyle === "circular" ? 19 : 22) * sealScale;
-  const subtitleSize = 9.5 * sealScale;
-  const metaSize = 8.5 * sealScale;
-  const drawCenteredText = (text: string, y: number, size: number, textFont: PDFFont) => {
-    const textWidth = textFont.widthOfTextAtSize(text, size);
-    const x = centerX - textWidth / 2;
-
-    page.drawText(text, {
-      x,
-      y,
-      size,
-      font: textFont,
-      color,
-      opacity,
-      rotate: rotation,
-    });
-  };
-
-  drawCenteredText(title, position.y + sealHeight / 2 + 8 * sealScale, titleSize, boldFont);
-  drawCenteredText(subtitle, position.y + sealHeight / 2 - 12 * sealScale, subtitleSize, font);
-
-  if (documentId) {
-    drawCenteredText(documentId, position.y + 16 * sealScale, metaSize, font);
-  }
-
-  if (config.sealShowDate) {
-    drawCenteredText(dateText, position.y + (documentId ? 30 : 16) * sealScale, metaSize, font);
-  }
-}
-
-async function drawImageWatermark(page: PDFPage, image: PDFImage, config: WatermarkConfig) {
-  const { width, height } = page.getSize();
-  const scale = Math.min(2, Math.max(0.05, config.scale));
-  const dimensions = image.scale(scale);
-  const position = resolveWatermarkPosition({
-    preset: config.positionPreset,
-    pageWidth: width,
-    pageHeight: height,
-    elementWidth: dimensions.width,
-    elementHeight: dimensions.height,
-    customX: config.x,
-    customY: config.y,
-  });
-
-  page.drawImage(image, {
-    x: position.x,
-    y: position.y,
-    width: dimensions.width,
-    height: dimensions.height,
-    opacity: clampOpacity(config.opacity),
-    rotate: degrees(config.rotation),
-  });
-}
-
-async function drawLayer(
-  page: PDFPage,
-  regularFont: PDFFont,
-  boldFont: PDFFont,
-  layer: DocumentLayer,
-  embeddedImage: PDFImage | null,
-) {
-  switch (layer.type) {
-    case "text":
-      drawTextWatermark(page, boldFont, layer);
-      break;
-    case "pattern":
-      drawPatternWatermark(page, boldFont, layer);
-      break;
-    case "safelayer":
-      drawSafeLayer(page, boldFont, layer);
-      break;
-    case "seal":
-      drawSeal(page, regularFont, boldFont, layer);
-      break;
-    case "image":
-      if (embeddedImage) {
-        await drawImageWatermark(page, embeddedImage, layer);
-      }
-      break;
-    case "blackout":
-      break;
-    default:
-      break;
-  }
-}
-
 function dataUrlToBytes(dataUrl: string): Uint8Array {
   const base64 = dataUrl.split(",")[1] ?? "";
   const binary = atob(base64);
@@ -394,17 +88,47 @@ function invertedPixelColor(
   return `rgba(${255 - red},${255 - green},${255 - blue},${alpha})`;
 }
 
-function drawCanvasLine(
+function escapeSvgText(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function svgToCanvasImage(svg: string): Promise<CanvasImageSource> {
+  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+
+  if ("createImageBitmap" in window) {
+    return createImageBitmap(blob);
+  }
+
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(blob);
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("SafeLayer SVG overlay could not be loaded."));
+    };
+    image.src = url;
+  });
+}
+
+function drawCanvasSegment(
   context: CanvasRenderingContext2D,
-  points: Array<{ x: number; y: number }>,
-  canvasHeight: number,
+  start: { x: number; y: number },
+  end: { x: number; y: number },
   imageData: ImageData,
   fallbackColor: string,
   opacity: number,
   thickness: number,
   invertFromPixels = false,
 ) {
-  if (points.length < 2) {
+  if (!Number.isFinite(start.x) || !Number.isFinite(start.y) || !Number.isFinite(end.x) || !Number.isFinite(end.y)) {
     return;
   }
 
@@ -413,43 +137,31 @@ function drawCanvasLine(
   context.lineJoin = "round";
   context.lineWidth = thickness;
 
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const start = points[index];
-    const end = points[index + 1];
-    const startY = canvasHeight - start.y;
-    const endY = canvasHeight - end.y;
-
-    if (!Number.isFinite(start.x) || !Number.isFinite(startY) || !Number.isFinite(end.x) || !Number.isFinite(endY)) {
-      continue;
-    }
-
-    if (invertFromPixels) {
-      const gradient = context.createLinearGradient(start.x, startY, end.x, endY);
-      gradient.addColorStop(
-        0,
-        invertedPixelColor(imageData.data, start.x, startY, imageData.width, imageData.height, opacity),
-      );
-      gradient.addColorStop(
-        1,
-        invertedPixelColor(imageData.data, end.x, endY, imageData.width, imageData.height, opacity),
-      );
-      context.strokeStyle = gradient;
-      context.globalAlpha = 1;
-    } else {
-      context.strokeStyle = fallbackColor;
-      context.globalAlpha = opacity;
-    }
-
-    context.beginPath();
-    context.moveTo(start.x, startY);
-    context.lineTo(end.x, endY);
-    context.stroke();
+  if (invertFromPixels) {
+    const gradient = context.createLinearGradient(start.x, start.y, end.x, end.y);
+    gradient.addColorStop(
+      0,
+      invertedPixelColor(imageData.data, start.x, start.y, imageData.width, imageData.height, opacity),
+    );
+    gradient.addColorStop(
+      1,
+      invertedPixelColor(imageData.data, end.x, end.y, imageData.width, imageData.height, opacity),
+    );
+    context.strokeStyle = gradient;
+    context.globalAlpha = 1;
+  } else {
+    context.strokeStyle = fallbackColor;
+    context.globalAlpha = opacity;
   }
 
+  context.beginPath();
+  context.moveTo(start.x, start.y);
+  context.lineTo(end.x, end.y);
+  context.stroke();
   context.restore();
 }
 
-function drawCanvasSafeLayer(
+async function drawCanvasSafeLayer(
   context: CanvasRenderingContext2D,
   layer: DocumentLayer,
   canvas: HTMLCanvasElement,
@@ -457,7 +169,7 @@ function drawCanvasSafeLayer(
 ) {
   const text = (layer.text.trim() || "PROTECTED").toUpperCase();
   const opacity = clampOpacity(layer.opacity);
-  const pattern = createSafeLayerPattern({
+  const model = createSafeLayerRenderModel({
     seed: `${layer.safeLayerSeed || layer.id}|page-canvas`,
     text,
     style: layer.safeLayerStyle,
@@ -473,32 +185,33 @@ function drawCanvasSafeLayer(
     holographicIntensity: layer.safeLayerHolographicIntensity,
   });
   const color = hexToCss(layer.color);
-  const fontSize = Math.max(7, layer.fontSize * (canvas.width / 612));
+  const toneColor = {
+    primary: color,
+    red: "#d95a58",
+    blue: "#47a5d8",
+    violet: "#8f74d9",
+  };
 
-  for (const line of pattern.waveLines) {
-    drawCanvasLine(context, line.points, canvas.height, imageData, color, line.opacity, 0.8, true);
+  for (const segment of model.contourSegments) {
+    drawCanvasSegment(context, segment.start, segment.end, imageData, toneColor[segment.tone], segment.opacity, 0.9, true);
   }
 
-  for (const line of pattern.contourLines) {
-    drawCanvasLine(context, line.points, canvas.height, imageData, color, line.opacity, 0.62, true);
-  }
+  const paths = model.textRows.map((row) => `<path id="${row.id}" d="${row.path}" fill="none"/>`).join("");
+  const textRows = model.textRows
+    .map(
+      (row) =>
+        `<text fill="${color}" opacity="${row.opacity}" font-size="${Math.max(8, layer.fontSize * (canvas.width / 612) * 0.78, model.fontSize)}" font-weight="700" letter-spacing="0.02em"><textPath href="#${row.id}" startOffset="${row.startOffset}">${escapeSvgText(row.text)}</textPath></text>`,
+    )
+    .join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}"><defs>${paths}</defs><g transform="${model.textTransform}" opacity="${model.textOpacity}" font-family="Arial, sans-serif">${textRows}</g></svg>`;
+  const image = await svgToCanvasImage(svg);
 
-  for (const line of pattern.holographicLines) {
-    drawCanvasLine(context, line.points, canvas.height, imageData, color, line.opacity, 1.05, false);
-  }
+  context.save();
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  context.restore();
 
-  for (const mark of pattern.textMarks) {
-    drawCanvasRotatedText({
-      context,
-      text: mark.text,
-      x: mark.x,
-      y: canvas.height - mark.y,
-      font: `700 ${fontSize}px Arial, sans-serif`,
-      color,
-      opacity: mark.opacity,
-      rotation: mark.rotation,
-      align: "center",
-    });
+  if ("close" in image && typeof image.close === "function") {
+    image.close();
   }
 }
 
@@ -527,25 +240,6 @@ async function loadCanvasImage(layer: DocumentLayer): Promise<CanvasImageSource 
     };
     image.src = url;
   });
-}
-
-async function embedImagesForLayers(pdfDoc: PDFDocument, layers: DocumentLayer[]): Promise<Map<string, PDFImage>> {
-  const embeddedImages = new Map<string, PDFImage>();
-
-  for (const layer of layers) {
-    if (!layer.enabled || layer.type !== "image" || !layer.imageData || !layer.imageMimeType) {
-      continue;
-    }
-
-    embeddedImages.set(
-      layer.id,
-      layer.imageMimeType === "image/png"
-        ? await pdfDoc.embedPng(layer.imageData)
-        : await pdfDoc.embedJpg(layer.imageData),
-    );
-  }
-
-  return embeddedImages;
 }
 
 async function createCanvasImagesForLayers(layers: DocumentLayer[]): Promise<Map<string, CanvasImageSource>> {
@@ -768,7 +462,7 @@ function drawCanvasBlackouts(
   context.restore();
 }
 
-function drawCanvasLayer(input: {
+async function drawCanvasLayer(input: {
   context: CanvasRenderingContext2D;
   canvas: HTMLCanvasElement;
   imageData: ImageData;
@@ -793,7 +487,7 @@ function drawCanvasLayer(input: {
       drawCanvasPatternWatermark(context, layer, pageWidth, pageHeight, scaleX, scaleY);
       break;
     case "safelayer":
-      drawCanvasSafeLayer(context, layer, canvas, imageData);
+      await drawCanvasSafeLayer(context, layer, canvas, imageData);
       break;
     case "seal":
       drawCanvasSeal(context, layer, pageWidth, pageHeight, scaleX, scaleY);
@@ -810,28 +504,6 @@ function drawCanvasLayer(input: {
 
 async function yieldToBrowser() {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
-}
-
-async function applyRenderableLayers(
-  pdfDoc: PDFDocument,
-  layers: DocumentLayer[],
-  pages: PDFPage[],
-): Promise<void> {
-  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const embeddedImages = await embedImagesForLayers(pdfDoc, layers);
-
-  for (const layer of layers) {
-    if (!layer.enabled || layer.type === "blackout") {
-      continue;
-    }
-
-    const selectedPages = resolvePageRules(layer.pages, pages.length);
-
-    for (const pageIndex of selectedPages) {
-      await drawLayer(pages[pageIndex], regularFont, boldFont, layer, embeddedImages.get(layer.id) ?? null);
-    }
-  }
 }
 
 async function createFlattenedPdf(
@@ -874,7 +546,7 @@ async function createFlattenedPdf(
           continue;
         }
 
-        drawCanvasLayer({
+        await drawCanvasLayer({
           context,
           canvas,
           imageData: pagePixels,
@@ -895,7 +567,7 @@ async function createFlattenedPdf(
           continue;
         }
 
-        drawCanvasLayer({
+        await drawCanvasLayer({
           context,
           canvas,
           imageData: pagePixels,

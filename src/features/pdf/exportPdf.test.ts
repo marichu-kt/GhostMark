@@ -1,0 +1,140 @@
+import { describe, expect, it, vi } from "vitest";
+import { createCanvas, DOMMatrix, ImageData } from "canvas";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { createDefaultDocumentLayers } from "../watermark/defaults";
+
+const sourceText = "COPY_ME_SHOULD_DISAPPEAR";
+
+async function configurePdfJsWorker() {
+  const pdfjsLib = await import("pdfjs-dist");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    "../../../node_modules/pdfjs-dist/build/pdf.worker.mjs",
+    import.meta.url,
+  ).href;
+  return pdfjsLib;
+}
+
+function installCanvasDom() {
+  if (!("withResolvers" in Promise)) {
+    Object.defineProperty(Promise, "withResolvers", {
+      value: <T,>() => {
+        let resolve!: (value: T | PromiseLike<T>) => void;
+        let reject!: (reason?: unknown) => void;
+        const promise = new Promise<T>((promiseResolve, promiseReject) => {
+          resolve = promiseResolve;
+          reject = promiseReject;
+        });
+        return { promise, resolve, reject };
+      },
+      configurable: true,
+    });
+  }
+
+  if (!globalThis.crypto) {
+    Object.defineProperty(globalThis, "crypto", {
+      value: { randomUUID: () => "test-id" } as unknown as Crypto,
+      configurable: true,
+    });
+  }
+
+  Object.defineProperty(globalThis, "DOMMatrix", { value: DOMMatrix, configurable: true });
+  Object.defineProperty(globalThis, "ImageData", { value: ImageData, configurable: true });
+  Object.defineProperty(globalThis, "window", {
+    value: {
+      devicePixelRatio: 1,
+      requestAnimationFrame: (callback: FrameRequestCallback) => setTimeout(() => callback(Date.now()), 0),
+      cancelAnimationFrame: (id: number) => clearTimeout(id),
+    },
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "document", {
+    value: {
+      createElement: (tagName: string) => {
+        if (tagName !== "canvas") {
+          throw new Error(`Unsupported test element: ${tagName}`);
+        }
+
+        const canvas = createCanvas(1, 1) as unknown as HTMLCanvasElement & { style: Record<string, string> };
+        (canvas as unknown as { style: Record<string, string> }).style = {};
+        return canvas;
+      },
+    },
+    configurable: true,
+  });
+
+  if (!globalThis.URL.createObjectURL) {
+    Object.defineProperty(globalThis.URL, "createObjectURL", {
+      value: vi.fn(() => "blob:ghostmark-test"),
+      configurable: true,
+    });
+  }
+}
+
+async function createSelectableTextPdf() {
+  const pdf = await PDFDocument.create();
+  pdf.setTitle("Sensitive source title");
+  pdf.setAuthor("Sensitive source author");
+  pdf.setSubject("Sensitive source subject");
+  pdf.setKeywords(["sensitive", "source"]);
+  pdf.setCreator("Sensitive source creator");
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const page = pdf.addPage([320, 180]);
+  page.drawText(sourceText, {
+    x: 32,
+    y: 96,
+    size: 18,
+    font,
+    color: rgb(0, 0, 0),
+  });
+  return pdf.save();
+}
+
+async function extractText(bytes: Uint8Array) {
+  const pdfjsLib = await configurePdfJsWorker();
+  const task = pdfjsLib.getDocument({ data: bytes.slice(), disableWorker: true } as unknown as Parameters<
+    typeof pdfjsLib.getDocument
+  >[0]);
+  const pdf = await task.promise;
+  const chunks: string[] = [];
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      chunks.push(...content.items.map((item) => ("str" in item ? item.str : "")));
+    }
+
+    return { pageCount: pdf.numPages, text: chunks.join(" ") };
+  } finally {
+    await pdf.destroy();
+  }
+}
+
+describe("exportPdf flattened output", () => {
+  it("uses the production export path and removes extractable source text", async () => {
+    installCanvasDom();
+    const { exportPdf } = await import("./exportPdf");
+    await configurePdfJsWorker();
+    const inputBytes = await createSelectableTextPdf();
+    const before = await extractText(new Uint8Array(inputBytes));
+
+    expect(before.text).toContain(sourceText);
+
+    const result = await exportPdf(new Uint8Array(inputBytes), createDefaultDocumentLayers(), {
+      outputFileName: "flattened.pdf",
+      cleanupMetadata: true,
+    });
+    const exportedBytes = new Uint8Array(await result.blob.arrayBuffer());
+    const after = await extractText(exportedBytes);
+    const reloaded = await PDFDocument.load(exportedBytes);
+
+    expect(after.pageCount).toBe(before.pageCount);
+    expect(after.text).not.toContain(sourceText);
+    expect(after.text.trim()).toBe("");
+    expect(reloaded.getTitle()).toBe("");
+    expect(reloaded.getAuthor()).toBe("");
+    expect(reloaded.getSubject()).toBe("");
+    expect(reloaded.getKeywords()).toBe("");
+    expect(reloaded.getCreator()).toBe("GhostMark");
+  });
+});

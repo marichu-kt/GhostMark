@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createLayerForType } from "../watermark/defaults";
-import { SAFELAYER_PREVIEW_PAGE_LIMIT } from "../watermark/safelayerPattern";
+import { SAFELAYER_PREVIEW_PAGE_LIMIT } from "../watermark/safelayerRenderer";
 import { buildFlattenedExportPlan, getFlattenedExportPageIndexes } from "./flattenedExportPlan";
 import { getVisiblePageCount } from "./largePdf";
 
