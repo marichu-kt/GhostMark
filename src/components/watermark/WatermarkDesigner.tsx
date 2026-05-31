@@ -53,6 +53,13 @@ const layerIcons: Record<LayerType, typeof Type> = {
   blackout: RectangleHorizontal,
 };
 
+export const SAFELAYER_VISIBLE_INSPECTOR_KEYS = [
+  "safelayer.text",
+  "watermark.color",
+  "pages.moreOptions",
+  "watermark.advanced",
+] as const;
+
 function getLayerTypeTranslationKey(type: LayerType): TranslationKey {
   switch (type) {
     case "image":
@@ -307,55 +314,6 @@ export function WatermarkDesigner({
               />
             ) : null}
 
-            {selectedLayer.type === "safelayer" ? (
-              <>
-                <Select
-                  label={t("safelayer.style")}
-                  value={selectedLayer.safeLayerStyle}
-                  onChange={(event) =>
-                    patchSelectedLayer({ safeLayerStyle: event.target.value as DocumentLayer["safeLayerStyle"] })
-                  }
-                  options={[
-                    { value: "mixed", label: t("safelayer.styleMixed") },
-                    { value: "waves", label: t("safelayer.styleWaves") },
-                    { value: "contours", label: t("safelayer.styleContours") },
-                    { value: "text-mesh", label: t("safelayer.styleTextMesh") },
-                  ]}
-                />
-                <Select
-                  label={t("safelayer.distortion")}
-                  value={selectedLayer.safeLayerDistortion}
-                  onChange={(event) =>
-                    patchSelectedLayer({
-                      safeLayerDistortion: event.target.value as DocumentLayer["safeLayerDistortion"],
-                    })
-                  }
-                  options={[
-                    { value: "soft", label: t("safelayer.soft") },
-                    { value: "medium", label: t("safelayer.medium") },
-                    { value: "strong", label: t("safelayer.strong") },
-                  ]}
-                />
-                <Slider
-                  label={t("safelayer.waveStrength")}
-                  min={4}
-                  max={64}
-                  value={selectedLayer.safeLayerWaveStrength}
-                  onChange={(safeLayerWaveStrength) => patchSelectedLayer({ safeLayerWaveStrength })}
-                />
-                <Slider
-                  label={t("safelayer.holographicIntensity")}
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={selectedLayer.safeLayerHolographicIntensity}
-                  displayValue={`${Math.round(selectedLayer.safeLayerHolographicIntensity * 100)}%`}
-                  onChange={(safeLayerHolographicIntensity) => patchSelectedLayer({ safeLayerHolographicIntensity })}
-                />
-                <p className="text-xs leading-5 text-steel-300">{t("safelayer.limitNote")}</p>
-              </>
-            ) : null}
-
             {selectedLayer.type === "seal" ? (
               <>
                 <Input
@@ -469,7 +427,7 @@ export function WatermarkDesigner({
               />
             ) : null}
 
-            {selectedLayer.type === "text" || selectedLayer.type === "pattern" || selectedLayer.type === "safelayer" ? (
+            {selectedLayer.type === "text" || selectedLayer.type === "pattern" ? (
               <Slider
                 label={t("watermark.fontSize")}
                 min={10}
@@ -492,7 +450,7 @@ export function WatermarkDesigner({
               />
             ) : null}
 
-            {selectedLayer.type !== "blackout" ? (
+            {selectedLayer.type !== "blackout" && selectedLayer.type !== "safelayer" ? (
               <Slider
                 label={t("watermark.opacity")}
                 min={0.02}
@@ -507,8 +465,7 @@ export function WatermarkDesigner({
             {selectedLayer.type === "text" ||
             selectedLayer.type === "pattern" ||
             selectedLayer.type === "image" ||
-            selectedLayer.type === "seal" ||
-            selectedLayer.type === "safelayer" ? (
+            selectedLayer.type === "seal" ? (
               <Slider
                 label={t("watermark.rotation")}
                 min={selectedLayer.type === "seal" ? -30 : -90}
@@ -568,37 +525,6 @@ export function WatermarkDesigner({
               </>
             ) : null}
 
-            {selectedLayer.type === "safelayer" ? (
-              <>
-                <Input
-                  label={t("safelayer.seed")}
-                  value={selectedLayer.safeLayerSeed}
-                  onChange={(event) => patchSelectedLayer({ safeLayerSeed: event.target.value })}
-                />
-                <Slider
-                  label={t("safelayer.textSpacing")}
-                  min={80}
-                  max={260}
-                  value={selectedLayer.safeLayerTextSpacing}
-                  onChange={(safeLayerTextSpacing) => patchSelectedLayer({ safeLayerTextSpacing })}
-                />
-                <Slider
-                  label={t("safelayer.lineSpacing")}
-                  min={40}
-                  max={180}
-                  value={selectedLayer.safeLayerLineSpacing}
-                  onChange={(safeLayerLineSpacing) => patchSelectedLayer({ safeLayerLineSpacing })}
-                />
-                <Slider
-                  label={t("safelayer.contourStrength")}
-                  min={0}
-                  max={48}
-                  value={selectedLayer.safeLayerContourStrength}
-                  onChange={(safeLayerContourStrength) => patchSelectedLayer({ safeLayerContourStrength })}
-                />
-              </>
-            ) : null}
-
             {selectedLayer.type === "seal" ? (
               <>
                 <Toggle
@@ -627,7 +553,7 @@ export function WatermarkDesigner({
               </>
             ) : null}
 
-            {selectedLayer.type !== "blackout" ? (
+            {selectedLayer.type !== "blackout" && selectedLayer.type !== "safelayer" ? (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <Input

@@ -164,25 +164,17 @@ function drawCanvasSegment(
 async function drawCanvasSafeLayer(
   context: CanvasRenderingContext2D,
   layer: DocumentLayer,
+  pageNumber: number,
   canvas: HTMLCanvasElement,
   imageData: ImageData,
 ) {
   const text = (layer.text.trim() || "PROTECTED").toUpperCase();
-  const opacity = clampOpacity(layer.opacity);
   const model = createSafeLayerRenderModel({
-    seed: `${layer.safeLayerSeed || layer.id}|page-canvas`,
+    seed: `${layer.safeLayerSeed || ""}|${layer.id}|canvas`,
     text,
-    style: layer.safeLayerStyle,
-    distortion: layer.safeLayerDistortion,
+    pageNumber,
     width: canvas.width,
     height: canvas.height,
-    opacity,
-    rotation: layer.rotation,
-    textSpacing: layer.safeLayerTextSpacing * (canvas.width / 612),
-    lineSpacing: layer.safeLayerLineSpacing * (canvas.height / 792),
-    waveStrength: layer.safeLayerWaveStrength * (canvas.height / 792),
-    contourStrength: layer.safeLayerContourStrength * (canvas.height / 792),
-    holographicIntensity: layer.safeLayerHolographicIntensity,
   });
   const color = hexToCss(layer.color);
   const toneColor = {
@@ -200,7 +192,7 @@ async function drawCanvasSafeLayer(
   const textRows = model.textRows
     .map(
       (row) =>
-        `<text fill="${color}" opacity="${row.opacity}" font-size="${Math.max(8, layer.fontSize * (canvas.width / 612) * 0.78, model.fontSize)}" font-weight="700" letter-spacing="0.02em"><textPath href="#${row.id}" startOffset="${row.startOffset}">${escapeSvgText(row.text)}</textPath></text>`,
+        `<text fill="${color}" opacity="${row.opacity}" font-size="${model.fontSize}" font-weight="700" letter-spacing="0.02em"><textPath href="#${row.id}" startOffset="${row.startOffset}">${escapeSvgText(row.text)}</textPath></text>`,
     )
     .join("");
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}"><defs>${paths}</defs><g transform="${model.textTransform}" opacity="${model.textOpacity}" font-family="Arial, sans-serif">${textRows}</g></svg>`;
@@ -487,7 +479,7 @@ async function drawCanvasLayer(input: {
       drawCanvasPatternWatermark(context, layer, pageWidth, pageHeight, scaleX, scaleY);
       break;
     case "safelayer":
-      await drawCanvasSafeLayer(context, layer, canvas, imageData);
+      await drawCanvasSafeLayer(context, layer, pageNumber, canvas, imageData);
       break;
     case "seal":
       drawCanvasSeal(context, layer, pageWidth, pageHeight, scaleX, scaleY);

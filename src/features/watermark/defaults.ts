@@ -1,5 +1,14 @@
 import type { DocumentLayer, LayerType, WatermarkConfig } from "../../types/watermark";
 import { getDefaultLayerName } from "./layers";
+import {
+  SAFELAYER_CONTOUR_STRENGTH,
+  SAFELAYER_FONT_SIZE,
+  SAFELAYER_HOLOGRAPHIC_INTENSITY,
+  SAFELAYER_LINE_SPACING,
+  SAFELAYER_OPACITY,
+  SAFELAYER_TEXT_SPACING,
+  SAFELAYER_WAVE_STRENGTH,
+} from "./safelayerRenderer";
 
 export function createDefaultLayer(type: LayerType = "text"): DocumentLayer {
   return {
@@ -34,11 +43,11 @@ export function createDefaultLayer(type: LayerType = "text"): DocumentLayer {
     safeLayerStyle: "mixed",
     safeLayerDistortion: "medium",
     safeLayerSeed: "",
-    safeLayerTextSpacing: 116,
-    safeLayerLineSpacing: 62,
-    safeLayerWaveStrength: 28,
-    safeLayerContourStrength: 22,
-    safeLayerHolographicIntensity: 0.32,
+    safeLayerTextSpacing: SAFELAYER_TEXT_SPACING,
+    safeLayerLineSpacing: SAFELAYER_LINE_SPACING,
+    safeLayerWaveStrength: SAFELAYER_WAVE_STRENGTH,
+    safeLayerContourStrength: SAFELAYER_CONTOUR_STRENGTH,
+    safeLayerHolographicIntensity: SAFELAYER_HOLOGRAPHIC_INTENSITY,
     blackoutRects: [],
   };
 }
@@ -74,9 +83,9 @@ export function createLayerForType(type: LayerType): DocumentLayer {
         ...layer,
         name: "SafeLayer",
         color: "#7d3432",
-        opacity: 0.2,
-        rotation: -10,
-        fontSize: 18,
+        opacity: SAFELAYER_OPACITY,
+        rotation: 0,
+        fontSize: SAFELAYER_FONT_SIZE,
         safeLayerSeed: crypto.randomUUID(),
       };
     case "blackout":

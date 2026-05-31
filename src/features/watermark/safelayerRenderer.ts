@@ -1,19 +1,9 @@
-import type { SafeLayerDistortion, SafeLayerStyle } from "../../types/watermark";
-
 export interface SafeLayerRendererConfig {
   seed: string;
   text: string;
-  style: SafeLayerStyle;
-  distortion: SafeLayerDistortion;
+  pageNumber: number;
   width: number;
   height: number;
-  opacity: number;
-  rotation: number;
-  textSpacing: number;
-  lineSpacing: number;
-  waveStrength: number;
-  contourStrength: number;
-  holographicIntensity: number;
 }
 
 export interface SafeLayerTextPathRow {
@@ -38,15 +28,21 @@ export interface SafeLayerRenderModel {
   textTransform: string;
   fontSize: number;
   textOpacity: number;
+  rotation: number;
 }
 
 export const SAFELAYER_PREVIEW_PAGE_LIMIT = 10;
-
-const distortionMultiplier: Record<SafeLayerDistortion, number> = {
-  soft: 0.72,
-  medium: 1,
-  strong: 1.32,
-};
+export const SAFELAYER_TEXT_SEPARATOR = "◆";
+export const SAFELAYER_FONT_SIZE = 7;
+export const SAFELAYER_OPACITY = 0.55;
+export const SAFELAYER_TEXT_SPACING = 116;
+export const SAFELAYER_LINE_SPACING = 62;
+export const SAFELAYER_WAVE_STRENGTH = 28;
+export const SAFELAYER_CONTOUR_STRENGTH = 22;
+export const SAFELAYER_HOLOGRAPHIC_INTENSITY = 0.32;
+const SAFELAYER_DISTORTION_MULTIPLIER = 1;
+const SAFELAYER_ROTATION_MIN = -32;
+const SAFELAYER_ROTATION_MAX = -24;
 
 export function hashString(value: string): number {
   let hash = 2166136261;
@@ -167,12 +163,12 @@ function createContourSegments(config: SafeLayerRendererConfig, seedNumber: numb
     }
   }
 
-  const lineCount = Math.round(22 + Math.min(28, Math.max(0, config.contourStrength)));
+  const lineCount = Math.round(22 + Math.min(28, Math.max(0, SAFELAYER_CONTOUR_STRENGTH)));
   const start = min + (max - min) * 0.07;
   const end = min + (max - min) * 0.97;
   const segments: SafeLayerContourSegment[] = [];
   const tones: SafeLayerContourSegment["tone"][] = ["primary", "red", "blue", "violet"];
-  const baseOpacity = Math.min(0.34, Math.max(0.06, config.opacity * 1.5));
+  const baseOpacity = Math.min(0.34, Math.max(0.06, SAFELAYER_OPACITY * 0.42));
 
   for (let levelIndex = 0; levelIndex < lineCount; levelIndex += 1) {
     const level = start + ((end - start) * levelIndex) / Math.max(1, lineCount - 1);
@@ -231,40 +227,38 @@ function createContourSegments(config: SafeLayerRendererConfig, seedNumber: numb
 
 export function createSafeLayerRenderModel(config: SafeLayerRendererConfig): SafeLayerRenderModel {
   const text = cleanSafeLayerText(config.text);
-  const seed = hashString(`${config.seed}|${text}|${config.width}|${config.height}|${config.rotation}`);
+  const seed = hashString(`${config.seed}|${text}|page:${config.pageNumber}|${config.width}|${config.height}`);
   const random = randomFromSeed(seed);
-  const distortion = distortionMultiplier[config.distortion];
-  const waveAmplitude = Math.max(4, config.waveStrength * 0.24 * distortion);
-  const rowSpacing = Math.max(10, config.lineSpacing * 0.22);
+  const rotation = SAFELAYER_ROTATION_MIN + random() * (SAFELAYER_ROTATION_MAX - SAFELAYER_ROTATION_MIN);
+  const distortion = SAFELAYER_DISTORTION_MULTIPLIER;
+  const waveAmplitude = Math.max(4, SAFELAYER_WAVE_STRENGTH * 0.24 * distortion);
+  const rowSpacing = Math.max(10, SAFELAYER_LINE_SPACING * 0.22);
   const hugeWidth = config.width * 3.8;
   const hugeHeight = config.height * 3.8;
-  const phrase = `${text} · `;
+  const phrase = `${text} ${SAFELAYER_TEXT_SEPARATOR} `;
   const textRows: SafeLayerTextPathRow[] = [];
-  const includeText = true;
-  const includeContours = config.style === "mixed" || config.style === "contours";
-  const includeWaves = config.style === "mixed" || config.style === "waves" || config.style === "text-mesh";
   const rowCount = Math.ceil(hugeHeight / rowSpacing);
 
-  if (includeText) {
-    for (let index = 0; index < rowCount; index += 1) {
-      const y = index * rowSpacing + rowSpacing / 2;
-      const offset = index % 2 === 0 ? "0%" : `${Math.round(2 + random() * 5)}%`;
-      textRows.push({
-        id: `safelayer-wave-${seed}-${index}`,
-        path: buildExactWavePath(hugeWidth, y, waveAmplitude),
-        text: phrase.repeat(90),
-        startOffset: offset,
-        opacity: Math.min(0.52, Math.max(0.08, config.opacity * (1.6 + random() * 0.45))),
-      });
-    }
+  for (let index = 0; index < rowCount; index += 1) {
+    const y = index * rowSpacing + rowSpacing / 2 + (random() - 0.5) * rowSpacing * 0.36;
+    const offset = `${Math.round(random() * 9)}%`;
+    const amplitude = waveAmplitude * (0.82 + random() * 0.42);
+    textRows.push({
+      id: `safelayer-wave-${seed}-${index}`,
+      path: buildExactWavePath(hugeWidth, y, amplitude),
+      text: phrase.repeat(90),
+      startOffset: offset,
+      opacity: Math.min(0.52, Math.max(0.12, SAFELAYER_OPACITY * (0.48 + random() * 0.12))),
+    });
   }
 
   return {
     text,
-    textRows: includeWaves ? textRows : [],
-    contourSegments: includeContours ? createContourSegments(config, seed) : [],
-    textTransform: `translate(${-config.width * 0.9} ${-config.height * 0.9}) rotate(${config.rotation - 17} ${config.width * 1.4} ${config.height * 1.4})`,
-    fontSize: Math.max(8, Math.min(18, config.textSpacing * 0.1)),
-    textOpacity: Math.min(0.58, Math.max(0.1, config.opacity * 2.2)),
+    textRows,
+    contourSegments: createContourSegments(config, seed),
+    textTransform: `translate(${-config.width * 0.9} ${-config.height * 0.9}) rotate(${rotation} ${config.width * 1.4} ${config.height * 1.4})`,
+    fontSize: SAFELAYER_FONT_SIZE,
+    textOpacity: SAFELAYER_OPACITY,
+    rotation,
   };
 }

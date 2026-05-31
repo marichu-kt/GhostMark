@@ -1,20 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { cleanSafeLayerText, createSafeLayerRenderModel, type SafeLayerRendererConfig } from "./safelayerRenderer";
+import {
+  SAFELAYER_FONT_SIZE,
+  SAFELAYER_TEXT_SEPARATOR,
+  cleanSafeLayerText,
+  createSafeLayerRenderModel,
+  type SafeLayerRendererConfig,
+} from "./safelayerRenderer";
 
 const baseConfig: SafeLayerRendererConfig = {
   seed: "case-001",
   text: "PROTECTED",
-  style: "mixed",
-  distortion: "medium",
+  pageNumber: 1,
   width: 612,
   height: 792,
-  opacity: 0.22,
-  rotation: -10,
-  textSpacing: 116,
-  lineSpacing: 62,
-  waveStrength: 28,
-  contourStrength: 22,
-  holographicIntensity: 0.32,
 };
 
 describe("createSafeLayerRenderModel", () => {
@@ -35,6 +33,33 @@ describe("createSafeLayerRenderModel", () => {
     expect(model.textRows[0].path).toContain(" S");
     expect(model.textRows[0].text).toContain("PROTECTED");
     expect(model.textTransform).toContain("rotate");
+  });
+
+  it("uses the diamond separator and never inserts the old middle-dot separator", () => {
+    const model = createSafeLayerRenderModel({ ...baseConfig, text: "Confidential" });
+    const generatedText = model.textRows.map((row) => row.text).join(" ");
+
+    expect(generatedText).toContain(`CONFIDENTIAL ${SAFELAYER_TEXT_SEPARATOR} CONFIDENTIAL`);
+    expect(generatedText).not.toContain("CONFIDENTIAL · CONFIDENTIAL");
+  });
+
+  it("keeps SafeLayer text at the fixed 7px renderer size", () => {
+    expect(createSafeLayerRenderModel(baseConfig).fontSize).toBe(SAFELAYER_FONT_SIZE);
+    expect(SAFELAYER_FONT_SIZE).toBe(7);
+  });
+
+  it("varies deterministic rotation and curves by page", () => {
+    const pageOne = createSafeLayerRenderModel({ ...baseConfig, pageNumber: 1 });
+    const pageTwo = createSafeLayerRenderModel({ ...baseConfig, pageNumber: 2 });
+
+    expect(pageOne).toEqual(createSafeLayerRenderModel({ ...baseConfig, pageNumber: 1 }));
+    expect(pageOne.rotation).toBeGreaterThanOrEqual(-32);
+    expect(pageOne.rotation).toBeLessThanOrEqual(-24);
+    expect(pageTwo.rotation).toBeGreaterThanOrEqual(-32);
+    expect(pageTwo.rotation).toBeLessThanOrEqual(-24);
+    expect(pageOne.rotation).not.toBe(pageTwo.rotation);
+    expect(pageOne.textRows[0].path).not.toBe(pageTwo.textRows[0].path);
+    expect(pageOne.contourSegments.slice(0, 12)).not.toEqual(pageTwo.contourSegments.slice(0, 12));
   });
 
   it("generates contour/isoline segments across the page", () => {

@@ -199,25 +199,17 @@ export function WatermarkPreviewOverlay({
           ));
         }
 
-        if (layer.type === "safelayer" && baseText) {
+        if (layer.type === "safelayer") {
           if (currentPage > SAFELAYER_PREVIEW_PAGE_LIMIT) {
             return null;
           }
 
           const model = createSafeLayerRenderModel({
-            seed: layer.safeLayerSeed || layer.id,
+            seed: `${layer.safeLayerSeed || ""}|${layer.id}`,
             text: baseText,
-            style: layer.safeLayerStyle,
-            distortion: layer.safeLayerDistortion,
+            pageNumber: currentPage,
             width: pageWidth,
             height: pageHeight,
-            opacity,
-            rotation: layer.rotation,
-            textSpacing: layer.safeLayerTextSpacing * zoom,
-            lineSpacing: layer.safeLayerLineSpacing * zoom,
-            waveStrength: layer.safeLayerWaveStrength * zoom,
-            contourStrength: layer.safeLayerContourStrength * zoom,
-            holographicIntensity: layer.safeLayerHolographicIntensity,
           });
           const toneColor = {
             primary: textColor,
@@ -260,7 +252,7 @@ export function WatermarkPreviewOverlay({
                     key={`text-${row.id}`}
                     fill={textColor}
                     opacity={row.opacity}
-                    fontSize={Math.max(8, layer.fontSize * zoom * 0.78, model.fontSize)}
+                    fontSize={model.fontSize}
                     fontWeight={700}
                     letterSpacing="0.02em"
                   >
