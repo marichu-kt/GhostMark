@@ -39,7 +39,7 @@ export function PositionGridPicker({
   return (
     <fieldset className="grid gap-2 text-sm text-steel-100" disabled={disabled}>
       <legend className="font-medium">{label ?? t("watermark.position")}</legend>
-      <div className="grid w-full max-w-[168px] grid-cols-3 gap-1.5" role="group">
+      <div className="grid w-full max-w-[126px] grid-cols-3 gap-1" role="group">
         {POSITION_GRID_OPTIONS.map((option) => {
           const selected = option.value === visibleValue;
           const labelText = t(option.labelKey);
@@ -53,7 +53,7 @@ export function PositionGridPicker({
               title={labelText}
               disabled={disabled}
               className={classNames(
-                "aspect-square rounded-md border transition focus:outline-none focus:ring-2 focus:ring-white/85 focus:ring-offset-2 focus:ring-offset-[#10151c]",
+                "aspect-square rounded border transition focus:outline-none focus:ring-2 focus:ring-white/85 focus:ring-offset-2 focus:ring-offset-[#10151c]",
                 selected
                   ? "border-local-400 bg-local-500/85 shadow-[0_0_0_1px_rgba(52,211,153,0.42),0_0_18px_rgba(52,211,153,0.22)]"
                   : "border-brand-red/60 bg-brand-red/10 hover:border-brand-red hover:bg-brand-red/18",

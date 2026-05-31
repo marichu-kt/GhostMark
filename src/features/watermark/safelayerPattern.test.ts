@@ -5,15 +5,16 @@ const baseConfig: SafeLayerPatternConfig = {
   seed: "case-001",
   text: "ONLY VALID FOR REVIEW",
   style: "mixed",
-  density: "medium",
   distortion: "medium",
   width: 612,
   height: 792,
   opacity: 0.22,
+  rotation: -10,
   textSpacing: 150,
   lineSpacing: 84,
   waveStrength: 18,
   contourStrength: 16,
+  holographicIntensity: 0.32,
 };
 
 describe("createSafeLayerPattern", () => {
@@ -27,13 +28,19 @@ describe("createSafeLayerPattern", () => {
     );
   });
 
-  it("increases complexity for higher density", () => {
-    const low = createSafeLayerPattern({ ...baseConfig, density: "low" });
-    const high = createSafeLayerPattern({ ...baseConfig, density: "high" });
+  it("changes coordinates when wave strength changes", () => {
+    const soft = createSafeLayerPattern({ ...baseConfig, waveStrength: 8 });
+    const strong = createSafeLayerPattern({ ...baseConfig, waveStrength: 44 });
 
-    expect(high.textMarks.length + high.waveLines.length + high.contourLines.length).toBeGreaterThan(
-      low.textMarks.length + low.waveLines.length + low.contourLines.length,
-    );
+    expect(strong.textMarks.map((mark) => mark.y)).not.toEqual(soft.textMarks.map((mark) => mark.y));
+  });
+
+  it("uses holographic intensity for overlay generation", () => {
+    const none = createSafeLayerPattern({ ...baseConfig, holographicIntensity: 0 });
+    const visible = createSafeLayerPattern({ ...baseConfig, holographicIntensity: 0.6 });
+
+    expect(none.holographicLines).toHaveLength(0);
+    expect(visible.holographicLines.length).toBeGreaterThan(0);
   });
 
   it("keeps generated opacities in safe bounds", () => {
@@ -42,8 +49,9 @@ describe("createSafeLayerPattern", () => {
       ...pattern.textMarks.map((mark) => mark.opacity),
       ...pattern.waveLines.map((line) => line.opacity),
       ...pattern.contourLines.map((line) => line.opacity),
+      ...pattern.holographicLines.map((line) => line.opacity),
     ];
 
-    expect(opacities.every((opacity) => opacity >= 0.04 && opacity <= 0.42)).toBe(true);
+    expect(opacities.every((opacity) => opacity >= 0.025 && opacity <= 0.4)).toBe(true);
   });
 });

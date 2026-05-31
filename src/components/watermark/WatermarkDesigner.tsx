@@ -171,26 +171,6 @@ export function WatermarkDesigner({
     });
   }
 
-  function addBlackoutRect() {
-    if (!selectedLayer) {
-      return;
-    }
-
-    patchSelectedLayer({
-      blackoutRects: [
-        ...selectedLayer.blackoutRects,
-        {
-          id: crypto.randomUUID(),
-          page: 1,
-          x: 72,
-          y: 650,
-          width: 180,
-          height: 28,
-        },
-      ],
-    });
-  }
-
   function removeBlackoutRect(rectId: string) {
     if (!selectedLayer) {
       return;
@@ -222,14 +202,14 @@ export function WatermarkDesigner({
   return (
     <>
       <FieldGroup title={t("layers.addWatermark")}>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid min-w-0 grid-cols-2 gap-2">
           {layerTypes.map((type) => {
             const Icon = layerIcons[type];
 
             return (
-              <Button key={type} variant="quiet" size="sm" onClick={() => addLayer(type)}>
+              <Button key={type} variant="quiet" size="sm" className="min-w-0 flex-wrap" onClick={() => addLayer(type)}>
                 <Icon size={15} aria-hidden="true" />
-                {t(getLayerTypeTranslationKey(type))}
+                <span className="min-w-0 truncate">{t(getLayerTypeTranslationKey(type))}</span>
               </Button>
             );
           })}
@@ -242,18 +222,18 @@ export function WatermarkDesigner({
             {t("layers.addFirst")}
           </div>
         ) : (
-          <div className="grid gap-2">
+          <div className="grid min-w-0 gap-2">
             {layers.map((layer, index) => {
               const selected = selectedLayer?.id === layer.id;
 
               return (
                 <div
                   key={layer.id}
-                  className={`rounded-md border p-2 transition-colors ${
+                  className={`min-w-0 rounded-md border p-2 transition-colors ${
                     selected ? "border-brand-red bg-graphite-800/90" : "border-graphite-700 bg-graphite-950/80"
                   }`}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <input
                       type="checkbox"
                       className="h-4 w-4 accent-brand-red"
@@ -271,7 +251,7 @@ export function WatermarkDesigner({
                       </span>
                       <span className="block truncate text-xs text-steel-400">{getLayerListSummary(layer)}</span>
                     </button>
-                    <div className="flex shrink-0 items-center gap-1">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
                       <Button
                         size="icon"
                         variant="quiet"
@@ -343,18 +323,6 @@ export function WatermarkDesigner({
                   ]}
                 />
                 <Select
-                  label={t("safelayer.density")}
-                  value={selectedLayer.safeLayerDensity}
-                  onChange={(event) =>
-                    patchSelectedLayer({ safeLayerDensity: event.target.value as DocumentLayer["safeLayerDensity"] })
-                  }
-                  options={[
-                    { value: "low", label: t("safelayer.low") },
-                    { value: "medium", label: t("safelayer.medium") },
-                    { value: "high", label: t("safelayer.high") },
-                  ]}
-                />
-                <Select
                   label={t("safelayer.distortion")}
                   value={selectedLayer.safeLayerDistortion}
                   onChange={(event) =>
@@ -367,6 +335,22 @@ export function WatermarkDesigner({
                     { value: "medium", label: t("safelayer.medium") },
                     { value: "strong", label: t("safelayer.strong") },
                   ]}
+                />
+                <Slider
+                  label={t("safelayer.waveStrength")}
+                  min={4}
+                  max={64}
+                  value={selectedLayer.safeLayerWaveStrength}
+                  onChange={(safeLayerWaveStrength) => patchSelectedLayer({ safeLayerWaveStrength })}
+                />
+                <Slider
+                  label={t("safelayer.holographicIntensity")}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={selectedLayer.safeLayerHolographicIntensity}
+                  displayValue={`${Math.round(selectedLayer.safeLayerHolographicIntensity * 100)}%`}
+                  onChange={(safeLayerHolographicIntensity) => patchSelectedLayer({ safeLayerHolographicIntensity })}
                 />
                 <p className="text-xs leading-5 text-steel-300">{t("safelayer.limitNote")}</p>
               </>
@@ -396,18 +380,6 @@ export function WatermarkDesigner({
                     { value: "circular", label: t("watermark.sealStyleCircular") },
                   ]}
                 />
-                <Select
-                  label={t("watermark.sealInkStyle")}
-                  value={selectedLayer.sealInkStyle ?? "clean"}
-                  onChange={(event) =>
-                    patchSelectedLayer({ sealInkStyle: event.target.value as DocumentLayer["sealInkStyle"] })
-                  }
-                  options={[
-                    { value: "clean", label: t("watermark.sealInkClean") },
-                    { value: "real-ink", label: t("watermark.sealInkReal") },
-                    { value: "faded-ink", label: t("watermark.sealInkFaded") },
-                  ]}
-                />
               </>
             ) : null}
 
@@ -434,17 +406,15 @@ export function WatermarkDesigner({
             {selectedLayer.type === "blackout" ? (
               <>
                 <Notice tone="warning">{t("blackout.flattenWarning")}</Notice>
-                <Button variant="secondary" onClick={addBlackoutRect}>
-                  {t("blackout.addRectangle")}
-                </Button>
-                <div className="grid gap-3">
+                <p className="text-xs leading-5 text-steel-300">{t("blackout.drawInstruction")}</p>
+                <div className="grid min-w-0 gap-3">
                   {selectedLayer.blackoutRects.map((rect, index) => (
-                    <div key={rect.id} className="grid gap-3 rounded-md border border-graphite-700 bg-graphite-950 p-3">
-                      <div className="flex items-center justify-between gap-2">
+                    <div key={rect.id} className="grid min-w-0 gap-3 rounded-md border border-graphite-700 bg-graphite-950 p-3">
+                      <div className="flex min-w-0 items-center justify-between gap-2">
                         <span className="text-sm font-semibold text-white">
                           {t("blackout.rectangle")} {index + 1}
                         </span>
-                        <div className="flex gap-1">
+                        <div className="flex shrink-0 gap-1">
                           <Button size="icon" variant="quiet" aria-label={t("layers.duplicate")} onClick={() => duplicateBlackoutRect(rect.id)}>
                             <Copy size={13} aria-hidden="true" />
                           </Button>
@@ -453,7 +423,7 @@ export function WatermarkDesigner({
                           </Button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid min-w-0 grid-cols-2 gap-3">
                         <Input
                           label={t("blackout.page")}
                           type="number"
@@ -618,13 +588,6 @@ export function WatermarkDesigner({
                   max={180}
                   value={selectedLayer.safeLayerLineSpacing}
                   onChange={(safeLayerLineSpacing) => patchSelectedLayer({ safeLayerLineSpacing })}
-                />
-                <Slider
-                  label={t("safelayer.waveStrength")}
-                  min={0}
-                  max={48}
-                  value={selectedLayer.safeLayerWaveStrength}
-                  onChange={(safeLayerWaveStrength) => patchSelectedLayer({ safeLayerWaveStrength })}
                 />
                 <Slider
                   label={t("safelayer.contourStrength")}

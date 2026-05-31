@@ -372,6 +372,7 @@ export function App() {
           onPageChange={setPageSafely}
           onZoomChange={setZoom}
           onPreviewEnabledChange={setPreviewEnabled}
+          onLayersChange={setLayers}
         />
       ) : (
         <EmptyState onLoaded={handleLoaded} />

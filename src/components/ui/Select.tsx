@@ -17,12 +17,12 @@ export function Select({ label, options, helpText, id, className, ...props }: Se
   const selectId = id ?? props.name ?? label.toLowerCase().replace(/\s+/g, "-");
 
   return (
-    <label className="grid gap-1.5 text-sm text-steel-100" htmlFor={selectId}>
-      <span className="font-medium">{label}</span>
+    <label className="grid min-w-0 gap-1.5 text-sm text-steel-100" htmlFor={selectId}>
+      <span className="min-w-0 break-words font-medium">{label}</span>
       <select
         id={selectId}
         className={classNames(
-          "min-h-10 rounded-md border border-graphite-700 bg-graphite-950 px-3 py-2 text-sm text-white",
+          "min-h-10 min-w-0 max-w-full rounded-md border border-graphite-700 bg-graphite-950 px-3 py-2 text-sm text-white",
           className,
         )}
         {...props}

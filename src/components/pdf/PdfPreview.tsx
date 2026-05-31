@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import type { LoadedPdf } from "../../types/pdf";
 import type { DocumentLayer } from "../../types/watermark";
 import {
@@ -7,6 +7,7 @@ import {
   shouldUseLargePdfMode,
 } from "../../features/pdf/largePdf";
 import { getPdfPageSize, renderPdfPageToCanvas } from "../../features/pdf/renderPdfPreview";
+import { createBlackoutRectFromDrag } from "../../features/watermark/blackoutDrawing";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { Notice } from "../ui/Notice";
 import { PageNavigator } from "./PageNavigator";
@@ -24,6 +25,12 @@ interface PdfPreviewProps {
   onPageChange: (page: number) => void;
   onZoomChange: (zoom: number) => void;
   onPreviewEnabledChange: (enabled: boolean) => void;
+  onLayersChange: (layers: DocumentLayer[]) => void;
+}
+
+interface DragPoint {
+  x: number;
+  y: number;
 }
 
 export function PdfPreview({
@@ -36,12 +43,14 @@ export function PdfPreview({
   onPageChange,
   onZoomChange,
   onPreviewEnabledChange,
+  onLayersChange,
 }: PdfPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [pageDisplaySize, setPageDisplaySize] = useState({ width: 0, height: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blackoutDrag, setBlackoutDrag] = useState<{ start: DragPoint; current: DragPoint } | null>(null);
   const { t } = useTranslation();
   const largePdfMode = shouldUseLargePdfMode(document.pageCount);
   const visiblePageCount = getVisiblePageCount(document.pageCount);
@@ -104,6 +113,80 @@ export function PdfPreview({
     }
   }
 
+  const selectedBlackoutLayer =
+    layers.find((layer) => layer.id === selectedLayerId && layer.type === "blackout" && layer.enabled) ?? null;
+  const drawingEnabled = Boolean(selectedBlackoutLayer && previewEnabled && pageDisplaySize.width > 0 && pageDisplaySize.height > 0);
+
+  function getPointerPoint(event: PointerEvent<HTMLDivElement>): DragPoint {
+    const rect = event.currentTarget.getBoundingClientRect();
+
+    return {
+      x: Math.min(rect.width, Math.max(0, event.clientX - rect.left)),
+      y: Math.min(rect.height, Math.max(0, event.clientY - rect.top)),
+    };
+  }
+
+  function handleBlackoutPointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (!drawingEnabled) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const start = getPointerPoint(event);
+    setBlackoutDrag({ start, current: start });
+  }
+
+  function handleBlackoutPointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!blackoutDrag) {
+      return;
+    }
+
+    setBlackoutDrag({ ...blackoutDrag, current: getPointerPoint(event) });
+  }
+
+  function handleBlackoutPointerUp(event: PointerEvent<HTMLDivElement>) {
+    if (!blackoutDrag || !selectedBlackoutLayer) {
+      setBlackoutDrag(null);
+      return;
+    }
+
+    const end = getPointerPoint(event);
+    const width = Math.abs(end.x - blackoutDrag.start.x);
+    const height = Math.abs(end.y - blackoutDrag.start.y);
+    setBlackoutDrag(null);
+
+    if (width < 4 || height < 4) {
+      return;
+    }
+
+    const rect = createBlackoutRectFromDrag({
+      id: crypto.randomUUID(),
+      page: safeCurrentPage,
+      start: blackoutDrag.start,
+      end,
+      zoom,
+      pageHeight: pageDisplaySize.height,
+    });
+
+    onLayersChange(
+      layers.map((layer) =>
+        layer.id === selectedBlackoutLayer.id
+          ? { ...layer, blackoutRects: [...layer.blackoutRects, rect] }
+          : layer,
+      ),
+    );
+  }
+
+  const dragBox = blackoutDrag
+    ? {
+        left: Math.min(blackoutDrag.start.x, blackoutDrag.current.x),
+        top: Math.min(blackoutDrag.start.y, blackoutDrag.current.y),
+        width: Math.abs(blackoutDrag.current.x - blackoutDrag.start.x),
+        height: Math.abs(blackoutDrag.current.y - blackoutDrag.start.y),
+      }
+    : null;
+
   return (
     <div className="flex h-full min-h-0">
       <ThumbnailRail document={document} currentPage={currentPage} onSelectPage={onPageChange} />
@@ -155,6 +238,28 @@ export function PdfPreview({
               pageHeight={pageDisplaySize.height}
               selectedLayerId={selectedLayerId}
             />
+            {drawingEnabled ? (
+              <div
+                className="absolute inset-0 cursor-crosshair touch-none"
+                role="presentation"
+                onPointerDown={handleBlackoutPointerDown}
+                onPointerMove={handleBlackoutPointerMove}
+                onPointerUp={handleBlackoutPointerUp}
+                onPointerCancel={() => setBlackoutDrag(null)}
+              >
+                {dragBox ? (
+                  <div
+                    className="absolute border border-white/75 bg-black/80 shadow-[0_0_0_1px_rgba(0,0,0,0.75)]"
+                    style={{
+                      left: dragBox.left,
+                      top: dragBox.top,
+                      width: dragBox.width,
+                      height: dragBox.height,
+                    }}
+                  />
+                ) : null}
+              </div>
+            ) : null}
             {loading ? (
               <div className="absolute inset-0 grid place-items-center bg-graphite-950/45 text-sm text-steel-100">
                 {t("preview.loading")}

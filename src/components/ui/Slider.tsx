@@ -26,10 +26,10 @@ export function Slider({
   const sliderId = id ?? label.toLowerCase().replace(/\s+/g, "-");
 
   return (
-    <label className="grid gap-2 text-sm text-steel-100" htmlFor={sliderId}>
-      <span className="flex items-center justify-between gap-4">
-        <span className="font-medium">{label}</span>
-        <span className="tabular-nums text-steel-300">{displayValue ?? value}</span>
+    <label className="grid min-w-0 gap-2 text-sm text-steel-100" htmlFor={sliderId}>
+      <span className="flex min-w-0 items-center justify-between gap-3">
+        <span className="min-w-0 break-words font-medium">{label}</span>
+        <span className="shrink-0 tabular-nums text-steel-300">{displayValue ?? value}</span>
       </span>
       <input
         id={sliderId}
@@ -39,7 +39,7 @@ export function Slider({
         step={step}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className={classNames("accent-brand-red", className)}
+        className={classNames("min-w-0 max-w-full accent-brand-red", className)}
         {...props}
       />
     </label>

@@ -53,17 +53,16 @@ function makeConfig(patch: Partial<WatermarkConfig> = {}): WatermarkConfig {
     sealSubtitle: "DOCUMENT CONTROL",
     sealDocumentId: "",
     sealStyle: "rectangular",
-    sealInkStyle: "clean",
     sealShowDate: true,
     sealBorderThickness: 2,
     safeLayerStyle: "mixed",
-    safeLayerDensity: "medium",
     safeLayerDistortion: "medium",
     safeLayerSeed: "test-seed",
     safeLayerTextSpacing: 150,
     safeLayerLineSpacing: 84,
     safeLayerWaveStrength: 18,
     safeLayerContourStrength: 16,
+    safeLayerHolographicIntensity: 0.32,
     blackoutRects: [],
     ...patch,
   };
@@ -170,8 +169,13 @@ describe("seal defaults", () => {
     expect(seal.sealTitle).toBe("REVIEWED");
     expect(seal.sealSubtitle).toBe("DOCUMENT CONTROL");
     expect(seal.sealStyle).toBe("rectangular");
-    expect(seal.sealInkStyle).toBe("clean");
     expect(seal.positionPreset).toBe("bottom-right");
     expect(seal.scale).toBe(1);
+  });
+});
+
+describe("blackout defaults", () => {
+  it("does not create an automatic rectangle", () => {
+    expect(createLayerForType("blackout").blackoutRects).toEqual([]);
   });
 });

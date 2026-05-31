@@ -29,17 +29,16 @@ export function createDefaultLayer(type: LayerType = "text"): DocumentLayer {
     sealSubtitle: "DOCUMENT CONTROL",
     sealDocumentId: "",
     sealStyle: "rectangular",
-    sealInkStyle: "clean",
     sealShowDate: true,
     sealBorderThickness: 2,
     safeLayerStyle: "mixed",
-    safeLayerDensity: "medium",
     safeLayerDistortion: "medium",
     safeLayerSeed: "",
-    safeLayerTextSpacing: 150,
-    safeLayerLineSpacing: 84,
-    safeLayerWaveStrength: 18,
-    safeLayerContourStrength: 16,
+    safeLayerTextSpacing: 116,
+    safeLayerLineSpacing: 62,
+    safeLayerWaveStrength: 28,
+    safeLayerContourStrength: 22,
+    safeLayerHolographicIntensity: 0.32,
     blackoutRects: [],
   };
 }
@@ -75,9 +74,9 @@ export function createLayerForType(type: LayerType): DocumentLayer {
         ...layer,
         name: "SafeLayer",
         color: "#7d3432",
-        opacity: 0.22,
-        rotation: -24,
-        fontSize: 22,
+        opacity: 0.2,
+        rotation: -10,
+        fontSize: 18,
         safeLayerSeed: crypto.randomUUID(),
       };
     case "blackout":
@@ -88,16 +87,7 @@ export function createLayerForType(type: LayerType): DocumentLayer {
         rotation: 0,
         color: "#000000",
         text: "",
-        blackoutRects: [
-          {
-            id: crypto.randomUUID(),
-            page: 1,
-            x: 72,
-            y: 650,
-            width: 180,
-            height: 28,
-          },
-        ],
+        blackoutRects: [],
       };
     default:
       return { ...layer, name: "Text" };

@@ -22,9 +22,7 @@ export type PositionPreset =
   | "bottom-right"
   | "diagonal-center";
 
-export type SealInkStyle = "clean" | "real-ink" | "faded-ink";
 export type SafeLayerStyle = "mixed" | "waves" | "contours" | "text-mesh";
-export type SafeLayerDensity = "low" | "medium" | "high";
 export type SafeLayerDistortion = "soft" | "medium" | "strong";
 
 export interface BlackoutRect {
@@ -77,17 +75,16 @@ export interface DocumentLayer {
   sealSubtitle: string;
   sealDocumentId: string;
   sealStyle: "rectangular" | "circular";
-  sealInkStyle: SealInkStyle;
   sealShowDate: boolean;
   sealBorderThickness: number;
   safeLayerStyle: SafeLayerStyle;
-  safeLayerDensity: SafeLayerDensity;
   safeLayerDistortion: SafeLayerDistortion;
   safeLayerSeed: string;
   safeLayerTextSpacing: number;
   safeLayerLineSpacing: number;
   safeLayerWaveStrength: number;
   safeLayerContourStrength: number;
+  safeLayerHolographicIntensity: number;
   blackoutRects: BlackoutRect[];
 }
 
