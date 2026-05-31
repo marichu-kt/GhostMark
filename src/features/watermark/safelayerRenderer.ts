@@ -4,6 +4,7 @@ export interface SafeLayerRendererConfig {
   pageNumber: number;
   width: number;
   height: number;
+  quality?: "preview" | "export";
 }
 
 export interface SafeLayerTextPathRow {
@@ -11,6 +12,9 @@ export interface SafeLayerTextPathRow {
   path: string;
   text: string;
   startOffset: string;
+  offsetRatio: number;
+  y: number;
+  amplitude: number;
   opacity: number;
 }
 
@@ -31,7 +35,7 @@ export interface SafeLayerRenderModel {
   rotation: number;
 }
 
-export const SAFELAYER_PREVIEW_PAGE_LIMIT = 10;
+export const SAFELAYER_PREVIEW_PAGE_LIMIT = 3;
 export const SAFELAYER_TEXT_SEPARATOR = "◆";
 export const SAFELAYER_FONT_SIZE = 7;
 export const SAFELAYER_OPACITY = 0.55;
@@ -40,6 +44,10 @@ export const SAFELAYER_LINE_SPACING = 62;
 export const SAFELAYER_WAVE_STRENGTH = 28;
 export const SAFELAYER_CONTOUR_STRENGTH = 22;
 export const SAFELAYER_HOLOGRAPHIC_INTENSITY = 0.32;
+export const SAFELAYER_PREVIEW_CONTOUR_RESOLUTION = 92;
+export const SAFELAYER_EXPORT_CONTOUR_RESOLUTION = 128;
+export const SAFELAYER_PREVIEW_CONTOUR_LEVELS = 24;
+export const SAFELAYER_EXPORT_CONTOUR_LEVELS = 36;
 const SAFELAYER_DISTORTION_MULTIPLIER = 1;
 const SAFELAYER_ROTATION_MIN = -32;
 const SAFELAYER_ROTATION_MAX = -24;
@@ -143,7 +151,9 @@ function edgePoint(
 function createContourSegments(config: SafeLayerRendererConfig, seedNumber: number): SafeLayerContourSegment[] {
   const width = config.width;
   const height = config.height;
-  const resolution = Math.min(180, Math.max(80, Math.round(width / 5)));
+  const targetResolution =
+    config.quality === "preview" ? SAFELAYER_PREVIEW_CONTOUR_RESOLUTION : SAFELAYER_EXPORT_CONTOUR_RESOLUTION;
+  const resolution = Math.min(targetResolution, Math.max(56, Math.round(width / 6)));
   const columns = resolution;
   const rows = Math.max(24, Math.round((columns * height) / Math.max(1, width)));
   const dx = width / columns;
@@ -163,7 +173,8 @@ function createContourSegments(config: SafeLayerRendererConfig, seedNumber: numb
     }
   }
 
-  const lineCount = Math.round(22 + Math.min(28, Math.max(0, SAFELAYER_CONTOUR_STRENGTH)));
+  const lineCount =
+    config.quality === "preview" ? SAFELAYER_PREVIEW_CONTOUR_LEVELS : SAFELAYER_EXPORT_CONTOUR_LEVELS;
   const start = min + (max - min) * 0.07;
   const end = min + (max - min) * 0.97;
   const segments: SafeLayerContourSegment[] = [];
@@ -241,13 +252,17 @@ export function createSafeLayerRenderModel(config: SafeLayerRendererConfig): Saf
 
   for (let index = 0; index < rowCount; index += 1) {
     const y = index * rowSpacing + rowSpacing / 2 + (random() - 0.5) * rowSpacing * 0.36;
-    const offset = `${Math.round(random() * 9)}%`;
+    const offsetRatio = random() * 0.09;
+    const offset = `${Math.round(offsetRatio * 100)}%`;
     const amplitude = waveAmplitude * (0.82 + random() * 0.42);
     textRows.push({
       id: `safelayer-wave-${seed}-${index}`,
       path: buildExactWavePath(hugeWidth, y, amplitude),
       text: phrase.repeat(90),
       startOffset: offset,
+      offsetRatio,
+      y,
+      amplitude,
       opacity: Math.min(0.52, Math.max(0.12, SAFELAYER_OPACITY * (0.48 + random() * 0.12))),
     });
   }

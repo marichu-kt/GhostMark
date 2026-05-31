@@ -210,6 +210,7 @@ export function WatermarkPreviewOverlay({
             pageNumber: currentPage,
             width: pageWidth,
             height: pageHeight,
+            quality: "preview",
           });
           const toneColor = {
             primary: textColor,

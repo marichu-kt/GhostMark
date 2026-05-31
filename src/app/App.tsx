@@ -227,7 +227,8 @@ export function App() {
         setLayers(defaultLayers);
         setSelectedLayerId(defaultLayers[0]?.id ?? null);
       }
-    } catch {
+    } catch (error) {
+      console.error("GhostMark export failed", error);
       setExportError(t("export.error"));
     } finally {
       setGenerating(false);

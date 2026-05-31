@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createCanvas, DOMMatrix, ImageData } from "canvas";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { createDefaultDocumentLayers } from "../watermark/defaults";
+import { createDefaultDocumentLayers, createLayerForType } from "../watermark/defaults";
 
 const sourceText = "COPY_ME_SHOULD_DISAPPEAR";
 
@@ -70,7 +70,20 @@ function installCanvasDom() {
   }
 }
 
-async function createSelectableTextPdf() {
+function installRejectingCreateImageBitmap() {
+  const createImageBitmapMock = vi.fn(async () => {
+    throw new Error("Simulated SVG decode failure");
+  });
+  Object.defineProperty(globalThis, "createImageBitmap", {
+    value: createImageBitmapMock,
+    configurable: true,
+  });
+  (globalThis.window as Window & { createImageBitmap: typeof createImageBitmap }).createImageBitmap =
+    createImageBitmapMock as unknown as typeof createImageBitmap;
+  return createImageBitmapMock;
+}
+
+async function createSelectableTextPdf(pageCount = 1) {
   const pdf = await PDFDocument.create();
   pdf.setTitle("Sensitive source title");
   pdf.setAuthor("Sensitive source author");
@@ -78,14 +91,18 @@ async function createSelectableTextPdf() {
   pdf.setKeywords(["sensitive", "source"]);
   pdf.setCreator("Sensitive source creator");
   const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const page = pdf.addPage([320, 180]);
-  page.drawText(sourceText, {
-    x: 32,
-    y: 96,
-    size: 18,
-    font,
-    color: rgb(0, 0, 0),
-  });
+
+  for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+    const page = pdf.addPage([320, 180]);
+    page.drawText(`${sourceText}_${pageIndex + 1}`, {
+      x: 32,
+      y: 96,
+      size: 18,
+      font,
+      color: rgb(0, 0, 0),
+    });
+  }
+
   return pdf.save();
 }
 
@@ -136,5 +153,45 @@ describe("exportPdf flattened output", () => {
     expect(reloaded.getSubject()).toBe("");
     expect(reloaded.getKeywords()).toBe("");
     expect(reloaded.getCreator()).toBe("GhostMark");
+  });
+
+  it("exports SafeLayer and Blackout through the flattened production path without throwing", async () => {
+    installCanvasDom();
+    const createImageBitmapMock = installRejectingCreateImageBitmap();
+    const { exportPdf } = await import("./exportPdf");
+    await configurePdfJsWorker();
+    const inputBytes = await createSelectableTextPdf(4);
+    const before = await extractText(new Uint8Array(inputBytes));
+    const safeLayer = {
+      ...createLayerForType("safelayer"),
+      id: "safe-layer-regression",
+      text: "internal review",
+      pages: { mode: "all" as const, selection: "" },
+    };
+    const blackout = {
+      ...createLayerForType("blackout"),
+      id: "blackout-regression",
+      pages: { mode: "all" as const, selection: "" },
+      blackoutRects: [{ id: "blackout-page-2", page: 2, x: 28, y: 88, width: 230, height: 30 }],
+    };
+
+    expect(before.pageCount).toBe(4);
+    expect(before.text).toContain(sourceText);
+
+    const result = await exportPdf(new Uint8Array(inputBytes), [blackout, safeLayer], {
+      outputFileName: "safelayer-blackout.pdf",
+      cleanupMetadata: true,
+    });
+    const exportedBytes = new Uint8Array(await result.blob.arrayBuffer());
+    const after = await extractText(exportedBytes);
+    const reloaded = await PDFDocument.load(exportedBytes);
+
+    expect(after.pageCount).toBe(4);
+    expect(after.text).not.toContain(sourceText);
+    expect(after.text.trim()).toBe("");
+    expect(reloaded.getTitle()).toBe("");
+    expect(reloaded.getAuthor()).toBe("");
+    expect(reloaded.getCreator()).toBe("GhostMark");
+    expect(createImageBitmapMock).not.toHaveBeenCalled();
   });
 });

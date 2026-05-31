@@ -88,36 +88,6 @@ function invertedPixelColor(
   return `rgba(${255 - red},${255 - green},${255 - blue},${alpha})`;
 }
 
-function escapeSvgText(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-async function svgToCanvasImage(svg: string): Promise<CanvasImageSource> {
-  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-
-  if ("createImageBitmap" in window) {
-    return createImageBitmap(blob);
-  }
-
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    const url = URL.createObjectURL(blob);
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(image);
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("SafeLayer SVG overlay could not be loaded."));
-    };
-    image.src = url;
-  });
-}
-
 function drawCanvasSegment(
   context: CanvasRenderingContext2D,
   start: { x: number; y: number },
@@ -161,6 +131,41 @@ function drawCanvasSegment(
   context.restore();
 }
 
+function drawCanvasSafeLayerTextRows(
+  context: CanvasRenderingContext2D,
+  model: ReturnType<typeof createSafeLayerRenderModel>,
+  color: string,
+  canvas: HTMLCanvasElement,
+) {
+  const phrase = `${model.text} ◆ `;
+  const hugeWidth = canvas.width * 3.8;
+  const pivotX = canvas.width * 1.4;
+  const pivotY = canvas.height * 1.4;
+
+  context.save();
+  context.translate(-canvas.width * 0.9, -canvas.height * 0.9);
+  context.translate(pivotX, pivotY);
+  context.rotate((model.rotation * Math.PI) / 180);
+  context.translate(-pivotX, -pivotY);
+  context.font = `700 ${model.fontSize}px Arial, sans-serif`;
+  context.fillStyle = color;
+  context.textBaseline = "middle";
+
+  const phraseWidth = Math.max(32, context.measureText(phrase).width);
+
+  for (const row of model.textRows) {
+    context.globalAlpha = row.opacity * model.textOpacity;
+    const startX = -row.offsetRatio * hugeWidth;
+
+    for (let x = startX; x < hugeWidth; x += phraseWidth) {
+      const y = row.y + Math.sin(x / 33 + row.offsetRatio * 16) * row.amplitude;
+      context.fillText(phrase, x, y);
+    }
+  }
+
+  context.restore();
+}
+
 async function drawCanvasSafeLayer(
   context: CanvasRenderingContext2D,
   layer: DocumentLayer,
@@ -175,6 +180,7 @@ async function drawCanvasSafeLayer(
     pageNumber,
     width: canvas.width,
     height: canvas.height,
+    quality: "export",
   });
   const color = hexToCss(layer.color);
   const toneColor = {
@@ -188,23 +194,7 @@ async function drawCanvasSafeLayer(
     drawCanvasSegment(context, segment.start, segment.end, imageData, toneColor[segment.tone], segment.opacity, 0.9, true);
   }
 
-  const paths = model.textRows.map((row) => `<path id="${row.id}" d="${row.path}" fill="none"/>`).join("");
-  const textRows = model.textRows
-    .map(
-      (row) =>
-        `<text fill="${color}" opacity="${row.opacity}" font-size="${model.fontSize}" font-weight="700" letter-spacing="0.02em"><textPath href="#${row.id}" startOffset="${row.startOffset}">${escapeSvgText(row.text)}</textPath></text>`,
-    )
-    .join("");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}"><defs>${paths}</defs><g transform="${model.textTransform}" opacity="${model.textOpacity}" font-family="Arial, sans-serif">${textRows}</g></svg>`;
-  const image = await svgToCanvasImage(svg);
-
-  context.save();
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  context.restore();
-
-  if ("close" in image && typeof image.close === "function") {
-    image.close();
-  }
+  drawCanvasSafeLayerTextRows(context, model, color, canvas);
 }
 
 async function loadCanvasImage(layer: DocumentLayer): Promise<CanvasImageSource | null> {

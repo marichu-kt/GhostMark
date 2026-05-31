@@ -22,7 +22,7 @@ describe("flattened export planning", () => {
     const safeLayer = { ...createLayerForType("safelayer"), id: "safe-layer" };
     const plan = buildFlattenedExportPlan([safeLayer], 1000);
 
-    expect(SAFELAYER_PREVIEW_PAGE_LIMIT).toBe(10);
+    expect(SAFELAYER_PREVIEW_PAGE_LIMIT).toBe(3);
     expect(plan[SAFELAYER_PREVIEW_PAGE_LIMIT].layerIds).toContain("safe-layer");
     expect(plan[199].layerIds).toContain("safe-layer");
     expect(plan[999].layerIds).toContain("safe-layer");
