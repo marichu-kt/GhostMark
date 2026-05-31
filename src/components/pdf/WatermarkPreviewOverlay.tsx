@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { DocumentLayer } from "../../types/watermark";
 import { resolvePageRules } from "../../features/pdf/pageRules";
-import { createSafeLayerPattern } from "../../features/watermark/safelayerPattern";
+import { createSafeLayerPattern, SAFELAYER_PREVIEW_PAGE_LIMIT } from "../../features/watermark/safelayerPattern";
 
 interface WatermarkPreviewOverlayProps {
   layers: DocumentLayer[];
@@ -201,6 +201,10 @@ export function WatermarkPreviewOverlay({
         }
 
         if (layer.type === "safelayer" && baseText) {
+          if (currentPage > SAFELAYER_PREVIEW_PAGE_LIMIT) {
+            return null;
+          }
+
           const pattern = createSafeLayerPattern({
             seed: layer.safeLayerSeed || layer.id,
             text: baseText,

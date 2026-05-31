@@ -3,7 +3,7 @@ import { createSafeLayerPattern, type SafeLayerPatternConfig } from "./safelayer
 
 const baseConfig: SafeLayerPatternConfig = {
   seed: "case-001",
-  text: "ONLY VALID FOR REVIEW",
+  text: "PROTECTED",
   style: "mixed",
   distortion: "medium",
   width: 612,
@@ -53,5 +53,28 @@ describe("createSafeLayerPattern", () => {
     ];
 
     expect(opacities.every((opacity) => opacity >= 0.025 && opacity <= 0.4)).toBe(true);
+  });
+
+  it("covers the full page with repeated text marks", () => {
+    const pattern = createSafeLayerPattern(baseConfig);
+    const xs = pattern.textMarks.map((mark) => mark.x);
+    const ys = pattern.textMarks.map((mark) => mark.y);
+
+    expect(Math.min(...xs)).toBeLessThan(0);
+    expect(Math.max(...xs)).toBeGreaterThan(baseConfig.width);
+    expect(Math.min(...ys)).toBeLessThan(0);
+    expect(Math.max(...ys)).toBeGreaterThan(baseConfig.height);
+  });
+
+  it("does not emit demo placeholder or footer text when layer text is empty", () => {
+    const pattern = createSafeLayerPattern({ ...baseConfig, text: "" });
+    const generatedText = pattern.textMarks.map((mark) => mark.text.toLowerCase()).join(" ");
+    const forbidden = [`text ${"here"}`, `saferlayer${"."}com`, `v1${"."}6${"."}2`];
+
+    for (const text of forbidden) {
+      expect(generatedText).not.toContain(text);
+    }
+
+    expect(generatedText).toContain("protected");
   });
 });

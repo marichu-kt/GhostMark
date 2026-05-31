@@ -15,6 +15,7 @@ interface ExportPanelProps {
   affectedPagesSummary: string;
   validationMessage?: string;
   filenameError?: string;
+  progress?: { current: number; total: number } | null;
   largePdfMode?: boolean;
   visiblePageCount?: number;
   totalPageCount?: number;
@@ -31,6 +32,7 @@ export function ExportPanel({
   affectedPagesSummary,
   validationMessage,
   filenameError,
+  progress,
   largePdfMode = false,
   visiblePageCount,
   totalPageCount,
@@ -69,8 +71,16 @@ export function ExportPanel({
           </Notice>
         ) : null}
         <Notice tone="info">
-          {t("metadata.cleanupApplied")} {t("metadata.notCertified")}
+          {t("export.flattenedCopyProtection")} {t("metadata.cleanupApplied")} {t("metadata.notCertified")}
         </Notice>
+        {progress ? (
+          <Notice tone="info">
+            {t("export.processingPage", {
+              current: progress.current,
+              total: progress.total,
+            })}
+          </Notice>
+        ) : null}
         {disabled && validationMessage ? <Notice tone="warning">{validationMessage}</Notice> : null}
         {error ? <Notice tone="danger">{error}</Notice> : null}
       </FieldGroup>

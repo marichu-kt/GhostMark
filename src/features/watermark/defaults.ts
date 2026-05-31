@@ -7,7 +7,7 @@ export function createDefaultLayer(type: LayerType = "text"): DocumentLayer {
     type,
     name: getDefaultLayerName(type),
     enabled: true,
-    text: type === "pattern" ? "DRAFT" : type === "safelayer" ? "ONLY VALID FOR REVIEW" : "CONFIDENTIAL",
+    text: type === "pattern" ? "DRAFT" : type === "safelayer" ? "PROTECTED" : "CONFIDENTIAL",
     fontSize: 64,
     color: "#2f343a",
     opacity: 0.18,

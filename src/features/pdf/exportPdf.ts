@@ -5,6 +5,7 @@ import { applyDocumentLayers } from "./applyWatermark";
 export interface ExportPdfOptions {
   outputFileName: string;
   cleanupMetadata: boolean;
+  onProgress?: (progress: { current: number; total: number }) => void;
 }
 
 export async function exportPdf(
@@ -14,6 +15,7 @@ export async function exportPdf(
 ): Promise<PdfExportResult> {
   const bytes = await applyDocumentLayers(inputBytes, layers, {
     cleanupMetadata: options.cleanupMetadata,
+    onProgress: options.onProgress,
   });
   const blobBytes = new Uint8Array(bytes);
   const blob = new Blob([blobBytes.buffer], { type: "application/pdf" });

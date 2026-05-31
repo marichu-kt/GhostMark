@@ -52,6 +52,7 @@ export function App() {
   const [outputFileName, setOutputFileName] = useState("ghostmark-watermarked.pdf");
   const [exportResult, setExportResult] = useState<PdfExportResult | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null);
   const [generating, setGenerating] = useState(false);
   const loadedPdfRef = useRef<LoadedPdf | null>(null);
   const exportResultRef = useRef<PdfExportResult | null>(null);
@@ -199,12 +200,14 @@ export function App() {
 
     setGenerating(true);
     setExportError(null);
+    setExportProgress({ current: 0, total: loadedPdf.pageCount });
 
     try {
       revokeExportResult();
       const result = await exportPdf(loadedPdf.bytes, layers, {
         outputFileName,
         cleanupMetadata: true,
+        onProgress: setExportProgress,
       });
       setExportResult(result);
       exportResultRef.current = result;
@@ -228,6 +231,7 @@ export function App() {
       setExportError(t("export.error"));
     } finally {
       setGenerating(false);
+      setExportProgress(null);
     }
   }
 
@@ -291,6 +295,7 @@ export function App() {
             affectedPagesSummary={affectedPagesSummary}
             validationMessage={validationMessage}
             filenameError={!outputFileName.trim() ? t("validation.outputFilename") : undefined}
+            progress={exportProgress}
             largePdfMode={largePdfMode}
             visiblePageCount={visiblePageCount}
             totalPageCount={loadedPdf?.pageCount ?? 1}
@@ -306,6 +311,7 @@ export function App() {
     affectedPagesSummary,
     exportError,
     exportResult,
+    exportProgress,
     loadedPdf,
     outputFileName,
     layers,

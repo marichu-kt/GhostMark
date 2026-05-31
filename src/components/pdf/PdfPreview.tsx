@@ -8,6 +8,7 @@ import {
 } from "../../features/pdf/largePdf";
 import { getPdfPageSize, renderPdfPageToCanvas } from "../../features/pdf/renderPdfPreview";
 import { createBlackoutRectFromDrag } from "../../features/watermark/blackoutDrawing";
+import { SAFELAYER_PREVIEW_PAGE_LIMIT } from "../../features/watermark/safelayerPattern";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { Notice } from "../ui/Notice";
 import { PageNavigator } from "./PageNavigator";
@@ -116,6 +117,10 @@ export function PdfPreview({
   const selectedBlackoutLayer =
     layers.find((layer) => layer.id === selectedLayerId && layer.type === "blackout" && layer.enabled) ?? null;
   const drawingEnabled = Boolean(selectedBlackoutLayer && previewEnabled && pageDisplaySize.width > 0 && pageDisplaySize.height > 0);
+  const safeLayerPreviewLimited =
+    previewEnabled &&
+    safeCurrentPage > SAFELAYER_PREVIEW_PAGE_LIMIT &&
+    layers.some((layer) => layer.enabled && layer.type === "safelayer");
 
   function getPointerPoint(event: PointerEvent<HTMLDivElement>): DragPoint {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -269,6 +274,14 @@ export function PdfPreview({
           {error ? (
             <div className="absolute left-6 right-6 top-6">
               <Notice tone="danger">{error}</Notice>
+            </div>
+          ) : null}
+          {safeLayerPreviewLimited ? (
+            <div className="absolute bottom-6 left-6 right-6">
+              <Notice tone="info">
+                {t("safelayer.previewLimited", { limit: SAFELAYER_PREVIEW_PAGE_LIMIT })}{" "}
+                {t("safelayer.exportIncludesFullPdf")}
+              </Notice>
             </div>
           ) : null}
         </div>

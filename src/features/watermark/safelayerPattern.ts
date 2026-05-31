@@ -37,6 +37,8 @@ export interface SafeLayerPattern {
   holographicLines: SafeLayerLine[];
 }
 
+export const SAFELAYER_PREVIEW_PAGE_LIMIT = 10;
+
 const distortionMultiplier: Record<SafeLayerDistortion, number> = {
   soft: 0.62,
   medium: 1,
@@ -88,8 +90,110 @@ function createWavePoints(input: {
   });
 }
 
+function normalizeSafeLayerText(text: string): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  return clean || "PROTECTED";
+}
+
+function createPageContourLines(input: {
+  width: number;
+  height: number;
+  noise: () => number;
+  opacity: number;
+  distortion: number;
+  contourStrength: number;
+}): SafeLayerLine[] {
+  const gridX = 22;
+  const gridY = Math.max(16, Math.round((gridX * input.height) / Math.max(1, input.width)));
+  const cells: number[][] = [];
+  const blobCount = 9;
+  const blobs = Array.from({ length: blobCount }, () => ({
+    x: input.noise(),
+    y: input.noise(),
+    radius: 0.12 + input.noise() * 0.26,
+    weight: 0.45 + input.noise() * 1.1,
+  }));
+
+  for (let y = 0; y <= gridY; y += 1) {
+    cells[y] = [];
+
+    for (let x = 0; x <= gridX; x += 1) {
+      const nx = x / gridX;
+      const ny = y / gridY;
+      let value = Math.sin(nx * Math.PI * 4.2 + input.noise() * 0.5) * 0.16;
+      value += Math.cos(ny * Math.PI * 3.7 + input.noise() * 0.5) * 0.16;
+
+      for (const blob of blobs) {
+        const dx = nx - blob.x;
+        const dy = ny - blob.y;
+        const distance = dx * dx + dy * dy;
+        value += Math.exp(-distance / (blob.radius * blob.radius)) * blob.weight;
+      }
+
+      cells[y][x] = value;
+    }
+  }
+
+  const minValue = Math.min(...cells.flat());
+  const maxValue = Math.max(...cells.flat());
+  const levels = [0.28, 0.42, 0.56, 0.7].map((level) => minValue + (maxValue - minValue) * level);
+  const lines: SafeLayerLine[] = [];
+
+  for (const level of levels) {
+    for (let y = 0; y < gridY; y += 1) {
+      const rowSegments: Array<{ x: number; y: number }> = [];
+
+      for (let x = 0; x < gridX; x += 1) {
+        const topLeft = cells[y][x];
+        const topRight = cells[y][x + 1];
+        const bottomLeft = cells[y + 1][x];
+        const bottomRight = cells[y + 1][x + 1];
+        const crosses =
+          (topLeft < level && topRight >= level) ||
+          (topLeft >= level && topRight < level) ||
+          (bottomLeft < level && bottomRight >= level) ||
+          (bottomLeft >= level && bottomRight < level) ||
+          (topLeft < level && bottomLeft >= level) ||
+          (topLeft >= level && bottomLeft < level) ||
+          (topRight < level && bottomRight >= level) ||
+          (topRight >= level && bottomRight < level);
+
+        if (!crosses) {
+          if (rowSegments.length > 2) {
+            lines.push({
+              points: rowSegments,
+              opacity: boundedOpacity(input.opacity * 0.44, input.noise(), 0.18),
+              tone: "primary",
+            });
+          }
+
+          rowSegments.length = 0;
+          continue;
+        }
+
+        const cellCenterX = ((x + 0.5) / gridX) * input.width;
+        const cellCenterY = ((y + 0.5) / gridY) * input.height;
+        rowSegments.push({
+          x: cellCenterX + (input.noise() - 0.5) * input.contourStrength * 0.38 * input.distortion,
+          y: cellCenterY + (input.noise() - 0.5) * input.contourStrength * 0.38 * input.distortion,
+        });
+      }
+
+      if (rowSegments.length > 2) {
+        lines.push({
+          points: rowSegments,
+          opacity: boundedOpacity(input.opacity * 0.44, input.noise(), 0.18),
+          tone: "primary",
+        });
+      }
+    }
+  }
+
+  return lines;
+}
+
 export function createSafeLayerPattern(config: SafeLayerPatternConfig): SafeLayerPattern {
-  const text = config.text.trim() || "ONLY VALID FOR REVIEW";
+  const text = normalizeSafeLayerText(config.text);
   const seed = `${config.seed}|${text}|${config.style}|${config.distortion}|${config.rotation}`;
   const noise = createDeterministicNoise(seed);
   const distortion = distortionMultiplier[config.distortion];
@@ -161,33 +265,16 @@ export function createSafeLayerPattern(config: SafeLayerPatternConfig): SafeLaye
   }
 
   if (includeContours) {
-    const contourCount = Math.max(8, Math.round((config.width * config.height) / 52000));
-
-    for (let contour = 0; contour < contourCount; contour += 1) {
-      const centerX = noise() * config.width;
-      const centerY = noise() * config.height;
-      const radiusX = 42 + noise() * 150;
-      const radiusY = 24 + noise() * 105;
-      const pointCount = 24;
-      const points = Array.from({ length: pointCount + 1 }, (_, index) => {
-        const angle = (index / pointCount) * Math.PI * 2;
-        const wobble = 1 + (noise() - 0.5) * 0.34 * distortion;
-
-        return {
-          x: centerX + Math.cos(angle) * radiusX * wobble,
-          y:
-            centerY +
-            Math.sin(angle) * radiusY * wobble +
-            Math.sin(angle * 3 + noise() * Math.PI) * config.contourStrength * 0.18,
-        };
-      });
-
-      contourLines.push({
-        points,
-        opacity: boundedOpacity(opacity * 0.44, noise(), 0.18),
-        tone: "primary",
-      });
-    }
+    contourLines.push(
+      ...createPageContourLines({
+        width: config.width,
+        height: config.height,
+        noise,
+        opacity,
+        distortion,
+        contourStrength: config.contourStrength,
+      }),
+    );
   }
 
   if (holographicIntensity > 0) {
