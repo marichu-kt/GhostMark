@@ -8,8 +8,9 @@ import {
   getSealLayerSize,
   getTextLayerSize,
 } from "../../features/watermark/layerGeometry";
-import { drawSafeLayerToCanvas } from "../../features/watermark/safelayerCanvasRenderer";
+import { drawSafeLayerContoursToCanvas } from "../../features/watermark/safelayerCanvasRenderer";
 import { SAFELAYER_PREVIEW_PAGE_LIMIT } from "../../features/watermark/safelayerRenderer";
+import { createSafeLayerSvgMarkup } from "../../features/watermark/safelayerSvgRenderer";
 import { resolvePreviewWatermarkPosition } from "../../features/watermark/previewGeometry";
 
 interface WatermarkPreviewOverlayProps {
@@ -60,6 +61,20 @@ function SafeLayerCanvasPreview({
   selected: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const backingScale = FLATTENED_EXPORT_SCALE / Math.max(0.01, zoom);
+  const width = Math.max(1, Math.round(pageWidth * backingScale));
+  const height = Math.max(1, Math.round(pageHeight * backingScale));
+  const { model, svg } = useMemo(
+    () =>
+      createSafeLayerSvgMarkup({
+        layer,
+        pageNumber: currentPage,
+        width,
+        height,
+        quality: "preview",
+      }),
+    [currentPage, height, layer, width],
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -68,9 +83,6 @@ function SafeLayerCanvasPreview({
       return;
     }
 
-    const backingScale = FLATTENED_EXPORT_SCALE / Math.max(0.01, zoom);
-    const width = Math.max(1, Math.round(pageWidth * backingScale));
-    const height = Math.max(1, Math.round(pageHeight * backingScale));
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d");
@@ -80,26 +92,33 @@ function SafeLayerCanvasPreview({
     }
 
     context.clearRect(0, 0, width, height);
-    drawSafeLayerToCanvas({
+    drawSafeLayerContoursToCanvas({
       context,
-      canvas,
+      model,
       layer,
-      pageNumber: currentPage,
       quality: "preview",
     });
-  }, [currentPage, layer, pageHeight, pageWidth, zoom]);
+  }, [height, layer, model, width]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0"
-      aria-hidden="true"
-      style={{
-        width: pageWidth,
-        height: pageHeight,
-        outline: selected ? "1px solid rgba(198,40,40,0.45)" : undefined,
-      }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0"
+        aria-hidden="true"
+        style={{
+          width: pageWidth,
+          height: pageHeight,
+          outline: selected ? "1px solid rgba(198,40,40,0.45)" : undefined,
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        aria-hidden="true"
+        style={{ width: pageWidth, height: pageHeight }}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    </>
   );
 }
 

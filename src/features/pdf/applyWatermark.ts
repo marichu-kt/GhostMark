@@ -334,7 +334,7 @@ async function drawCanvasLayer(input: {
       drawCanvasPatternWatermark(context, layer, pageWidth, pageHeight, scaleX, scaleY);
       break;
     case "safelayer":
-      drawSafeLayerToCanvas({ context, layer, pageNumber, canvas, imageData, quality: "export" });
+      await drawSafeLayerToCanvas({ context, layer, pageNumber, canvas, imageData, quality: "export" });
       break;
     case "seal":
       drawCanvasSeal(context, layer, pageWidth, pageHeight, scaleX, scaleY);

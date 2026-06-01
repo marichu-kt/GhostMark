@@ -1,10 +1,10 @@
 import type { DocumentLayer } from "../../types/watermark";
 import {
-  createSafeLayerRenderModel,
   getSafeLayerPointAtDistance,
   sampleSafeLayerWavePath,
   type SafeLayerRenderModel,
 } from "./safelayerRenderer";
+import { createSafeLayerSvgMarkup, drawSvgMarkupToCanvas } from "./safelayerSvgRenderer";
 
 interface SafeLayerCanvasRenderInput {
   context: CanvasRenderingContext2D;
@@ -79,6 +79,35 @@ function drawCanvasSegment(
   context.lineTo(end.x, end.y);
   context.stroke();
   context.restore();
+}
+
+export function drawSafeLayerContoursToCanvas(input: {
+  context: CanvasRenderingContext2D;
+  model: SafeLayerRenderModel;
+  layer: DocumentLayer;
+  quality: "preview" | "export";
+  imageData?: ImageData | null;
+}) {
+  const color = hexToCss(input.layer.color);
+  const toneColor = {
+    primary: color,
+    red: "#d95a58",
+    blue: "#47a5d8",
+    violet: "#8f74d9",
+  };
+  const lineWidth = input.quality === "preview" ? 0.7 : 0.9;
+
+  for (const segment of input.model.contourSegments) {
+    drawCanvasSegment(
+      input.context,
+      segment.start,
+      segment.end,
+      toneColor[segment.tone],
+      segment.opacity,
+      lineWidth,
+      input.imageData,
+    );
+  }
 }
 
 function drawSafeLayerTextRows(
@@ -168,44 +197,36 @@ function drawSafeLayerTextRows(
   context.restore();
 }
 
-export function drawSafeLayerToCanvas({
+export async function drawSafeLayerToCanvas({
   context,
   canvas,
   layer,
   pageNumber,
   quality,
   imageData = null,
-}: SafeLayerCanvasRenderInput): SafeLayerRenderModel {
+}: SafeLayerCanvasRenderInput): Promise<SafeLayerRenderModel> {
   const text = (layer.text.trim() || "PROTECTED").toUpperCase();
-  const model = createSafeLayerRenderModel({
-    seed: `${layer.safeLayerSeed || ""}|${layer.id}`,
-    text,
+  const { model, svg } = createSafeLayerSvgMarkup({
+    layer: { ...layer, text },
     pageNumber,
     width: canvas.width,
     height: canvas.height,
     quality,
   });
   const color = hexToCss(layer.color);
-  const toneColor = {
-    primary: color,
-    red: "#d95a58",
-    blue: "#47a5d8",
-    violet: "#8f74d9",
-  };
-  const lineWidth = quality === "preview" ? 0.7 : 0.9;
 
-  for (const segment of model.contourSegments) {
-    drawCanvasSegment(
-      context,
-      segment.start,
-      segment.end,
-      toneColor[segment.tone],
-      segment.opacity,
-      lineWidth,
-      imageData,
-    );
+  drawSafeLayerContoursToCanvas({ context, model, layer, quality, imageData });
+
+  const drewSvgText = await drawSvgMarkupToCanvas({
+    context,
+    svg,
+    width: canvas.width,
+    height: canvas.height,
+  });
+
+  if (!drewSvgText) {
+    drawSafeLayerTextRows(context, model, color, canvas);
   }
 
-  drawSafeLayerTextRows(context, model, color, canvas);
   return model;
 }

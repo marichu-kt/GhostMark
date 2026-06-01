@@ -16,7 +16,7 @@ if (!globalThis.crypto) {
 }
 
 describe("drawSafeLayerToCanvas", () => {
-  it("uses the same render model as preview/export SafeLayer planning", () => {
+  it("uses the same render model as preview/export SafeLayer planning", async () => {
     const layer = {
       ...createLayerForType("safelayer"),
       id: "safe-layer-shared",
@@ -26,7 +26,7 @@ describe("drawSafeLayerToCanvas", () => {
     };
     const canvas = createCanvas(420, 560) as unknown as HTMLCanvasElement;
     const context = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
-    const renderedModel = drawSafeLayerToCanvas({
+    const renderedModel = await drawSafeLayerToCanvas({
       context,
       canvas,
       layer,
@@ -49,7 +49,7 @@ describe("drawSafeLayerToCanvas", () => {
     expect(renderedModel.textRows[0].path).toContain(" S110 0, 132 7");
   });
 
-  it("draws visible SafeLayer contours and wavy text onto the preview canvas", () => {
+  it("draws visible SafeLayer contours and wavy text onto the preview canvas", async () => {
     const layer = {
       ...createLayerForType("safelayer"),
       id: "safe-layer-visible",
@@ -60,7 +60,7 @@ describe("drawSafeLayerToCanvas", () => {
     const canvas = createCanvas(360, 480) as unknown as HTMLCanvasElement;
     const context = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
 
-    drawSafeLayerToCanvas({
+    await drawSafeLayerToCanvas({
       context,
       canvas,
       layer,
