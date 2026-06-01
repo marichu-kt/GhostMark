@@ -49,7 +49,6 @@ export function App() {
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [layers, setLayers] = useState<DocumentLayer[]>(() => createDefaultDocumentLayers());
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(() => layers[0]?.id ?? null);
-  const [outputFileName, setOutputFileName] = useState("ghostmark-watermarked.pdf");
   const [exportResult, setExportResult] = useState<PdfExportResult | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null);
@@ -98,6 +97,10 @@ export function App() {
   const pageCount = loadedPdf?.pageCount ?? 1;
   const visiblePageCount = loadedPdf ? getVisiblePageCount(loadedPdf.pageCount) : 1;
   const largePdfMode = loadedPdf ? shouldUseLargePdfMode(loadedPdf.pageCount) : false;
+  const outputFileName = useMemo(
+    () => createDownloadFileName(loadedPdf?.fileName ?? ""),
+    [loadedPdf?.fileName],
+  );
 
   const setPageSafely = useCallback(
     (page: number) => {
@@ -130,7 +133,6 @@ export function App() {
     setLoadedPdf(document);
     setCurrentPage(1);
     setZoom(1.1);
-    setOutputFileName(createDownloadFileName(document.fileName));
     setExportError(null);
     const defaultLayers = createDefaultDocumentLayers();
     setLayers(defaultLayers);
@@ -193,14 +195,10 @@ export function App() {
       return;
     }
 
-    if (!outputFileName.trim()) {
-      setExportError(t("validation.outputFilename"));
-      return;
-    }
-
     setGenerating(true);
     setExportError(null);
     setExportProgress({ current: 0, total: loadedPdf.pageCount });
+    setActiveStep("export");
 
     try {
       revokeExportResult();
@@ -288,14 +286,12 @@ export function App() {
         return (
           <ExportPanel
             outputFileName={outputFileName}
-            onOutputFileNameChange={setOutputFileName}
             disabled={!watermarkReady}
             error={exportError}
             result={exportResult}
             watermarkSummary={watermarkSummary}
             affectedPagesSummary={affectedPagesSummary}
             validationMessage={validationMessage}
-            filenameError={!outputFileName.trim() ? t("validation.outputFilename") : undefined}
             progress={exportProgress}
             largePdfMode={largePdfMode}
             visiblePageCount={visiblePageCount}
@@ -331,7 +327,7 @@ export function App() {
     }
 
     if (activeStep === "export") {
-      const exportDisabled = !watermarkReady || generating || !outputFileName.trim();
+      const exportDisabled = !watermarkReady || generating;
 
       return (
         <Button
@@ -350,10 +346,10 @@ export function App() {
       <Button
         variant="primary"
         className="w-full"
-        disabled={!watermarkReady}
-        onClick={() => setActiveStep("export")}
+        disabled={!watermarkReady || generating}
+        onClick={() => void handleGenerateExport()}
       >
-        {t("actions.exportPdf")}
+        {generating ? t("preview.loading") : t("actions.exportPdf")}
       </Button>
     );
   })();

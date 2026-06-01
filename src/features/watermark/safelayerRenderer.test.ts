@@ -27,10 +27,11 @@ describe("createSafeLayerRenderModel", () => {
 
   it("builds dense full-page wavy textPath rows", () => {
     const model = createSafeLayerRenderModel(baseConfig);
+    const yValues = [...model.textRows[0].path.matchAll(/L\d+ ([\d.-]+)/g)].map((match) => match[1]);
 
     expect(model.textRows.length).toBeGreaterThan(180);
-    expect(model.textRows[0].path).toContain(" C");
-    expect(model.textRows[0].path).toContain(" S");
+    expect(model.textRows[0].path).toContain(" L");
+    expect(new Set(yValues.slice(0, 24)).size).toBeGreaterThan(6);
     expect(model.textRows[0].text).toContain("PROTECTED");
     expect(model.textTransform).toContain("rotate");
   });
@@ -60,6 +61,15 @@ describe("createSafeLayerRenderModel", () => {
     expect(pageOne.rotation).not.toBe(pageTwo.rotation);
     expect(pageOne.textRows[0].path).not.toBe(pageTwo.textRows[0].path);
     expect(pageOne.contourSegments.slice(0, 12)).not.toEqual(pageTwo.contourSegments.slice(0, 12));
+  });
+
+  it("uses the same page seed across preview and export dimensions", () => {
+    const preview = createSafeLayerRenderModel({ ...baseConfig, width: 306, height: 396, quality: "preview" });
+    const exportModel = createSafeLayerRenderModel({ ...baseConfig, width: 612, height: 792, quality: "export" });
+
+    expect(preview.rotation).toBe(exportModel.rotation);
+    expect(preview.textRows[0].offsetRatio).toBe(exportModel.textRows[0].offsetRatio);
+    expect(preview.textRows[0].opacity).toBe(exportModel.textRows[0].opacity);
   });
 
   it("generates contour/isoline segments across the page", () => {

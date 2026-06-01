@@ -5,6 +5,7 @@ import {
   createSafeLayerRenderModel,
   SAFELAYER_PREVIEW_PAGE_LIMIT,
 } from "../../features/watermark/safelayerRenderer";
+import { resolveWatermarkPosition } from "../../features/watermark/positioning";
 
 interface WatermarkPreviewOverlayProps {
   layers: DocumentLayer[];
@@ -49,31 +50,25 @@ function resolvePdfLikePosition(
   rotation = 0,
 ): PositionStyle {
   if (layer.x !== 0 || layer.y !== 0) {
-    // Preview coordinates approximate pdf-lib placement. PDF export uses a bottom-left
-    // origin, while this HTML overlay uses top-left CSS coordinates.
-    const x = layer.x * zoom;
-    const y = layer.y * zoom;
+    const position = { x: layer.x * zoom, y: layer.y * zoom };
+
     return {
-      left: x,
-      top: pageHeight - y - elementHeight,
+      left: position.x,
+      top: pageHeight - position.y - elementHeight,
       transform: `rotate(${rotation}deg)`,
     };
   }
 
-  const margin = 48 * zoom;
-  const map: Record<typeof layer.positionPreset, { x: number; y: number }> = {
-    center: { x: pageWidth / 2 - elementWidth / 2, y: pageHeight / 2 - elementHeight / 2 },
-    "center-left": { x: margin, y: pageHeight / 2 - elementHeight / 2 },
-    "center-right": { x: pageWidth - margin - elementWidth, y: pageHeight / 2 - elementHeight / 2 },
-    "diagonal-center": { x: pageWidth / 2 - elementWidth / 2, y: pageHeight / 2 - elementHeight / 2 },
-    "top-left": { x: margin, y: pageHeight - margin - elementHeight },
-    "top-center": { x: pageWidth / 2 - elementWidth / 2, y: pageHeight - margin - elementHeight },
-    "top-right": { x: pageWidth - margin - elementWidth, y: pageHeight - margin - elementHeight },
-    "bottom-left": { x: margin, y: margin },
-    "bottom-center": { x: pageWidth / 2 - elementWidth / 2, y: margin },
-    "bottom-right": { x: pageWidth - margin - elementWidth, y: margin },
-  };
-  const position = map[layer.positionPreset];
+  const position = resolveWatermarkPosition({
+    preset: layer.positionPreset,
+    pageWidth,
+    pageHeight,
+    elementWidth,
+    elementHeight,
+    customX: 0,
+    customY: 0,
+    margin: 48 * zoom,
+  });
 
   return {
     left: position.x,

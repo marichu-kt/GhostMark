@@ -16,6 +16,12 @@ export function formatFileSize(bytes: number): string {
 }
 
 export function createDownloadFileName(inputName: string): string {
-  const baseName = inputName.replace(/\.pdf$/i, "").trim() || "document";
-  return `${baseName}-watermarked.pdf`;
+  const baseName = inputName.replace(/\.pdf$/i, "").trim();
+  const safeBaseName = baseName
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "-")
+    .replace(/\s+/g, " ")
+    .replace(/[-. ]+$/g, "")
+    .trim();
+
+  return safeBaseName ? `${safeBaseName}-GhostMark.pdf` : "GhostMark-output.pdf";
 }

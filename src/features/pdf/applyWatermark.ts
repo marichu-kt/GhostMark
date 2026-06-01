@@ -1,7 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 import type { DocumentLayer, WatermarkConfig } from "../../types/watermark";
 import { resolveWatermarkPosition } from "../watermark/positioning";
-import { createSafeLayerRenderModel } from "../watermark/safelayerRenderer";
+import { createSafeLayerRenderModel, getSafeLayerWaveY } from "../watermark/safelayerRenderer";
 import {
   buildFlattenedExportPlan,
   FLATTENED_EXPORT_SCALE,
@@ -158,7 +158,7 @@ function drawCanvasSafeLayerTextRows(
     const startX = -row.offsetRatio * hugeWidth;
 
     for (let x = startX; x < hugeWidth; x += phraseWidth) {
-      const y = row.y + Math.sin(x / 33 + row.offsetRatio * 16) * row.amplitude;
+      const y = getSafeLayerWaveY(row, x);
       context.fillText(phrase, x, y);
     }
   }
@@ -175,7 +175,7 @@ async function drawCanvasSafeLayer(
 ) {
   const text = (layer.text.trim() || "PROTECTED").toUpperCase();
   const model = createSafeLayerRenderModel({
-    seed: `${layer.safeLayerSeed || ""}|${layer.id}|canvas`,
+    seed: `${layer.safeLayerSeed || ""}|${layer.id}`,
     text,
     pageNumber,
     width: canvas.width,

@@ -1,20 +1,17 @@
 import type { PdfExportResult } from "../../types/pdf";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { FieldGroup } from "../ui/FieldGroup";
-import { Input } from "../ui/Input";
 import { Notice } from "../ui/Notice";
 import { ExportSummary } from "./ExportSummary";
 
 interface ExportPanelProps {
   outputFileName: string;
-  onOutputFileNameChange: (value: string) => void;
   disabled: boolean;
   error: string | null;
   result: PdfExportResult | null;
   watermarkSummary: string;
   affectedPagesSummary: string;
   validationMessage?: string;
-  filenameError?: string;
   progress?: { current: number; total: number } | null;
   largePdfMode?: boolean;
   visiblePageCount?: number;
@@ -24,14 +21,12 @@ interface ExportPanelProps {
 
 export function ExportPanel({
   outputFileName,
-  onOutputFileNameChange,
   disabled,
   error,
   result,
   watermarkSummary,
   affectedPagesSummary,
   validationMessage,
-  filenameError,
   progress,
   largePdfMode = false,
   visiblePageCount,
@@ -46,13 +41,11 @@ export function ExportPanel({
         title={t("export.title")}
         description={disabled ? validationMessage ?? t("export.noDocument") : undefined}
       >
-        <Input
-          label={t("export.outputFileName")}
-          value={outputFileName}
-          error={filenameError}
-          onChange={(event) => onOutputFileNameChange(event.target.value)}
-        />
         <div className="grid gap-2 rounded-md border border-graphite-700 bg-graphite-950 p-3 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-steel-400">{t("export.outputFileName")}</span>
+            <span className="min-w-0 truncate text-right font-medium text-white">{outputFileName}</span>
+          </div>
           <div className="flex items-center justify-between gap-3">
             <span className="text-steel-400">{t("export.summaryLayers")}</span>
             <span className="text-right font-medium text-white">{watermarkSummary}</span>

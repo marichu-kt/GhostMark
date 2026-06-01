@@ -101,6 +101,24 @@ export function buildExactWavePath(width: number, y: number, amplitude: number):
   return path;
 }
 
+export function getSafeLayerWaveY(row: Pick<SafeLayerTextPathRow, "y" | "amplitude" | "offsetRatio">, x: number) {
+  return row.y + Math.sin(x / 33 + row.offsetRatio * 16) * row.amplitude;
+}
+
+export function buildSafeLayerWavePath(
+  width: number,
+  row: Pick<SafeLayerTextPathRow, "y" | "amplitude" | "offsetRatio">,
+): string {
+  const step = 24;
+  let path = `M0 ${getSafeLayerWaveY(row, 0).toFixed(2)}`;
+
+  for (let x = step; x <= width + 2200; x += step) {
+    path += ` L${x} ${getSafeLayerWaveY(row, x).toFixed(2)}`;
+  }
+
+  return path;
+}
+
 function fieldValue(x: number, y: number, width: number, height: number, seed: number): number {
   const nx = x / width;
   const ny = y / height;
@@ -238,7 +256,7 @@ function createContourSegments(config: SafeLayerRendererConfig, seedNumber: numb
 
 export function createSafeLayerRenderModel(config: SafeLayerRendererConfig): SafeLayerRenderModel {
   const text = cleanSafeLayerText(config.text);
-  const seed = hashString(`${config.seed}|${text}|page:${config.pageNumber}|${config.width}|${config.height}`);
+  const seed = hashString(`${config.seed}|${text}|page:${config.pageNumber}`);
   const random = randomFromSeed(seed);
   const rotation = SAFELAYER_ROTATION_MIN + random() * (SAFELAYER_ROTATION_MAX - SAFELAYER_ROTATION_MIN);
   const distortion = SAFELAYER_DISTORTION_MULTIPLIER;
@@ -255,16 +273,17 @@ export function createSafeLayerRenderModel(config: SafeLayerRendererConfig): Saf
     const offsetRatio = random() * 0.09;
     const offset = `${Math.round(offsetRatio * 100)}%`;
     const amplitude = waveAmplitude * (0.82 + random() * 0.42);
-    textRows.push({
+    const row = {
       id: `safelayer-wave-${seed}-${index}`,
-      path: buildExactWavePath(hugeWidth, y, amplitude),
+      path: "",
       text: phrase.repeat(90),
       startOffset: offset,
       offsetRatio,
       y,
       amplitude,
       opacity: Math.min(0.52, Math.max(0.12, SAFELAYER_OPACITY * (0.48 + random() * 0.12))),
-    });
+    };
+    textRows.push({ ...row, path: buildSafeLayerWavePath(hugeWidth, row) });
   }
 
   return {
