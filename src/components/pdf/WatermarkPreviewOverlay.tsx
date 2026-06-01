@@ -1,10 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { DocumentLayer } from "../../types/watermark";
 import { resolvePageRules } from "../../features/pdf/pageRules";
-import {
-  createSafeLayerRenderModel,
-  SAFELAYER_PREVIEW_PAGE_LIMIT,
-} from "../../features/watermark/safelayerRenderer";
+import { FLATTENED_EXPORT_SCALE } from "../../features/pdf/flattenedExportPlan";
+import { drawSafeLayerToCanvas } from "../../features/watermark/safelayerCanvasRenderer";
+import { SAFELAYER_PREVIEW_PAGE_LIMIT } from "../../features/watermark/safelayerRenderer";
 import { resolvePreviewWatermarkPosition } from "../../features/watermark/previewGeometry";
 
 interface WatermarkPreviewOverlayProps {
@@ -41,6 +40,65 @@ function layerAppliesToPage(layer: DocumentLayer, pageIndex: number, totalPages:
   } catch {
     return false;
   }
+}
+
+function SafeLayerCanvasPreview({
+  layer,
+  currentPage,
+  pageWidth,
+  pageHeight,
+  zoom,
+  selected,
+}: {
+  layer: DocumentLayer;
+  currentPage: number;
+  pageWidth: number;
+  pageHeight: number;
+  zoom: number;
+  selected: boolean;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas) {
+      return;
+    }
+
+    const backingScale = FLATTENED_EXPORT_SCALE / Math.max(0.01, zoom);
+    const width = Math.max(1, Math.round(pageWidth * backingScale));
+    const height = Math.max(1, Math.round(pageHeight * backingScale));
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return;
+    }
+
+    context.clearRect(0, 0, width, height);
+    drawSafeLayerToCanvas({
+      context,
+      canvas,
+      layer,
+      pageNumber: currentPage,
+      quality: "preview",
+    });
+  }, [currentPage, layer, pageHeight, pageWidth, zoom]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0"
+      aria-hidden="true"
+      style={{
+        width: pageWidth,
+        height: pageHeight,
+        outline: selected ? "1px solid rgba(198,40,40,0.45)" : undefined,
+      }}
+    />
+  );
 }
 
 export function WatermarkPreviewOverlay({
@@ -156,66 +214,16 @@ export function WatermarkPreviewOverlay({
             return null;
           }
 
-          const model = createSafeLayerRenderModel({
-            seed: `${layer.safeLayerSeed || ""}|${layer.id}`,
-            text: baseText,
-            pageNumber: currentPage,
-            width: pageWidth,
-            height: pageHeight,
-            quality: "preview",
-          });
-          const toneColor = {
-            primary: textColor,
-            red: "#d95a58",
-            blue: "#47a5d8",
-            violet: "#8f74d9",
-          };
-
           return (
-            <svg
+            <SafeLayerCanvasPreview
               key={layer.id}
-              className="absolute inset-0"
-              width={pageWidth}
-              height={pageHeight}
-              viewBox={`0 0 ${pageWidth} ${pageHeight}`}
-              aria-hidden="true"
-              style={{ outline: selected ? "1px solid rgba(198,40,40,0.45)" : undefined }}
-            >
-              <defs>
-                {model.textRows.map((row) => (
-                  <path key={row.id} id={row.id} d={row.path} fill="none" />
-                ))}
-              </defs>
-              {model.contourSegments.map((line, index) => (
-                <line
-                  key={`contour-${index}`}
-                  x1={line.start.x}
-                  y1={line.start.y}
-                  x2={line.end.x}
-                  y2={line.end.y}
-                  stroke={toneColor[line.tone]}
-                  strokeWidth={0.55 * zoom}
-                  opacity={line.opacity}
-                  strokeLinecap="round"
-                />
-              ))}
-              <g transform={model.textTransform} opacity={model.textOpacity}>
-                {model.textRows.map((row) => (
-                  <text
-                    key={`text-${row.id}`}
-                    fill={textColor}
-                    opacity={row.opacity}
-                    fontSize={model.fontSize}
-                    fontWeight={700}
-                    letterSpacing="0.02em"
-                  >
-                    <textPath href={`#${row.id}`} startOffset={row.startOffset}>
-                      {row.text}
-                    </textPath>
-                  </text>
-                ))}
-              </g>
-            </svg>
+              layer={layer}
+              currentPage={currentPage}
+              pageWidth={pageWidth}
+              pageHeight={pageHeight}
+              zoom={zoom}
+              selected={selected}
+            />
           );
         }
 
