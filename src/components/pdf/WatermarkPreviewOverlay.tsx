@@ -2,6 +2,12 @@ import { useEffect, useMemo, useRef } from "react";
 import type { DocumentLayer } from "../../types/watermark";
 import { resolvePageRules } from "../../features/pdf/pageRules";
 import { FLATTENED_EXPORT_SCALE } from "../../features/pdf/flattenedExportPlan";
+import {
+  getImageLayerSize,
+  getPatternTextSize,
+  getSealLayerSize,
+  getTextLayerSize,
+} from "../../features/watermark/layerGeometry";
 import { drawSafeLayerToCanvas } from "../../features/watermark/safelayerCanvasRenderer";
 import { SAFELAYER_PREVIEW_PAGE_LIMIT } from "../../features/watermark/safelayerRenderer";
 import { resolvePreviewWatermarkPosition } from "../../features/watermark/previewGeometry";
@@ -27,10 +33,6 @@ function bytesToDataUrl(bytes: Uint8Array, mimeType: string): string {
   }
 
   return `data:${mimeType};base64,${btoa(binary)}`;
-}
-
-function estimateTextWidth(text: string, fontSize: number): number {
-  return Math.max(fontSize, text.length * fontSize * 0.62);
 }
 
 function layerAppliesToPage(layer: DocumentLayer, pageIndex: number, totalPages: number): boolean {
@@ -143,14 +145,13 @@ export function WatermarkPreviewOverlay({
         const selected = layer.id === selectedLayerId;
 
         if (layer.type === "text" && baseText) {
-          const elementWidth = estimateTextWidth(baseText, fontSize);
-          const elementHeight = fontSize;
+          const size = getTextLayerSize({ ...layer, fontSize });
           const position = resolvePreviewWatermarkPosition({
             layer,
             pageWidth,
             pageHeight,
-            elementWidth,
-            elementHeight,
+            elementWidth: size.width,
+            elementHeight: size.height,
             zoom,
             rotation: layer.rotation,
           });
@@ -161,6 +162,8 @@ export function WatermarkPreviewOverlay({
               className="absolute whitespace-nowrap font-bold uppercase tracking-normal"
               style={{
                 ...position,
+                width: size.width,
+                lineHeight: `${size.height}px`,
                 color: textColor,
                 fontSize,
                 opacity,
@@ -176,6 +179,7 @@ export function WatermarkPreviewOverlay({
         if (layer.type === "pattern" && baseText) {
           const spacingX = Math.max(70, layer.patternSpacingX * zoom);
           const spacingY = Math.max(60, layer.patternSpacingY * zoom);
+          const size = getPatternTextSize({ ...layer, fontSize });
           const columns = Math.ceil(pageWidth / spacingX) + 4;
           const rows = Math.ceil(pageHeight / spacingY) + 4;
           const marks = Array.from({ length: rows * columns }, (_, index) => {
@@ -197,6 +201,8 @@ export function WatermarkPreviewOverlay({
               style={{
                 left: mark.x,
                 top: mark.y,
+                width: size.width,
+                lineHeight: `${size.height}px`,
                 color: textColor,
                 fontSize,
                 opacity,
@@ -247,8 +253,9 @@ export function WatermarkPreviewOverlay({
 
         if (layer.type === "seal") {
           const sealScale = Math.min(1.8, Math.max(0.55, layer.scale || 1));
-          const width = (layer.sealStyle === "circular" ? 150 : 220) * sealScale * zoom;
-          const height = (layer.sealStyle === "circular" ? 150 : 92) * sealScale * zoom;
+          const sealSize = getSealLayerSize(layer);
+          const width = sealSize.width * zoom;
+          const height = sealSize.height * zoom;
           const position = resolvePreviewWatermarkPosition({
             layer,
             pageWidth,
@@ -259,7 +266,7 @@ export function WatermarkPreviewOverlay({
             rotation: layer.rotation,
           });
           const documentId = layer.sealDocumentId.trim().toUpperCase();
-          const borderWidth = Math.max(1, layer.sealBorderThickness);
+          const borderWidth = Math.max(1, layer.sealBorderThickness * zoom);
 
           return (
             <div
@@ -320,8 +327,9 @@ export function WatermarkPreviewOverlay({
             return null;
           }
 
-          const width = Math.max(48, 260 * layer.scale * zoom);
-          const height = width;
+          const imageSize = getImageLayerSize(layer);
+          const width = imageSize.width * zoom;
+          const height = imageSize.height * zoom;
           const position = resolvePreviewWatermarkPosition({
             layer,
             pageWidth,
@@ -341,7 +349,9 @@ export function WatermarkPreviewOverlay({
               style={{
                 ...position,
                 width,
+                height,
                 opacity,
+                objectFit: "contain",
                 transformOrigin: "center",
               }}
             />

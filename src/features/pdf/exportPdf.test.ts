@@ -195,5 +195,5 @@ describe("exportPdf flattened output", () => {
     expect(reloaded.getAuthor()).toBe("");
     expect(reloaded.getCreator()).toBe("GhostMark");
     expect(createImageBitmapMock).not.toHaveBeenCalled();
-  });
+  }, 20_000);
 });

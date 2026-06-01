@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   SAFELAYER_FONT_SIZE,
+  SAFELAYER_PREVIEW_PAGE_LIMIT,
   SAFELAYER_TEXT_SEPARATOR,
+  buildExactWavePath,
   cleanSafeLayerText,
   createSafeLayerRenderModel,
+  getSafeLayerPointAtDistance,
+  sampleSafeLayerWavePath,
   type SafeLayerRendererConfig,
 } from "./safelayerRenderer";
 
@@ -27,13 +31,32 @@ describe("createSafeLayerRenderModel", () => {
 
   it("builds dense full-page wavy textPath rows", () => {
     const model = createSafeLayerRenderModel(baseConfig);
-    const yValues = [...model.textRows[0].path.matchAll(/L\d+ ([\d.-]+)/g)].map((match) => match[1]);
 
     expect(model.textRows.length).toBeGreaterThan(180);
-    expect(model.textRows[0].path).toContain(" L");
-    expect(new Set(yValues.slice(0, 24)).size).toBeGreaterThan(6);
+    expect(model.textRows[0].path).toContain(" C22 0, 44 14, 66 7");
+    expect(model.textRows[0].path).toContain(" S110 0, 132 7");
+    expect(model.textRows[0].path).toContain(" S176 14, 198 7");
     expect(model.textRows[0].text).toContain("PROTECTED");
     expect(model.textTransform).toContain("rotate");
+  });
+
+  it("ports the reference cubic wave path instead of straight or polyline rows", () => {
+    const path = buildExactWavePath(420, 21);
+
+    expect(path.startsWith("M0 21 C22 14, 44 28, 66 21")).toBe(true);
+    expect(path).toContain(" S110 14, 132 21");
+    expect(path).toContain(" S176 28, 198 21");
+    expect(path).not.toContain(" L");
+  });
+
+  it("samples the cubic wave with changing tangents for canvas text-on-path rendering", () => {
+    const points = sampleSafeLayerWavePath(420, 21);
+    const first = getSafeLayerPointAtDistance(points, 24);
+    const later = getSafeLayerPointAtDistance(points, 72);
+
+    expect(points.length).toBeGreaterThan(80);
+    expect(first?.angle).not.toBe(later?.angle);
+    expect(new Set(points.slice(0, 20).map((point) => point.y.toFixed(2))).size).toBeGreaterThan(6);
   });
 
   it("uses the diamond separator and never inserts the old middle-dot separator", () => {
@@ -59,7 +82,7 @@ describe("createSafeLayerRenderModel", () => {
     expect(pageTwo.rotation).toBeGreaterThanOrEqual(-32);
     expect(pageTwo.rotation).toBeLessThanOrEqual(-24);
     expect(pageOne.rotation).not.toBe(pageTwo.rotation);
-    expect(pageOne.textRows[0].path).not.toBe(pageTwo.textRows[0].path);
+    expect(pageOne.textRows[0].startOffset).not.toBe(pageTwo.textRows[0].startOffset);
     expect(pageOne.contourSegments.slice(0, 12)).not.toEqual(pageTwo.contourSegments.slice(0, 12));
   });
 
@@ -94,5 +117,12 @@ describe("createSafeLayerRenderModel", () => {
     }
 
     expect(generatedText).toContain("protected");
+  });
+
+  it("keeps preview capped at three pages while render planning supports export pages", () => {
+    const model = createSafeLayerRenderModel({ ...baseConfig, pageNumber: 8, quality: "export" });
+
+    expect(SAFELAYER_PREVIEW_PAGE_LIMIT).toBe(3);
+    expect(model.textRows.length).toBeGreaterThan(180);
   });
 });

@@ -41,12 +41,12 @@ describe("drawSafeLayerToCanvas", () => {
       height: canvas.height,
       quality: "preview",
     });
-    const yValues = [...renderedModel.textRows[0].path.matchAll(/L\d+ ([\d.-]+)/g)].map((match) => match[1]);
 
     expect(renderedModel).toEqual(plannedModel);
     expect(renderedModel.fontSize).toBe(SAFELAYER_FONT_SIZE);
     expect(renderedModel.textRows[0].text).toContain(SAFELAYER_TEXT_SEPARATOR);
-    expect(new Set(yValues.slice(0, 24)).size).toBeGreaterThan(6);
+    expect(renderedModel.textRows[0].path).toContain(" C22 0, 44 14, 66 7");
+    expect(renderedModel.textRows[0].path).toContain(" S110 0, 132 7");
   });
 
   it("draws visible SafeLayer contours and wavy text onto the preview canvas", () => {

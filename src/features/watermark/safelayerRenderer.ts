@@ -39,9 +39,11 @@ export const SAFELAYER_PREVIEW_PAGE_LIMIT = 3;
 export const SAFELAYER_TEXT_SEPARATOR = "◆";
 export const SAFELAYER_FONT_SIZE = 7;
 export const SAFELAYER_OPACITY = 0.55;
+export const SAFELAYER_ROW_SPACING = 14;
+export const SAFELAYER_WAVE_AMPLITUDE = 7;
 export const SAFELAYER_TEXT_SPACING = 116;
-export const SAFELAYER_LINE_SPACING = 62;
-export const SAFELAYER_WAVE_STRENGTH = 28;
+export const SAFELAYER_LINE_SPACING = SAFELAYER_ROW_SPACING / 0.22;
+export const SAFELAYER_WAVE_STRENGTH = SAFELAYER_WAVE_AMPLITUDE / 0.24;
 export const SAFELAYER_CONTOUR_STRENGTH = 22;
 export const SAFELAYER_HOLOGRAPHIC_INTENSITY = 0.32;
 export const SAFELAYER_PREVIEW_CONTOUR_RESOLUTION = 92;
@@ -49,8 +51,8 @@ export const SAFELAYER_EXPORT_CONTOUR_RESOLUTION = 128;
 export const SAFELAYER_PREVIEW_CONTOUR_LEVELS = 24;
 export const SAFELAYER_EXPORT_CONTOUR_LEVELS = 36;
 const SAFELAYER_DISTORTION_MULTIPLIER = 1;
-const SAFELAYER_ROTATION_MIN = -32;
-const SAFELAYER_ROTATION_MAX = -24;
+const SAFELAYER_ROTATION_MIN = -29;
+const SAFELAYER_ROTATION_MAX = -25;
 
 export function hashString(value: string): number {
   let hash = 2166136261;
@@ -83,40 +85,171 @@ export function cleanSafeLayerText(value: string): string {
   return pieces.length ? pieces.join(" ").toUpperCase() : "PROTECTED";
 }
 
-export function buildExactWavePath(width: number, y: number, amplitude: number): string {
+export interface SafeLayerWavePoint {
+  x: number;
+  y: number;
+  angle: number;
+  distance: number;
+}
+
+interface CubicSegment {
+  p0: { x: number; y: number };
+  p1: { x: number; y: number };
+  p2: { x: number; y: number };
+  p3: { x: number; y: number };
+}
+
+export function buildExactWavePath(width: number, y: number): string {
   let path = `M0 ${y}`;
   let x = 0;
-  const unit = 66;
-  const half = unit / 1.5;
 
-  path += ` C${x + 22} ${y - amplitude}, ${x + 44} ${y + amplitude}, ${x + unit} ${y}`;
-  x = unit;
+  path += ` C${x + 22} ${y - 7}, ${x + 44} ${y + 7}, ${x + 66} ${y}`;
+  x = 66;
 
   while (x < width + 2200) {
-    path += ` S${x + half} ${y - amplitude}, ${x + unit} ${y}`;
-    path += ` S${x + 110} ${y + amplitude}, ${x + unit * 2} ${y}`;
-    x += unit * 2;
+    path += ` S${x + 44} ${y - 7}, ${x + 66} ${y}`;
+    path += ` S${x + 110} ${y + 7}, ${x + 132} ${y}`;
+    x += 132;
   }
 
   return path;
 }
 
-export function getSafeLayerWaveY(row: Pick<SafeLayerTextPathRow, "y" | "amplitude" | "offsetRatio">, x: number) {
-  return row.y + Math.sin(x / 33 + row.offsetRatio * 16) * row.amplitude;
+function cubicPoint(segment: CubicSegment, t: number) {
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const t2 = t * t;
+
+  return {
+    x: mt2 * mt * segment.p0.x + 3 * mt2 * t * segment.p1.x + 3 * mt * t2 * segment.p2.x + t2 * t * segment.p3.x,
+    y: mt2 * mt * segment.p0.y + 3 * mt2 * t * segment.p1.y + 3 * mt * t2 * segment.p2.y + t2 * t * segment.p3.y,
+  };
 }
 
-export function buildSafeLayerWavePath(
-  width: number,
-  row: Pick<SafeLayerTextPathRow, "y" | "amplitude" | "offsetRatio">,
-): string {
-  const step = 24;
-  let path = `M0 ${getSafeLayerWaveY(row, 0).toFixed(2)}`;
+function cubicTangent(segment: CubicSegment, t: number) {
+  const mt = 1 - t;
 
-  for (let x = step; x <= width + 2200; x += step) {
-    path += ` L${x} ${getSafeLayerWaveY(row, x).toFixed(2)}`;
+  return {
+    x:
+      3 * mt * mt * (segment.p1.x - segment.p0.x) +
+      6 * mt * t * (segment.p2.x - segment.p1.x) +
+      3 * t * t * (segment.p3.x - segment.p2.x),
+    y:
+      3 * mt * mt * (segment.p1.y - segment.p0.y) +
+      6 * mt * t * (segment.p2.y - segment.p1.y) +
+      3 * t * t * (segment.p3.y - segment.p2.y),
+  };
+}
+
+function reflect(point: { x: number; y: number }, around: { x: number; y: number }) {
+  return { x: around.x * 2 - point.x, y: around.y * 2 - point.y };
+}
+
+function createWaveSegments(width: number, y: number): CubicSegment[] {
+  const segments: CubicSegment[] = [];
+  let current = { x: 0, y };
+  let previousControl = { x: 44, y: y + SAFELAYER_WAVE_AMPLITUDE };
+  let segment: CubicSegment = {
+    p0: current,
+    p1: { x: 22, y: y - SAFELAYER_WAVE_AMPLITUDE },
+    p2: previousControl,
+    p3: { x: 66, y },
+  };
+  segments.push(segment);
+  current = segment.p3;
+
+  while (current.x < width + 2200) {
+    segment = {
+      p0: current,
+      p1: reflect(previousControl, current),
+      p2: { x: current.x + 44, y: y - SAFELAYER_WAVE_AMPLITUDE },
+      p3: { x: current.x + 66, y },
+    };
+    segments.push(segment);
+    previousControl = segment.p2;
+    current = segment.p3;
+
+    segment = {
+      p0: current,
+      p1: reflect(previousControl, current),
+      p2: { x: current.x + 44, y: y + SAFELAYER_WAVE_AMPLITUDE },
+      p3: { x: current.x + 66, y },
+    };
+    segments.push(segment);
+    previousControl = segment.p2;
+    current = segment.p3;
   }
 
-  return path;
+  return segments;
+}
+
+export function sampleSafeLayerWavePath(width: number, y: number, samplesPerSegment = 10): SafeLayerWavePoint[] {
+  const points: SafeLayerWavePoint[] = [];
+  let distance = 0;
+  let previous: { x: number; y: number } | null = null;
+
+  for (const segment of createWaveSegments(width, y)) {
+    for (let index = 0; index <= samplesPerSegment; index += 1) {
+      if (points.length > 0 && index === 0) {
+        continue;
+      }
+
+      const t = index / samplesPerSegment;
+      const point = cubicPoint(segment, t);
+      const tangent = cubicTangent(segment, t);
+
+      if (previous) {
+        distance += Math.hypot(point.x - previous.x, point.y - previous.y);
+      }
+
+      points.push({
+        x: point.x,
+        y: point.y,
+        angle: Math.atan2(tangent.y, tangent.x),
+        distance,
+      });
+      previous = point;
+    }
+  }
+
+  return points;
+}
+
+export function getSafeLayerPointAtDistance(points: SafeLayerWavePoint[], distance: number): SafeLayerWavePoint | null {
+  if (points.length === 0) {
+    return null;
+  }
+
+  if (distance <= 0) {
+    return points[0];
+  }
+
+  const last = points[points.length - 1];
+
+  if (distance >= last.distance) {
+    return last;
+  }
+
+  for (let index = 1; index < points.length; index += 1) {
+    const current = points[index];
+    const previous = points[index - 1];
+
+    if (current.distance < distance) {
+      continue;
+    }
+
+    const span = Math.max(0.0001, current.distance - previous.distance);
+    const t = (distance - previous.distance) / span;
+
+    return {
+      x: previous.x + (current.x - previous.x) * t,
+      y: previous.y + (current.y - previous.y) * t,
+      angle: previous.angle + (current.angle - previous.angle) * t,
+      distance,
+    };
+  }
+
+  return last;
 }
 
 function fieldValue(x: number, y: number, width: number, height: number, seed: number): number {
@@ -260,8 +393,7 @@ export function createSafeLayerRenderModel(config: SafeLayerRendererConfig): Saf
   const random = randomFromSeed(seed);
   const rotation = SAFELAYER_ROTATION_MIN + random() * (SAFELAYER_ROTATION_MAX - SAFELAYER_ROTATION_MIN);
   const distortion = SAFELAYER_DISTORTION_MULTIPLIER;
-  const waveAmplitude = Math.max(4, SAFELAYER_WAVE_STRENGTH * 0.24 * distortion);
-  const rowSpacing = Math.max(10, SAFELAYER_LINE_SPACING * 0.22);
+  const rowSpacing = SAFELAYER_ROW_SPACING * distortion;
   const hugeWidth = config.width * 3.8;
   const hugeHeight = config.height * 3.8;
   const phrase = `${text} ${SAFELAYER_TEXT_SEPARATOR} `;
@@ -269,21 +401,20 @@ export function createSafeLayerRenderModel(config: SafeLayerRendererConfig): Saf
   const rowCount = Math.ceil(hugeHeight / rowSpacing);
 
   for (let index = 0; index < rowCount; index += 1) {
-    const y = index * rowSpacing + rowSpacing / 2 + (random() - 0.5) * rowSpacing * 0.36;
-    const offsetRatio = random() * 0.09;
-    const offset = `${Math.round(offsetRatio * 100)}%`;
-    const amplitude = waveAmplitude * (0.82 + random() * 0.42);
+    const y = index * rowSpacing + SAFELAYER_WAVE_AMPLITUDE;
+    const offsetRatio = (index % 2 === 0 ? 0 : 0.03) + random() * 0.008;
+    const offset = `${(offsetRatio * 100).toFixed(2)}%`;
     const row = {
       id: `safelayer-wave-${seed}-${index}`,
-      path: "",
+      path: buildExactWavePath(hugeWidth, y),
       text: phrase.repeat(90),
       startOffset: offset,
       offsetRatio,
       y,
-      amplitude,
-      opacity: Math.min(0.52, Math.max(0.12, SAFELAYER_OPACITY * (0.48 + random() * 0.12))),
+      amplitude: SAFELAYER_WAVE_AMPLITUDE,
+      opacity: 1,
     };
-    textRows.push({ ...row, path: buildSafeLayerWavePath(hugeWidth, row) });
+    textRows.push(row);
   }
 
   return {

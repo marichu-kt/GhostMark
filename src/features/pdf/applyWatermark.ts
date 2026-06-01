@@ -1,6 +1,12 @@
 import { PDFDocument } from "pdf-lib";
 import type { DocumentLayer, WatermarkConfig } from "../../types/watermark";
-import { resolveWatermarkPosition } from "../watermark/positioning";
+import {
+  getImageLayerSize,
+  getPatternTextSize,
+  getSealLayerSize,
+  getTextLayerSize,
+  resolveLayerPlacement,
+} from "../watermark/layerGeometry";
 import { drawSafeLayerToCanvas } from "../watermark/safelayerCanvasRenderer";
 import {
   buildFlattenedExportPlan,
@@ -19,10 +25,6 @@ function clampOpacity(opacity: number): number {
   return Math.min(1, Math.max(0, opacity));
 }
 
-function pdfYToCanvas(y: number, elementHeight: number, canvasHeight: number, scaleY: number): number {
-  return canvasHeight - (y + elementHeight) * scaleY;
-}
-
 function hexToCss(hex: string): string {
   const normalized = hex.replace("#", "").trim();
   return /^[0-9a-fA-F]{6}$/.test(normalized) ? `#${normalized}` : "#2f343a";
@@ -37,8 +39,10 @@ function setCanvasAlphaColor(context: CanvasRenderingContext2D, hex: string, opa
 function drawCanvasRotatedText(input: {
   context: CanvasRenderingContext2D;
   text: string;
-  x: number;
-  y: number;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
   font: string;
   color: string;
   opacity: number;
@@ -46,14 +50,14 @@ function drawCanvasRotatedText(input: {
   align?: CanvasTextAlign;
 }) {
   input.context.save();
-  input.context.translate(input.x, input.y);
+  input.context.translate(input.left + input.width / 2, input.top + input.height / 2);
   input.context.rotate((input.rotation * Math.PI) / 180);
   input.context.globalAlpha = clampOpacity(input.opacity);
   input.context.fillStyle = input.color;
   input.context.textAlign = input.align ?? "left";
-  input.context.textBaseline = "alphabetic";
+  input.context.textBaseline = "top";
   input.context.font = input.font;
-  input.context.fillText(input.text, 0, 0);
+  input.context.fillText(input.text, -input.width / 2, -input.height / 2);
   input.context.restore();
 }
 
@@ -123,26 +127,23 @@ function drawCanvasTextWatermark(
   scaleY: number,
 ) {
   const text = layer.text.trim() || "CONFIDENTIAL";
-  const fontSize = layer.fontSize * scaleY;
-  context.save();
-  context.font = `700 ${fontSize}px Arial, sans-serif`;
-  const textWidth = context.measureText(text).width / scaleX;
-  const position = resolveWatermarkPosition({
-    preset: layer.positionPreset,
+  const size = getTextLayerSize(layer);
+  const position = resolveLayerPlacement({
+    layer,
     pageWidth,
     pageHeight,
-    elementWidth: textWidth,
-    elementHeight: layer.fontSize,
-    customX: layer.x,
-    customY: layer.y,
+    elementWidth: size.width,
+    elementHeight: size.height,
   });
-  context.restore();
+  const fontSize = layer.fontSize * scaleY;
 
   drawCanvasRotatedText({
     context,
     text,
-    x: position.x * scaleX,
-    y: pdfYToCanvas(position.y, 0, pageHeight * scaleY, scaleY),
+    left: position.x * scaleX,
+    top: position.top * scaleY,
+    width: position.width * scaleX,
+    height: position.height * scaleY,
     font: `700 ${fontSize}px Arial, sans-serif`,
     color: hexToCss(layer.color),
     opacity: layer.opacity,
@@ -159,23 +160,23 @@ function drawCanvasPatternWatermark(
   scaleY: number,
 ) {
   const text = layer.text.trim() || "DRAFT";
+  const size = getPatternTextSize(layer);
   const fontSize = layer.fontSize * scaleY;
   const spacingX = Math.max(80, layer.patternSpacingX);
   const spacingY = Math.max(80, layer.patternSpacingY);
-  context.save();
-  context.font = `700 ${fontSize}px Arial, sans-serif`;
-  const textWidth = context.measureText(text).width / scaleX;
-  context.restore();
 
   for (let row = -1; row <= Math.ceil(pageHeight / spacingY) + 1; row += 1) {
     const offsetX = layer.patternStaggered && row % 2 !== 0 ? spacingX / 2 : 0;
 
-    for (let x = -textWidth; x <= pageWidth + spacingX; x += spacingX) {
+    for (let x = -size.width; x <= pageWidth + spacingX; x += spacingX) {
+      const y = row * spacingY - spacingY;
       drawCanvasRotatedText({
         context,
         text,
-        x: (x + offsetX) * scaleX,
-        y: pageHeight * scaleY - row * spacingY * scaleY,
+        left: (x + offsetX) * scaleX,
+        top: y * scaleY,
+        width: size.width * scaleX,
+        height: size.height * scaleY,
         font: `700 ${fontSize}px Arial, sans-serif`,
         color: hexToCss(layer.color),
         opacity: layer.opacity,
@@ -194,21 +195,18 @@ function drawCanvasSeal(
   scaleY: number,
 ) {
   const sealScale = Math.min(1.8, Math.max(0.55, layer.scale || 1));
-  const sealWidth = (layer.sealStyle === "circular" ? 150 : 220) * sealScale;
-  const sealHeight = (layer.sealStyle === "circular" ? 150 : 92) * sealScale;
-  const position = resolveWatermarkPosition({
-    preset: layer.positionPreset,
+  const size = getSealLayerSize(layer);
+  const position = resolveLayerPlacement({
+    layer,
     pageWidth,
     pageHeight,
-    elementWidth: sealWidth,
-    elementHeight: sealHeight,
-    customX: layer.x,
-    customY: layer.y,
+    elementWidth: size.width,
+    elementHeight: size.height,
   });
   const x = position.x * scaleX;
-  const y = pdfYToCanvas(position.y, sealHeight, pageHeight * scaleY, scaleY);
-  const width = sealWidth * scaleX;
-  const height = sealHeight * scaleY;
+  const y = position.top * scaleY;
+  const width = size.width * scaleX;
+  const height = size.height * scaleY;
   const title = (layer.sealTitle || "REVIEWED").trim().toUpperCase();
   const subtitle = (layer.sealSubtitle || "DOCUMENT CONTROL").trim().toUpperCase();
   const documentId = layer.sealDocumentId.trim().toUpperCase();
@@ -262,25 +260,20 @@ function drawCanvasImageWatermark(
   scaleX: number,
   scaleY: number,
 ) {
-  const sourceWidth = "width" in image ? Number(image.width) : 260;
-  const sourceHeight = "height" in image ? Number(image.height) : sourceWidth;
-  const width = Math.max(48, sourceWidth * Math.min(2, Math.max(0.05, layer.scale)));
-  const height = Math.max(48, sourceHeight * Math.min(2, Math.max(0.05, layer.scale)));
-  const position = resolveWatermarkPosition({
-    preset: layer.positionPreset,
+  const size = getImageLayerSize(layer);
+  const position = resolveLayerPlacement({
+    layer,
     pageWidth,
     pageHeight,
-    elementWidth: width,
-    elementHeight: height,
-    customX: layer.x,
-    customY: layer.y,
+    elementWidth: size.width,
+    elementHeight: size.height,
   });
 
   context.save();
   context.globalAlpha = clampOpacity(layer.opacity);
-  context.translate(position.x * scaleX + (width * scaleX) / 2, pdfYToCanvas(position.y, height, pageHeight * scaleY, scaleY) + (height * scaleY) / 2);
+  context.translate(position.centerX * scaleX, position.centerY * scaleY);
   context.rotate((layer.rotation * Math.PI) / 180);
-  context.drawImage(image, (-width * scaleX) / 2, (-height * scaleY) / 2, width * scaleX, height * scaleY);
+  context.drawImage(image, (-size.width * scaleX) / 2, (-size.height * scaleY) / 2, size.width * scaleX, size.height * scaleY);
   context.restore();
 }
 

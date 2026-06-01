@@ -1,7 +1,8 @@
 import type { DocumentLayer } from "../../types/watermark";
 import {
   createSafeLayerRenderModel,
-  getSafeLayerWaveY,
+  getSafeLayerPointAtDistance,
+  sampleSafeLayerWavePath,
   type SafeLayerRenderModel,
 } from "./safelayerRenderer";
 
@@ -90,24 +91,77 @@ function drawSafeLayerTextRows(
   const hugeWidth = canvas.width * 3.8;
   const pivotX = canvas.width * 1.4;
   const pivotY = canvas.height * 1.4;
+  const translateX = -canvas.width * 0.9;
+  const translateY = -canvas.height * 0.9;
+  const rotation = (model.rotation * Math.PI) / 180;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const inverseCorners = [
+    { x: -160, y: -160 },
+    { x: canvas.width + 160, y: -160 },
+    { x: canvas.width + 160, y: canvas.height + 160 },
+    { x: -160, y: canvas.height + 160 },
+  ].map((point) => {
+    const translatedX = point.x - translateX - pivotX;
+    const translatedY = point.y - translateY - pivotY;
+
+    return {
+      x: translatedX * cos + translatedY * sin + pivotX,
+      y: -translatedX * sin + translatedY * cos + pivotY,
+    };
+  });
+  const visibleMinX = Math.max(0, Math.min(...inverseCorners.map((point) => point.x)));
+  const visibleMaxX = Math.min(hugeWidth, Math.max(...inverseCorners.map((point) => point.x)));
+  const visibleMinY = Math.min(...inverseCorners.map((point) => point.y));
+  const visibleMaxY = Math.max(...inverseCorners.map((point) => point.y));
 
   context.save();
-  context.translate(-canvas.width * 0.9, -canvas.height * 0.9);
+  context.translate(translateX, translateY);
   context.translate(pivotX, pivotY);
-  context.rotate((model.rotation * Math.PI) / 180);
+  context.rotate(rotation);
   context.translate(-pivotX, -pivotY);
   context.font = `700 ${model.fontSize}px Arial, sans-serif`;
   context.fillStyle = color;
   context.textBaseline = "middle";
-
-  const phraseWidth = Math.max(32, context.measureText(phrase).width);
+  context.textAlign = "center";
+  const letterSpacing = 1;
+  const averageCharacterWidth = Math.max(2, context.measureText(phrase).width / phrase.length + letterSpacing);
+  const chunkLength = 8;
 
   for (const row of model.textRows) {
-    context.globalAlpha = row.opacity * model.textOpacity;
-    const startX = -row.offsetRatio * hugeWidth;
+    if (row.y < visibleMinY - 36 || row.y > visibleMaxY + 36) {
+      continue;
+    }
 
-    for (let x = startX; x < hugeWidth; x += phraseWidth) {
-      context.fillText(phrase, x, getSafeLayerWaveY(row, x));
+    context.globalAlpha = row.opacity * model.textOpacity;
+    const points = sampleSafeLayerWavePath(hugeWidth, row.y, 3);
+    const pathLength = points[points.length - 1]?.distance ?? 0;
+    const offsetDistance = row.offsetRatio * pathLength;
+    let distance = Math.max(offsetDistance, visibleMinX - 160);
+    let characterIndex = Math.max(0, Math.floor((distance - offsetDistance) / averageCharacterWidth));
+    const endDistance = Math.min(pathLength, visibleMaxX + 160);
+
+    while (distance < endDistance) {
+      let chunk = "";
+
+      for (let offset = 0; offset < chunkLength; offset += 1) {
+        chunk += phrase[(characterIndex + offset) % phrase.length];
+      }
+
+      const width = Math.max(1, context.measureText(chunk).width + letterSpacing * chunk.length);
+      const point = getSafeLayerPointAtDistance(points, distance + width / 2);
+
+      if (!point) {
+        break;
+      }
+
+      context.save();
+      context.translate(point.x, point.y);
+      context.rotate(point.angle);
+      context.fillText(chunk, 0, 0);
+      context.restore();
+      distance += width;
+      characterIndex += chunkLength;
     }
   }
 
