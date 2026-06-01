@@ -69,26 +69,15 @@ flowchart LR
   <sub>Import PDFs locally in the browser. Files stay on your device.</sub>
 </p>
 
-| Sample | Preview |
-| --- | --- |
-| Empty PDF<br><sub>Clean baseline document used for testing.</sub><br>[Open PDF](samples/sample-empty.pdf) | <img src="samples/sample-empty.png" alt="Empty PDF sample preview" width="220"> |
-| Text watermark<br><sub>A simple confidential text watermark.</sub><br>[Open PDF](samples/sample-text.pdf) | <img src="samples/sample-text.png" alt="Text watermark sample preview" width="220"> |
-| Image watermark<br><sub>A centered image watermark with preserved aspect ratio.</sub><br>[Open PDF](samples/sample-image.pdf) | <img src="samples/sample-image.png" alt="Image watermark sample preview" width="220"> |
-| Pattern watermark<br><sub>A repeated pattern watermark across the page.</sub><br>[Open PDF](samples/sample-pattern.pdf) | <img src="samples/sample-pattern.png" alt="Pattern watermark sample preview" width="220"> |
-| SafeLayer<br><sub>A dense wavy protection layer with contour texture.</sub><br>[Open PDF](samples/sample-safelayer.pdf) | <img src="samples/sample-safelayer.png" alt="SafeLayer sample preview" width="220"> |
-| Seal watermark<br><sub>Circular and rectangular review stamps.</sub><br>[Open PDF](samples/sample-seal.pdf) | <img src="samples/sample-seal.png" alt="Seal watermark sample preview" width="220"> |
-| Blackout<br><sub>Black rectangles flattened into the exported PDF.</sub><br>[Open PDF](samples/sample-blackout.pdf) | <img src="samples/sample-blackout.png" alt="Blackout sample preview" width="220"> |
-
-
 | Sample                                                                                                                        | Preview                                                                                   |
 | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Empty PDF<br><sub>Clean baseline document used for testing.</sub><br>[Open PDF](samples/sample-empty.pdf)                     | <img src="samples/sample-empty.png" alt="Empty PDF sample preview" width="360">           |
-| Text watermark<br><sub>A simple confidential text watermark.</sub><br>[Open PDF](samples/sample-text.pdf)                     | <img src="samples/sample-text.png" alt="Text watermark sample preview" width="360">       |
-| Image watermark<br><sub>A centered image watermark with preserved aspect ratio.</sub><br>[Open PDF](samples/sample-image.pdf) | <img src="samples/sample-image.png" alt="Image watermark sample preview" width="360">     |
-| Pattern watermark<br><sub>A repeated pattern watermark across the page.</sub><br>[Open PDF](samples/sample-pattern.pdf)       | <img src="samples/sample-pattern.png" alt="Pattern watermark sample preview" width="360"> |
-| SafeLayer<br><sub>A dense wavy protection layer with contour texture.</sub><br>[Open PDF](samples/sample-safelayer.pdf)       | <img src="samples/sample-safelayer.png" alt="SafeLayer sample preview" width="360">       |
-| Seal watermark<br><sub>Circular and rectangular review stamps.</sub><br>[Open PDF](samples/sample-seal.pdf)                   | <img src="samples/sample-seal.png" alt="Seal watermark sample preview" width="360">       |
-| Blackout<br><sub>Black rectangles flattened into the exported PDF.</sub><br>[Open PDF](samples/sample-blackout.pdf)           | <img src="samples/sample-blackout.png" alt="Blackout sample preview" width="360">         |
+| Empty PDF<br><sub>Clean baseline document used for testing.</sub><br>[Open PDF](samples/sample-empty.pdf)                     | <img src="samples/sample-empty.png" alt="Empty PDF sample preview" width="520">           |
+| Text watermark<br><sub>A simple confidential text watermark.</sub><br>[Open PDF](samples/sample-text.pdf)                     | <img src="samples/sample-text.png" alt="Text watermark sample preview" width="520">       |
+| Image watermark<br><sub>A centered image watermark with preserved aspect ratio.</sub><br>[Open PDF](samples/sample-image.pdf) | <img src="samples/sample-image.png" alt="Image watermark sample preview" width="520">     |
+| Pattern watermark<br><sub>A repeated pattern watermark across the page.</sub><br>[Open PDF](samples/sample-pattern.pdf)       | <img src="samples/sample-pattern.png" alt="Pattern watermark sample preview" width="520"> |
+| SafeLayer<br><sub>A dense wavy protection layer with contour texture.</sub><br>[Open PDF](samples/sample-safelayer.pdf)       | <img src="samples/sample-safelayer.png" alt="SafeLayer sample preview" width="520">       |
+| Seal watermark<br><sub>Circular and rectangular review stamps.</sub><br>[Open PDF](samples/sample-seal.pdf)                   | <img src="samples/sample-seal.png" alt="Seal watermark sample preview" width="520">       |
+| Blackout<br><sub>Black rectangles flattened into the exported PDF.</sub><br>[Open PDF](samples/sample-blackout.pdf)           | <img src="samples/sample-blackout.png" alt="Blackout sample preview" width="520">         |
 
 ---
 
