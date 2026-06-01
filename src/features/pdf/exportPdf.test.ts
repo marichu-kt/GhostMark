@@ -146,6 +146,7 @@ describe("exportPdf flattened output", () => {
     const reloaded = await PDFDocument.load(exportedBytes);
 
     expect(after.pageCount).toBe(before.pageCount);
+    expect(result.fileName).toBe("flattened.pdf");
     expect(after.text).not.toContain(sourceText);
     expect(after.text.trim()).toBe("");
     expect(reloaded.getTitle()).toBe("");
@@ -187,6 +188,7 @@ describe("exportPdf flattened output", () => {
     const reloaded = await PDFDocument.load(exportedBytes);
 
     expect(after.pageCount).toBe(4);
+    expect(result.fileName).toBe("safelayer-blackout.pdf");
     expect(after.text).not.toContain(sourceText);
     expect(after.text.trim()).toBe("");
     expect(reloaded.getTitle()).toBe("");

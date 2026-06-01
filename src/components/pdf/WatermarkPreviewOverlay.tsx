@@ -5,7 +5,7 @@ import {
   createSafeLayerRenderModel,
   SAFELAYER_PREVIEW_PAGE_LIMIT,
 } from "../../features/watermark/safelayerRenderer";
-import { resolveWatermarkPosition } from "../../features/watermark/positioning";
+import { resolvePreviewWatermarkPosition } from "../../features/watermark/previewGeometry";
 
 interface WatermarkPreviewOverlayProps {
   layers: DocumentLayer[];
@@ -16,12 +16,6 @@ interface WatermarkPreviewOverlayProps {
   pageWidth: number;
   pageHeight: number;
   selectedLayerId?: string | null;
-}
-
-interface PositionStyle {
-  left: number;
-  top: number;
-  transform: string;
 }
 
 function bytesToDataUrl(bytes: Uint8Array, mimeType: string): string {
@@ -38,43 +32,6 @@ function bytesToDataUrl(bytes: Uint8Array, mimeType: string): string {
 
 function estimateTextWidth(text: string, fontSize: number): number {
   return Math.max(fontSize, text.length * fontSize * 0.62);
-}
-
-function resolvePdfLikePosition(
-  layer: DocumentLayer,
-  pageWidth: number,
-  pageHeight: number,
-  elementWidth: number,
-  elementHeight: number,
-  zoom: number,
-  rotation = 0,
-): PositionStyle {
-  if (layer.x !== 0 || layer.y !== 0) {
-    const position = { x: layer.x * zoom, y: layer.y * zoom };
-
-    return {
-      left: position.x,
-      top: pageHeight - position.y - elementHeight,
-      transform: `rotate(${rotation}deg)`,
-    };
-  }
-
-  const position = resolveWatermarkPosition({
-    preset: layer.positionPreset,
-    pageWidth,
-    pageHeight,
-    elementWidth,
-    elementHeight,
-    customX: 0,
-    customY: 0,
-    margin: 48 * zoom,
-  });
-
-  return {
-    left: position.x,
-    top: pageHeight - position.y - elementHeight,
-    transform: `rotate(${rotation}deg)`,
-  };
 }
 
 function layerAppliesToPage(layer: DocumentLayer, pageIndex: number, totalPages: number): boolean {
@@ -130,15 +87,15 @@ export function WatermarkPreviewOverlay({
         if (layer.type === "text" && baseText) {
           const elementWidth = estimateTextWidth(baseText, fontSize);
           const elementHeight = fontSize;
-          const position = resolvePdfLikePosition(
+          const position = resolvePreviewWatermarkPosition({
             layer,
             pageWidth,
             pageHeight,
             elementWidth,
             elementHeight,
             zoom,
-            layer.rotation,
-          );
+            rotation: layer.rotation,
+          });
 
           return (
             <div
@@ -284,7 +241,15 @@ export function WatermarkPreviewOverlay({
           const sealScale = Math.min(1.8, Math.max(0.55, layer.scale || 1));
           const width = (layer.sealStyle === "circular" ? 150 : 220) * sealScale * zoom;
           const height = (layer.sealStyle === "circular" ? 150 : 92) * sealScale * zoom;
-          const position = resolvePdfLikePosition(layer, pageWidth, pageHeight, width, height, zoom, layer.rotation);
+          const position = resolvePreviewWatermarkPosition({
+            layer,
+            pageWidth,
+            pageHeight,
+            elementWidth: width,
+            elementHeight: height,
+            zoom,
+            rotation: layer.rotation,
+          });
           const documentId = layer.sealDocumentId.trim().toUpperCase();
           const borderWidth = Math.max(1, layer.sealBorderThickness);
 
@@ -349,7 +314,15 @@ export function WatermarkPreviewOverlay({
 
           const width = Math.max(48, 260 * layer.scale * zoom);
           const height = width;
-          const position = resolvePdfLikePosition(layer, pageWidth, pageHeight, width, height, zoom, layer.rotation);
+          const position = resolvePreviewWatermarkPosition({
+            layer,
+            pageWidth,
+            pageHeight,
+            elementWidth: width,
+            elementHeight: height,
+            zoom,
+            rotation: layer.rotation,
+          });
 
           return (
             <img

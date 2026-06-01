@@ -5,6 +5,7 @@ import type { DocumentLayer } from "../types/watermark";
 import { useAppSettings } from "./AppProviders";
 import { createDownloadFileName } from "../features/pdf/fileFormatting";
 import { exportPdf } from "../features/pdf/exportPdf";
+import { getExportFooterModel, type ExportWorkflowStep } from "./exportFlow";
 import {
   clampPreviewPage,
   getVisiblePageCount,
@@ -27,7 +28,7 @@ import { WatermarkDesigner } from "../components/watermark/WatermarkDesigner";
 import { ExportPanel } from "../components/export/ExportPanel";
 import { Button } from "../components/ui/Button";
 
-type WorkflowStep = "import" | "edit" | "export" | "security";
+type WorkflowStep = ExportWorkflowStep;
 
 function triggerDownload(result: PdfExportResult) {
   const link = document.createElement("a");
@@ -322,34 +323,29 @@ export function App() {
   ]);
 
   const rightPanelFooter = (() => {
-    if (!loadedPdf || activeStep === "security" || activeStep === "import") {
+    const footerModel = getExportFooterModel({
+      hasDocument: Boolean(loadedPdf),
+      activeStep,
+      watermarkReady,
+      generating,
+      hasExportResult: Boolean(exportResult),
+    });
+
+    if (!footerModel) {
       return null;
-    }
-
-    if (activeStep === "export") {
-      const exportDisabled = !watermarkReady || generating;
-
-      return (
-        <Button
-          variant="primary"
-          className="w-full"
-          disabled={exportDisabled}
-          onClick={() => void handleGenerateExport()}
-        >
-          <Download size={16} aria-hidden="true" />
-          {generating ? t("preview.loading") : t("actions.exportPdf")}
-        </Button>
-      );
     }
 
     return (
       <Button
         variant="primary"
         className="w-full"
-        disabled={!watermarkReady || generating}
+        disabled={footerModel.disabled}
         onClick={() => void handleGenerateExport()}
       >
-        {generating ? t("preview.loading") : t("actions.exportPdf")}
+        {footerModel.showDownloadIcon ? (
+          <Download size={16} aria-hidden="true" />
+        ) : null}
+        {t(footerModel.labelKey)}
       </Button>
     );
   })();

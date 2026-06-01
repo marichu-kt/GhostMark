@@ -17,4 +17,8 @@ describe("createDownloadFileName", () => {
     expect(createDownloadFileName("")).toBe("GhostMark-output.pdf");
     expect(createDownloadFileName("???.pdf")).toBe("GhostMark-output.pdf");
   });
+
+  it("does not use the old watermarked suffix", () => {
+    expect(createDownloadFileName("contract.pdf")).not.toContain("-watermarked");
+  });
 });
