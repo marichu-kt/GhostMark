@@ -63,7 +63,7 @@ flowchart LR
 
 | Home page — attach your PDFs to apply watermarks                                                       |
 | ------------------------------------------------------------------------------------------------------ |
-| <p align="center"><img src="./public/demo/demo-1.png" alt="GhostMark upload screen" width="760" /></p> |
+| <p align="center"><img src="./public/demo/demo-1.png" alt="GhostMark upload screen" width="800" /></p> |
 
 
 | Sample                                                                                                                        | Preview                                                                                   |
