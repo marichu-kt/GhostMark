@@ -68,12 +68,14 @@ describe("shared layer geometry", () => {
   it("preserves image aspect ratio when minimum dimensions clamp small watermarks", () => {
     const landscape = { ...createLayerForType("image"), scale: 0.05 };
     const portrait = { ...createLayerForType("image"), scale: 0.05 };
+    const square = { ...createLayerForType("image"), scale: 0.05 };
 
     expect(getImageLayerSize(landscape, 800, 400)).toEqual({ width: 96, height: 48 });
     expect(getImageLayerSize(portrait, 400, 800)).toEqual({ width: 48, height: 96 });
+    expect(getImageLayerSize(square, 600, 600)).toEqual({ width: 48, height: 48 });
   });
 
-  it("creates matching image render plans from natural image dimensions", () => {
+  it("creates image render plans from natural dimensions without independent stretching", () => {
     const layer = { ...createLayerForType("image"), positionPreset: "top-left" as const, scale: 0.25, rotation: 18 };
     const plan = createImageRenderPlan({
       layer,
@@ -84,7 +86,10 @@ describe("shared layer geometry", () => {
     });
 
     expect(plan.width / plan.height).toBeCloseTo(2);
+    expect(plan.aspectRatio).toBeCloseTo(2);
     expect(plan.rotation).toBe(18);
+    expect(plan.rotationOrigin).toBe("center");
+    expect(plan.anchor).toBe("center");
     expect(plan.x).toBe(48);
     expect(plan.top).toBe(48);
   });
@@ -111,8 +116,37 @@ describe("shared layer geometry", () => {
     expect(plan.documentId).toBe("DOC-7");
     expect(plan.dateText).toBe("2026-06-01");
     expect(plan.rotation).toBe(-10);
+    expect(plan.rotationOrigin).toBe("center");
+    expect(plan.anchor).toBe("center");
+    expect(plan.borderWidth).toBe(2);
     expect(plan.x).toBe(612 - 48 - plan.width);
     expect(plan.y).toBe(48);
     expect(plan.top).toBe(792 - 48 - plan.height);
+  });
+
+  it("keeps seal placement stable at top-left, center, and bottom-right", () => {
+    const base = { ...createLayerForType("seal"), sealShowDate: false };
+    const topLeft = createSealRenderPlan({
+      layer: { ...base, positionPreset: "top-left" },
+      pageWidth: 612,
+      pageHeight: 792,
+    });
+    const center = createSealRenderPlan({
+      layer: { ...base, positionPreset: "center" },
+      pageWidth: 612,
+      pageHeight: 792,
+    });
+    const bottomRight = createSealRenderPlan({
+      layer: { ...base, positionPreset: "bottom-right" },
+      pageWidth: 612,
+      pageHeight: 792,
+    });
+
+    expect(topLeft.x).toBe(48);
+    expect(topLeft.top).toBe(48);
+    expect(center.centerX).toBeCloseTo(306);
+    expect(center.centerY).toBeCloseTo(396);
+    expect(bottomRight.x).toBe(612 - 48 - bottomRight.width);
+    expect(bottomRight.y).toBe(48);
   });
 });

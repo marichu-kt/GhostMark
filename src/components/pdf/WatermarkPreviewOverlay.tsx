@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocumentLayer } from "../../types/watermark";
-import { resolvePageRules } from "../../features/pdf/pageRules";
 import { FLATTENED_EXPORT_SCALE } from "../../features/pdf/flattenedExportPlan";
+import { resolvePageRules } from "../../features/pdf/pageRules";
 import {
-  createImageRenderPlan,
-  createSealRenderPlan,
-  getPatternTextSize,
-  getTextLayerSize,
-} from "../../features/watermark/layerGeometry";
+  drawImageWatermarkToCanvas,
+  drawSealWatermarkToCanvas,
+} from "../../features/watermark/canvasWatermarkRenderer";
+import { getPatternTextSize, getTextLayerSize } from "../../features/watermark/layerGeometry";
+import { resolvePreviewWatermarkPosition } from "../../features/watermark/previewGeometry";
 import { drawSafeLayerContoursToCanvas } from "../../features/watermark/safelayerCanvasRenderer";
 import { SAFELAYER_PREVIEW_PAGE_LIMIT } from "../../features/watermark/safelayerRenderer";
 import { createSafeLayerSvgMarkup } from "../../features/watermark/safelayerSvgRenderer";
-import { resolvePreviewWatermarkPosition } from "../../features/watermark/previewGeometry";
 
 interface WatermarkPreviewOverlayProps {
   layers: DocumentLayer[];
@@ -38,8 +37,7 @@ function bytesToDataUrl(bytes: Uint8Array, mimeType: string): string {
 
 function layerAppliesToPage(layer: DocumentLayer, pageIndex: number, totalPages: number): boolean {
   try {
-    const selectedPages = resolvePageRules(layer.pages, totalPages);
-    return selectedPages.includes(pageIndex);
+    return resolvePageRules(layer.pages, totalPages).includes(pageIndex);
   } catch {
     return false;
   }
@@ -92,12 +90,7 @@ function SafeLayerCanvasPreview({
     }
 
     context.clearRect(0, 0, width, height);
-    drawSafeLayerContoursToCanvas({
-      context,
-      model,
-      layer,
-      quality: "preview",
-    });
+    drawSafeLayerContoursToCanvas({ context, model, layer, quality: "preview" });
   }, [height, layer, model, width]);
 
   return (
@@ -122,6 +115,87 @@ function SafeLayerCanvasPreview({
   );
 }
 
+function CanvasWatermarkLayerPreview({
+  layer,
+  image,
+  pageWidth,
+  pageHeight,
+  zoom,
+}: {
+  layer: DocumentLayer;
+  image?: HTMLImageElement;
+  pageWidth: number;
+  pageHeight: number;
+  zoom: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas || zoom <= 0) {
+      return;
+    }
+
+    const logicalPageWidth = pageWidth / zoom;
+    const logicalPageHeight = pageHeight / zoom;
+    const deviceScale = Math.max(1, window.devicePixelRatio || 1);
+    const canvasWidth = Math.max(1, Math.round(pageWidth * deviceScale));
+    const canvasHeight = Math.max(1, Math.round(pageHeight * deviceScale));
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const context = canvas.getContext("2d");
+
+    if (!context || logicalPageWidth <= 0 || logicalPageHeight <= 0) {
+      return;
+    }
+
+    context.clearRect(0, 0, canvasWidth, canvasHeight);
+    const scaleX = canvasWidth / logicalPageWidth;
+    const scaleY = canvasHeight / logicalPageHeight;
+
+    if (layer.type === "seal") {
+      drawSealWatermarkToCanvas({
+        context,
+        layer,
+        pageWidth: logicalPageWidth,
+        pageHeight: logicalPageHeight,
+        canvasWidth,
+        canvasHeight,
+        scaleX,
+        scaleY,
+      });
+    }
+
+    if (layer.type === "image" && image) {
+      drawImageWatermarkToCanvas({
+        context,
+        layer,
+        image,
+        pageWidth: logicalPageWidth,
+        pageHeight: logicalPageHeight,
+        canvasWidth,
+        canvasHeight,
+        scaleX,
+        scaleY,
+      });
+    }
+  }, [image, layer, pageHeight, pageWidth, zoom]);
+
+  if (layer.type === "image" && !image) {
+    return null;
+  }
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0"
+      aria-hidden="true"
+      style={{ width: pageWidth, height: pageHeight }}
+    />
+  );
+}
+
 export function WatermarkPreviewOverlay({
   layers,
   enabled,
@@ -132,9 +206,7 @@ export function WatermarkPreviewOverlay({
   pageHeight,
   selectedLayerId,
 }: WatermarkPreviewOverlayProps) {
-  const [imageDimensions, setImageDimensions] = useState<Map<string, { width: number; height: number }>>(
-    () => new Map(),
-  );
+  const [imageElements, setImageElements] = useState<Map<string, HTMLImageElement>>(() => new Map());
   const imageUrls = useMemo(() => {
     const urls = new Map<string, string>();
 
@@ -157,30 +229,23 @@ export function WatermarkPreviewOverlay({
           return;
         }
 
-        setImageDimensions((current) => {
-          if (current.has(layerId)) {
-            return current;
-          }
-
+        setImageElements((current) => {
           const next = new Map(current);
-          next.set(layerId, {
-            width: Math.max(1, image.naturalWidth || image.width || 260),
-            height: Math.max(1, image.naturalHeight || image.height || 260),
-          });
+          next.set(layerId, image);
           return next;
         });
       };
       image.src = imageUrl;
     }
 
-    setImageDimensions((current) => {
-      const next = new Map<string, { width: number; height: number }>();
+    setImageElements((current) => {
+      const next = new Map<string, HTMLImageElement>();
 
-      for (const layerId of imageUrls.keys()) {
-        const dimensions = current.get(layerId);
+      for (const [layerId, imageUrl] of imageUrls) {
+        const image = current.get(layerId);
 
-        if (dimensions) {
-          next.set(layerId, dimensions);
+        if (image?.src === imageUrl) {
+          next.set(layerId, image);
         }
       }
 
@@ -319,126 +384,28 @@ export function WatermarkPreviewOverlay({
         }
 
         if (layer.type === "seal") {
-          const plan = createSealRenderPlan({
-            layer,
-            pageWidth,
-            pageHeight,
-            displayScale: zoom,
-          });
-
           return (
-            <div
+            <CanvasWatermarkLayerPreview
               key={layer.id}
-              className="absolute text-center uppercase"
-              style={{
-                left: plan.x,
-                top: plan.top,
-                width: plan.width,
-                height: plan.height,
-                borderColor: plan.color,
-                borderWidth: plan.borderWidth,
-                borderStyle: "solid",
-                borderRadius: plan.circular ? "9999px" : plan.borderRadius,
-                color: plan.color,
-                opacity: plan.opacity,
-                transform: `rotate(${plan.rotation}deg)`,
-                transformOrigin: "center",
-              }}
-            >
-              {!plan.circular ? (
-                <div
-                  className="absolute border-t"
-                  style={{
-                    left: plan.dividerInset,
-                    right: plan.dividerInset,
-                    top: plan.dividerTop,
-                    borderColor: plan.color,
-                    borderTopWidth: Math.max(1, plan.borderWidth * 0.55),
-                    opacity: 0.7,
-                  }}
-                />
-              ) : null}
-              <div
-                className="absolute left-0 right-0 -translate-y-1/2 font-bold tracking-[0.08em]"
-                style={{
-                  top: plan.titleY,
-                  fontSize: plan.titleFontSize,
-                }}
-              >
-                {plan.title}
-              </div>
-              <div
-                className="absolute left-0 right-0 -translate-y-1/2 tracking-[0.18em]"
-                style={{ top: plan.subtitleY, fontSize: plan.subtitleFontSize }}
-              >
-                {plan.subtitle}
-              </div>
-              {plan.documentId ? (
-                <div
-                  className="absolute left-0 right-0 -translate-y-1/2"
-                  style={{ top: plan.documentIdY, fontSize: plan.metaFontSize }}
-                >
-                  {plan.documentId}
-                </div>
-              ) : null}
-              {plan.dateText ? (
-                <div
-                  className="absolute left-0 right-0 -translate-y-1/2"
-                  style={{ top: plan.dateY, fontSize: plan.metaFontSize }}
-                >
-                  {plan.dateText}
-                </div>
-              ) : null}
-              {!plan.circular ? (
-                <div
-                  className="absolute border-t"
-                  style={{
-                    left: plan.dividerInset,
-                    right: plan.dividerInset,
-                    top: plan.dividerBottom,
-                    borderColor: plan.color,
-                    borderTopWidth: Math.max(1, plan.borderWidth * 0.55),
-                    opacity: 0.7,
-                  }}
-                />
-              ) : null}
-            </div>
+              layer={layer}
+              pageWidth={pageWidth}
+              pageHeight={pageHeight}
+              zoom={zoom}
+            />
           );
         }
 
         if (layer.type === "image") {
-          const imageUrl = imageUrls.get(layer.id);
-
-          if (!imageUrl) {
-            return null;
-          }
-
-          const dimensions = imageDimensions.get(layer.id);
-          const plan = createImageRenderPlan({
-            layer,
-            pageWidth,
-            pageHeight,
-            sourceWidth: dimensions?.width,
-            sourceHeight: dimensions?.height,
-            displayScale: zoom,
-          });
+          const image = imageElements.get(layer.id);
 
           return (
-            <img
+            <CanvasWatermarkLayerPreview
               key={layer.id}
-              src={imageUrl}
-              alt=""
-              className="absolute object-contain"
-              style={{
-                left: plan.x,
-                top: plan.top,
-                width: plan.width,
-                height: plan.height,
-                opacity,
-                objectFit: "contain",
-                transform: `rotate(${plan.rotation}deg)`,
-                transformOrigin: "center",
-              }}
+              layer={layer}
+              image={image}
+              pageWidth={pageWidth}
+              pageHeight={pageHeight}
+              zoom={zoom}
             />
           );
         }

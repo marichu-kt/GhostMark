@@ -1,12 +1,14 @@
 import { PDFDocument } from "pdf-lib";
 import type { DocumentLayer, WatermarkConfig } from "../../types/watermark";
 import {
-  createImageRenderPlan,
-  createSealRenderPlan,
   getPatternTextSize,
   getTextLayerSize,
   resolveLayerPlacement,
 } from "../watermark/layerGeometry";
+import {
+  drawImageWatermarkToCanvas,
+  drawSealWatermarkToCanvas,
+} from "../watermark/canvasWatermarkRenderer";
 import { drawSafeLayerToCanvas } from "../watermark/safelayerCanvasRenderer";
 import {
   buildFlattenedExportPlan,
@@ -28,12 +30,6 @@ function clampOpacity(opacity: number): number {
 function hexToCss(hex: string): string {
   const normalized = hex.replace("#", "").trim();
   return /^[0-9a-fA-F]{6}$/.test(normalized) ? `#${normalized}` : "#2f343a";
-}
-
-function setCanvasAlphaColor(context: CanvasRenderingContext2D, hex: string, opacity: number) {
-  context.globalAlpha = clampOpacity(opacity);
-  context.fillStyle = hexToCss(hex);
-  context.strokeStyle = hexToCss(hex);
 }
 
 function drawCanvasRotatedText(input: {
@@ -71,15 +67,6 @@ function dataUrlToBytes(dataUrl: string): Uint8Array {
   }
 
   return bytes;
-}
-
-function getCanvasImageDimensions(image: CanvasImageSource): { width: number; height: number } {
-  const maybeBitmap = image as CanvasImageSource & { width?: number; height?: number; naturalWidth?: number; naturalHeight?: number };
-
-  return {
-    width: Math.max(1, Number(maybeBitmap.naturalWidth ?? maybeBitmap.width ?? 260)),
-    height: Math.max(1, Number(maybeBitmap.naturalHeight ?? maybeBitmap.height ?? 260)),
-  };
 }
 
 async function loadCanvasImage(layer: DocumentLayer): Promise<CanvasImageSource | null> {
@@ -203,68 +190,16 @@ function drawCanvasSeal(
   scaleX: number,
   scaleY: number,
 ) {
-  const plan = createSealRenderPlan({
+  drawSealWatermarkToCanvas({
+    context,
     layer,
     pageWidth,
     pageHeight,
+    canvasWidth: context.canvas.width,
+    canvasHeight: context.canvas.height,
+    scaleX,
+    scaleY,
   });
-  const x = plan.x * scaleX;
-  const y = plan.top * scaleY;
-  const width = plan.width * scaleX;
-  const height = plan.height * scaleY;
-  const scaled = (value: number) => value * scaleY;
-
-  context.save();
-  context.translate(x + width / 2, y + height / 2);
-  context.rotate((plan.rotation * Math.PI) / 180);
-  setCanvasAlphaColor(context, plan.color, plan.opacity);
-  context.lineWidth = Math.max(1, plan.borderWidth * scaleX);
-
-  if (plan.circular) {
-    context.beginPath();
-    context.ellipse(0, 0, width / 2, height / 2, 0, 0, Math.PI * 2);
-    context.stroke();
-    context.globalAlpha = clampOpacity(plan.opacity * 0.7);
-    context.beginPath();
-    context.ellipse(0, 0, Math.max(1, width / 2 - 10 * scaleX), Math.max(1, height / 2 - 10 * scaleY), 0, 0, Math.PI * 2);
-    context.stroke();
-  } else {
-    context.strokeRect(-width / 2, -height / 2, width, height);
-    context.globalAlpha = clampOpacity(plan.opacity * 0.75);
-    context.fillRect(
-      -width / 2 + plan.dividerInset * scaleX,
-      -height / 2 + plan.dividerTop * scaleY,
-      width - plan.dividerInset * 2 * scaleX,
-      Math.max(1, plan.borderWidth * 0.55 * scaleY),
-    );
-    context.fillRect(
-      -width / 2 + plan.dividerInset * scaleX,
-      -height / 2 + plan.dividerBottom * scaleY,
-      width - plan.dividerInset * 2 * scaleX,
-      Math.max(1, plan.borderWidth * 0.55 * scaleY),
-    );
-  }
-
-  context.globalAlpha = clampOpacity(plan.opacity);
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.fillStyle = hexToCss(plan.color);
-  context.font = `700 ${scaled(plan.titleFontSize)}px Arial, sans-serif`;
-  context.fillText(plan.title, 0, -height / 2 + plan.titleY * scaleY);
-  context.font = `500 ${scaled(plan.subtitleFontSize)}px Arial, sans-serif`;
-  context.fillText(plan.subtitle, 0, -height / 2 + plan.subtitleY * scaleY);
-
-  if (plan.documentId) {
-    context.font = `500 ${scaled(plan.metaFontSize)}px Arial, sans-serif`;
-    context.fillText(plan.documentId, 0, -height / 2 + plan.documentIdY * scaleY);
-  }
-
-  if (plan.dateText) {
-    context.font = `500 ${scaled(plan.metaFontSize)}px Arial, sans-serif`;
-    context.fillText(plan.dateText, 0, -height / 2 + plan.dateY * scaleY);
-  }
-
-  context.restore();
 }
 
 function drawCanvasImageWatermark(
@@ -276,21 +211,17 @@ function drawCanvasImageWatermark(
   scaleX: number,
   scaleY: number,
 ) {
-  const dimensions = getCanvasImageDimensions(image);
-  const plan = createImageRenderPlan({
+  drawImageWatermarkToCanvas({
+    context,
     layer,
+    image,
     pageWidth,
     pageHeight,
-    sourceWidth: dimensions.width,
-    sourceHeight: dimensions.height,
+    canvasWidth: context.canvas.width,
+    canvasHeight: context.canvas.height,
+    scaleX,
+    scaleY,
   });
-
-  context.save();
-  context.globalAlpha = clampOpacity(layer.opacity);
-  context.translate(plan.centerX * scaleX, plan.centerY * scaleY);
-  context.rotate((plan.rotation * Math.PI) / 180);
-  context.drawImage(image, (-plan.width * scaleX) / 2, (-plan.height * scaleY) / 2, plan.width * scaleX, plan.height * scaleY);
-  context.restore();
 }
 
 function drawCanvasBlackouts(
