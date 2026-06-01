@@ -51,8 +51,8 @@ export const SAFELAYER_EXPORT_CONTOUR_RESOLUTION = 128;
 export const SAFELAYER_PREVIEW_CONTOUR_LEVELS = 24;
 export const SAFELAYER_EXPORT_CONTOUR_LEVELS = 36;
 const SAFELAYER_DISTORTION_MULTIPLIER = 1;
-const SAFELAYER_ROTATION_MIN = -29;
-const SAFELAYER_ROTATION_MAX = -25;
+const SAFELAYER_ROTATION_MIN = -45;
+const SAFELAYER_ROTATION_MAX = 45;
 
 export function hashString(value: string): number {
   let hash = 2166136261;
@@ -83,6 +83,17 @@ export function cleanSafeLayerText(value: string): string {
     .filter(Boolean);
 
   return pieces.length ? pieces.join(" ").toUpperCase() : "PROTECTED";
+}
+
+function getSafeLayerPageSeed(config: SafeLayerRendererConfig, text: string): string {
+  return `${config.seed}|${text}|page:${config.pageNumber}|size:${Math.round(config.width)}x${Math.round(config.height)}`;
+}
+
+export function getSafeLayerPageRotation(config: SafeLayerRendererConfig, text = cleanSafeLayerText(config.text)): number {
+  const seed = hashString(getSafeLayerPageSeed(config, text));
+  const random = randomFromSeed(seed);
+
+  return SAFELAYER_ROTATION_MIN + random() * (SAFELAYER_ROTATION_MAX - SAFELAYER_ROTATION_MIN);
 }
 
 export interface SafeLayerWavePoint {
@@ -389,9 +400,9 @@ function createContourSegments(config: SafeLayerRendererConfig, seedNumber: numb
 
 export function createSafeLayerRenderModel(config: SafeLayerRendererConfig): SafeLayerRenderModel {
   const text = cleanSafeLayerText(config.text);
-  const seed = hashString(`${config.seed}|${text}|page:${config.pageNumber}`);
+  const seed = hashString(getSafeLayerPageSeed(config, text));
   const random = randomFromSeed(seed);
-  const rotation = SAFELAYER_ROTATION_MIN + random() * (SAFELAYER_ROTATION_MAX - SAFELAYER_ROTATION_MIN);
+  const rotation = getSafeLayerPageRotation(config, text);
   const distortion = SAFELAYER_DISTORTION_MULTIPLIER;
   const rowSpacing = SAFELAYER_ROW_SPACING * distortion;
   const hugeWidth = config.width * 3.8;

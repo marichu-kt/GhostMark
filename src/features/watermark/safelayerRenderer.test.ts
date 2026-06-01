@@ -6,6 +6,7 @@ import {
   buildExactWavePath,
   cleanSafeLayerText,
   createSafeLayerRenderModel,
+  getSafeLayerPageRotation,
   getSafeLayerPointAtDistance,
   sampleSafeLayerWavePath,
   type SafeLayerRendererConfig,
@@ -77,22 +78,38 @@ describe("createSafeLayerRenderModel", () => {
     const pageTwo = createSafeLayerRenderModel({ ...baseConfig, pageNumber: 2 });
 
     expect(pageOne).toEqual(createSafeLayerRenderModel({ ...baseConfig, pageNumber: 1 }));
-    expect(pageOne.rotation).toBeGreaterThanOrEqual(-32);
-    expect(pageOne.rotation).toBeLessThanOrEqual(-24);
-    expect(pageTwo.rotation).toBeGreaterThanOrEqual(-32);
-    expect(pageTwo.rotation).toBeLessThanOrEqual(-24);
+    expect(pageOne.rotation).toBeGreaterThanOrEqual(-45);
+    expect(pageOne.rotation).toBeLessThanOrEqual(45);
+    expect(pageTwo.rotation).toBeGreaterThanOrEqual(-45);
+    expect(pageTwo.rotation).toBeLessThanOrEqual(45);
     expect(pageOne.rotation).not.toBe(pageTwo.rotation);
     expect(pageOne.textRows[0].startOffset).not.toBe(pageTwo.textRows[0].startOffset);
     expect(pageOne.contourSegments.slice(0, 12)).not.toEqual(pageTwo.contourSegments.slice(0, 12));
   });
 
-  it("uses the same page seed across preview and export dimensions", () => {
-    const preview = createSafeLayerRenderModel({ ...baseConfig, width: 306, height: 396, quality: "preview" });
+  it("uses the same SafeLayer rotation calculation for preview and export render models", () => {
+    const preview = createSafeLayerRenderModel({ ...baseConfig, quality: "preview" });
     const exportModel = createSafeLayerRenderModel({ ...baseConfig, width: 612, height: 792, quality: "export" });
 
     expect(preview.rotation).toBe(exportModel.rotation);
     expect(preview.textRows[0].offsetRatio).toBe(exportModel.textRows[0].offsetRatio);
     expect(preview.textRows[0].opacity).toBe(exportModel.textRows[0].opacity);
+  });
+
+  it("keeps page rotations deterministic across the requested -45 to 45 degree range", () => {
+    const rotations = Array.from({ length: 18 }, (_, index) =>
+      getSafeLayerPageRotation({ ...baseConfig, pageNumber: index + 1 }),
+    );
+
+    for (const rotation of rotations) {
+      expect(rotation).toBeGreaterThanOrEqual(-45);
+      expect(rotation).toBeLessThanOrEqual(45);
+    }
+
+    expect(new Set(rotations.map((rotation) => rotation.toFixed(2))).size).toBeGreaterThan(12);
+    expect(rotations).toEqual(
+      Array.from({ length: 18 }, (_, index) => getSafeLayerPageRotation({ ...baseConfig, pageNumber: index + 1 })),
+    );
   });
 
   it("generates contour/isoline segments across the page", () => {

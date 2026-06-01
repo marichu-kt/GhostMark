@@ -1,9 +1,9 @@
 import { PDFDocument } from "pdf-lib";
 import type { DocumentLayer, WatermarkConfig } from "../../types/watermark";
 import {
-  getImageLayerSize,
+  createImageRenderPlan,
+  createSealRenderPlan,
   getPatternTextSize,
-  getSealLayerSize,
   getTextLayerSize,
   resolveLayerPlacement,
 } from "../watermark/layerGeometry";
@@ -71,6 +71,15 @@ function dataUrlToBytes(dataUrl: string): Uint8Array {
   }
 
   return bytes;
+}
+
+function getCanvasImageDimensions(image: CanvasImageSource): { width: number; height: number } {
+  const maybeBitmap = image as CanvasImageSource & { width?: number; height?: number; naturalWidth?: number; naturalHeight?: number };
+
+  return {
+    width: Math.max(1, Number(maybeBitmap.naturalWidth ?? maybeBitmap.width ?? 260)),
+    height: Math.max(1, Number(maybeBitmap.naturalHeight ?? maybeBitmap.height ?? 260)),
+  };
 }
 
 async function loadCanvasImage(layer: DocumentLayer): Promise<CanvasImageSource | null> {
@@ -194,58 +203,65 @@ function drawCanvasSeal(
   scaleX: number,
   scaleY: number,
 ) {
-  const sealScale = Math.min(1.8, Math.max(0.55, layer.scale || 1));
-  const size = getSealLayerSize(layer);
-  const position = resolveLayerPlacement({
+  const plan = createSealRenderPlan({
     layer,
     pageWidth,
     pageHeight,
-    elementWidth: size.width,
-    elementHeight: size.height,
   });
-  const x = position.x * scaleX;
-  const y = position.top * scaleY;
-  const width = size.width * scaleX;
-  const height = size.height * scaleY;
-  const title = (layer.sealTitle || "REVIEWED").trim().toUpperCase();
-  const subtitle = (layer.sealSubtitle || "DOCUMENT CONTROL").trim().toUpperCase();
-  const documentId = layer.sealDocumentId.trim().toUpperCase();
+  const x = plan.x * scaleX;
+  const y = plan.top * scaleY;
+  const width = plan.width * scaleX;
+  const height = plan.height * scaleY;
+  const scaled = (value: number) => value * scaleY;
 
   context.save();
   context.translate(x + width / 2, y + height / 2);
-  context.rotate((layer.rotation * Math.PI) / 180);
-  setCanvasAlphaColor(context, layer.color, layer.opacity);
-  context.lineWidth = Math.max(1, layer.sealBorderThickness * scaleX);
+  context.rotate((plan.rotation * Math.PI) / 180);
+  setCanvasAlphaColor(context, plan.color, plan.opacity);
+  context.lineWidth = Math.max(1, plan.borderWidth * scaleX);
 
-  if (layer.sealStyle === "circular") {
+  if (plan.circular) {
     context.beginPath();
     context.ellipse(0, 0, width / 2, height / 2, 0, 0, Math.PI * 2);
     context.stroke();
-    context.globalAlpha = clampOpacity(layer.opacity * 0.7);
+    context.globalAlpha = clampOpacity(plan.opacity * 0.7);
     context.beginPath();
     context.ellipse(0, 0, Math.max(1, width / 2 - 10 * scaleX), Math.max(1, height / 2 - 10 * scaleY), 0, 0, Math.PI * 2);
     context.stroke();
   } else {
     context.strokeRect(-width / 2, -height / 2, width, height);
-    context.globalAlpha = clampOpacity(layer.opacity * 0.75);
-    context.fillRect(-width / 2 + 14 * scaleX, -height / 2 + 28 * scaleY, width - 28 * scaleX, Math.max(1, layer.sealBorderThickness * 0.55 * scaleY));
+    context.globalAlpha = clampOpacity(plan.opacity * 0.75);
+    context.fillRect(
+      -width / 2 + plan.dividerInset * scaleX,
+      -height / 2 + plan.dividerTop * scaleY,
+      width - plan.dividerInset * 2 * scaleX,
+      Math.max(1, plan.borderWidth * 0.55 * scaleY),
+    );
+    context.fillRect(
+      -width / 2 + plan.dividerInset * scaleX,
+      -height / 2 + plan.dividerBottom * scaleY,
+      width - plan.dividerInset * 2 * scaleX,
+      Math.max(1, plan.borderWidth * 0.55 * scaleY),
+    );
   }
 
-  context.globalAlpha = clampOpacity(layer.opacity);
+  context.globalAlpha = clampOpacity(plan.opacity);
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillStyle = hexToCss(layer.color);
-  context.font = `700 ${Math.max(10, 22 * sealScale * scaleY)}px Arial, sans-serif`;
-  context.fillText(title, 0, -2 * scaleY);
-  context.font = `500 ${Math.max(8, 9.5 * sealScale * scaleY)}px Arial, sans-serif`;
-  context.fillText(subtitle, 0, 16 * scaleY);
+  context.fillStyle = hexToCss(plan.color);
+  context.font = `700 ${scaled(plan.titleFontSize)}px Arial, sans-serif`;
+  context.fillText(plan.title, 0, -height / 2 + plan.titleY * scaleY);
+  context.font = `500 ${scaled(plan.subtitleFontSize)}px Arial, sans-serif`;
+  context.fillText(plan.subtitle, 0, -height / 2 + plan.subtitleY * scaleY);
 
-  if (documentId) {
-    context.fillText(documentId, 0, height / 2 - 17 * scaleY);
+  if (plan.documentId) {
+    context.font = `500 ${scaled(plan.metaFontSize)}px Arial, sans-serif`;
+    context.fillText(plan.documentId, 0, -height / 2 + plan.documentIdY * scaleY);
   }
 
-  if (layer.sealShowDate) {
-    context.fillText(new Date().toISOString().slice(0, 10), 0, height / 2 - (documentId ? 31 : 17) * scaleY);
+  if (plan.dateText) {
+    context.font = `500 ${scaled(plan.metaFontSize)}px Arial, sans-serif`;
+    context.fillText(plan.dateText, 0, -height / 2 + plan.dateY * scaleY);
   }
 
   context.restore();
@@ -260,20 +276,20 @@ function drawCanvasImageWatermark(
   scaleX: number,
   scaleY: number,
 ) {
-  const size = getImageLayerSize(layer);
-  const position = resolveLayerPlacement({
+  const dimensions = getCanvasImageDimensions(image);
+  const plan = createImageRenderPlan({
     layer,
     pageWidth,
     pageHeight,
-    elementWidth: size.width,
-    elementHeight: size.height,
+    sourceWidth: dimensions.width,
+    sourceHeight: dimensions.height,
   });
 
   context.save();
   context.globalAlpha = clampOpacity(layer.opacity);
-  context.translate(position.centerX * scaleX, position.centerY * scaleY);
-  context.rotate((layer.rotation * Math.PI) / 180);
-  context.drawImage(image, (-size.width * scaleX) / 2, (-size.height * scaleY) / 2, size.width * scaleX, size.height * scaleY);
+  context.translate(plan.centerX * scaleX, plan.centerY * scaleY);
+  context.rotate((plan.rotation * Math.PI) / 180);
+  context.drawImage(image, (-plan.width * scaleX) / 2, (-plan.height * scaleY) / 2, plan.width * scaleX, plan.height * scaleY);
   context.restore();
 }
 

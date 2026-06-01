@@ -1,7 +1,5 @@
 import { useRef, useState } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
   Copy,
   Grid3X3,
   ImagePlus,
@@ -15,7 +13,6 @@ import type {
   DocumentLayer,
   LayerType,
   PageRuleConfig,
-  WatermarkLayer,
 } from "../../types/watermark";
 import type { TranslationKey } from "../../features/i18n/i18n";
 import { createLayerForType } from "../../features/watermark/defaults";
@@ -32,7 +29,6 @@ import { Slider } from "../ui/Slider";
 import { Toggle } from "../ui/Toggle";
 import { PageRulesPanel } from "./PageRulesPanel";
 import { PositionGridPicker } from "./PositionGridPicker";
-import { layerOptions } from "./sharedOptions";
 
 interface WatermarkDesignerProps {
   layers: DocumentLayer[];
@@ -127,20 +123,6 @@ export function WatermarkDesigner({
     onSelectedLayerChange(nextLayer.id);
   }
 
-  function moveLayer(layerId: string, direction: -1 | 1) {
-    const index = layers.findIndex((layer) => layer.id === layerId);
-    const targetIndex = index + direction;
-
-    if (index < 0 || targetIndex < 0 || targetIndex >= layers.length) {
-      return;
-    }
-
-    const nextLayers = [...layers];
-    const [layer] = nextLayers.splice(index, 1);
-    nextLayers.splice(targetIndex, 0, layer);
-    replaceLayers(nextLayers);
-  }
-
   function patchSelectedLayer(patch: Partial<DocumentLayer>) {
     if (!selectedLayer) {
       return;
@@ -230,7 +212,7 @@ export function WatermarkDesigner({
           </div>
         ) : (
           <div className="grid min-w-0 gap-2">
-            {layers.map((layer, index) => {
+            {layers.map((layer) => {
               const selected = selectedLayer?.id === layer.id;
 
               return (
@@ -259,24 +241,6 @@ export function WatermarkDesigner({
                       <span className="block truncate text-xs text-steel-400">{getLayerListSummary(layer)}</span>
                     </button>
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-                      <Button
-                        size="icon"
-                        variant="quiet"
-                        aria-label={t("layers.moveUp")}
-                        disabled={index === 0}
-                        onClick={() => moveLayer(layer.id, -1)}
-                      >
-                        <ArrowUp size={13} aria-hidden="true" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="quiet"
-                        aria-label={t("layers.moveDown")}
-                        disabled={index === layers.length - 1}
-                        onClick={() => moveLayer(layer.id, 1)}
-                      >
-                        <ArrowDown size={13} aria-hidden="true" />
-                      </Button>
                       <Button
                         size="icon"
                         variant="quiet"
@@ -569,17 +533,6 @@ export function WatermarkDesigner({
                     onChange={(event) => patchSelectedLayer({ y: Number(event.target.value) })}
                   />
                 </div>
-                <Select
-                  label={t("watermark.layer")}
-                  value={selectedLayer.layer}
-                  onChange={(event) => patchSelectedLayer({ layer: event.target.value as WatermarkLayer })}
-                  helpText={t("watermark.layerTodo")}
-                  options={layerOptions.map((option) => ({
-                    value: option.value,
-                    label: t(option.labelKey),
-                    disabled: option.disabled,
-                  }))}
-                />
               </>
             ) : null}
           </Collapsible>

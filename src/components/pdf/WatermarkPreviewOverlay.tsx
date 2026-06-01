@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocumentLayer } from "../../types/watermark";
 import { resolvePageRules } from "../../features/pdf/pageRules";
 import { FLATTENED_EXPORT_SCALE } from "../../features/pdf/flattenedExportPlan";
 import {
-  getImageLayerSize,
+  createImageRenderPlan,
+  createSealRenderPlan,
   getPatternTextSize,
-  getSealLayerSize,
   getTextLayerSize,
 } from "../../features/watermark/layerGeometry";
 import { drawSafeLayerContoursToCanvas } from "../../features/watermark/safelayerCanvasRenderer";
@@ -132,6 +132,9 @@ export function WatermarkPreviewOverlay({
   pageHeight,
   selectedLayerId,
 }: WatermarkPreviewOverlayProps) {
+  const [imageDimensions, setImageDimensions] = useState<Map<string, { width: number; height: number }>>(
+    () => new Map(),
+  );
   const imageUrls = useMemo(() => {
     const urls = new Map<string, string>();
 
@@ -143,6 +146,51 @@ export function WatermarkPreviewOverlay({
 
     return urls;
   }, [layers]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    for (const [layerId, imageUrl] of imageUrls) {
+      const image = new Image();
+      image.onload = () => {
+        if (cancelled) {
+          return;
+        }
+
+        setImageDimensions((current) => {
+          if (current.has(layerId)) {
+            return current;
+          }
+
+          const next = new Map(current);
+          next.set(layerId, {
+            width: Math.max(1, image.naturalWidth || image.width || 260),
+            height: Math.max(1, image.naturalHeight || image.height || 260),
+          });
+          return next;
+        });
+      };
+      image.src = imageUrl;
+    }
+
+    setImageDimensions((current) => {
+      const next = new Map<string, { width: number; height: number }>();
+
+      for (const layerId of imageUrls.keys()) {
+        const dimensions = current.get(layerId);
+
+        if (dimensions) {
+          next.set(layerId, dimensions);
+        }
+      }
+
+      return next.size === current.size ? current : next;
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [imageUrls]);
 
   if (!enabled || pageWidth <= 0 || pageHeight <= 0) {
     return null;
@@ -271,70 +319,89 @@ export function WatermarkPreviewOverlay({
         }
 
         if (layer.type === "seal") {
-          const sealScale = Math.min(1.8, Math.max(0.55, layer.scale || 1));
-          const sealSize = getSealLayerSize(layer);
-          const width = sealSize.width * zoom;
-          const height = sealSize.height * zoom;
-          const position = resolvePreviewWatermarkPosition({
+          const plan = createSealRenderPlan({
             layer,
             pageWidth,
             pageHeight,
-            elementWidth: width,
-            elementHeight: height,
-            zoom,
-            rotation: layer.rotation,
+            displayScale: zoom,
           });
-          const documentId = layer.sealDocumentId.trim().toUpperCase();
-          const borderWidth = Math.max(1, layer.sealBorderThickness * zoom);
 
           return (
             <div
               key={layer.id}
-              className="absolute grid content-center gap-1 text-center uppercase"
+              className="absolute text-center uppercase"
               style={{
-                ...position,
-                width,
-                height,
-                borderColor: textColor,
-                borderWidth,
+                left: plan.x,
+                top: plan.top,
+                width: plan.width,
+                height: plan.height,
+                borderColor: plan.color,
+                borderWidth: plan.borderWidth,
                 borderStyle: "solid",
-                borderRadius: layer.sealStyle === "circular" ? "9999px" : 8 * zoom,
-                color: textColor,
-                opacity,
+                borderRadius: plan.circular ? "9999px" : plan.borderRadius,
+                color: plan.color,
+                opacity: plan.opacity,
+                transform: `rotate(${plan.rotation}deg)`,
                 transformOrigin: "center",
               }}
             >
+              {!plan.circular ? (
+                <div
+                  className="absolute border-t"
+                  style={{
+                    left: plan.dividerInset,
+                    right: plan.dividerInset,
+                    top: plan.dividerTop,
+                    borderColor: plan.color,
+                    borderTopWidth: Math.max(1, plan.borderWidth * 0.55),
+                    opacity: 0.7,
+                  }}
+                />
+              ) : null}
               <div
-                className="mx-auto w-[82%] border-b"
-                style={{ borderColor: textColor, opacity: 0.65 }}
-              />
-              <div
-                className="relative font-bold tracking-[0.08em]"
+                className="absolute left-0 right-0 -translate-y-1/2 font-bold tracking-[0.08em]"
                 style={{
-                  fontSize: Math.max(12, 21 * sealScale * zoom),
-                  opacity,
+                  top: plan.titleY,
+                  fontSize: plan.titleFontSize,
                 }}
               >
-                {(layer.sealTitle || "REVIEWED").toUpperCase()}
+                {plan.title}
               </div>
               <div
-                className="tracking-[0.18em]"
-                style={{ fontSize: Math.max(8, 9.5 * sealScale * zoom), opacity }}
+                className="absolute left-0 right-0 -translate-y-1/2 tracking-[0.18em]"
+                style={{ top: plan.subtitleY, fontSize: plan.subtitleFontSize }}
               >
-                {(layer.sealSubtitle || "DOCUMENT CONTROL").toUpperCase()}
+                {plan.subtitle}
               </div>
-              {documentId ? (
-                <div style={{ fontSize: Math.max(8, 8.5 * sealScale * zoom), opacity }}>{documentId}</div>
-              ) : null}
-              {layer.sealShowDate ? (
-                <div style={{ fontSize: Math.max(8, 8.5 * sealScale * zoom), opacity }}>
-                  {new Date().toISOString().slice(0, 10)}
+              {plan.documentId ? (
+                <div
+                  className="absolute left-0 right-0 -translate-y-1/2"
+                  style={{ top: plan.documentIdY, fontSize: plan.metaFontSize }}
+                >
+                  {plan.documentId}
                 </div>
               ) : null}
-              <div
-                className="mx-auto w-[82%] border-t"
-                style={{ borderColor: textColor, opacity: 0.65 }}
-              />
+              {plan.dateText ? (
+                <div
+                  className="absolute left-0 right-0 -translate-y-1/2"
+                  style={{ top: plan.dateY, fontSize: plan.metaFontSize }}
+                >
+                  {plan.dateText}
+                </div>
+              ) : null}
+              {!plan.circular ? (
+                <div
+                  className="absolute border-t"
+                  style={{
+                    left: plan.dividerInset,
+                    right: plan.dividerInset,
+                    top: plan.dividerBottom,
+                    borderColor: plan.color,
+                    borderTopWidth: Math.max(1, plan.borderWidth * 0.55),
+                    opacity: 0.7,
+                  }}
+                />
+              ) : null}
             </div>
           );
         }
@@ -346,17 +413,14 @@ export function WatermarkPreviewOverlay({
             return null;
           }
 
-          const imageSize = getImageLayerSize(layer);
-          const width = imageSize.width * zoom;
-          const height = imageSize.height * zoom;
-          const position = resolvePreviewWatermarkPosition({
+          const dimensions = imageDimensions.get(layer.id);
+          const plan = createImageRenderPlan({
             layer,
             pageWidth,
             pageHeight,
-            elementWidth: width,
-            elementHeight: height,
-            zoom,
-            rotation: layer.rotation,
+            sourceWidth: dimensions?.width,
+            sourceHeight: dimensions?.height,
+            displayScale: zoom,
           });
 
           return (
@@ -366,11 +430,13 @@ export function WatermarkPreviewOverlay({
               alt=""
               className="absolute object-contain"
               style={{
-                ...position,
-                width,
-                height,
+                left: plan.x,
+                top: plan.top,
+                width: plan.width,
+                height: plan.height,
                 opacity,
                 objectFit: "contain",
+                transform: `rotate(${plan.rotation}deg)`,
                 transformOrigin: "center",
               }}
             />

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createLayerForType } from "./defaults";
 import {
+  createImageRenderPlan,
+  createSealRenderPlan,
   estimateLayerTextWidth,
   getImageLayerSize,
   getPatternTextSize,
@@ -61,5 +63,56 @@ describe("shared layer geometry", () => {
     expect(getPatternTextSize(pattern)).toEqual({ width: estimateLayerTextWidth("DRAFT", 28), height: 28 });
     expect(getSealLayerSize(seal)).toEqual({ width: 220, height: 92 });
     expect(getImageLayerSize(image)).toEqual({ width: 130, height: 130 });
+  });
+
+  it("preserves image aspect ratio when minimum dimensions clamp small watermarks", () => {
+    const landscape = { ...createLayerForType("image"), scale: 0.05 };
+    const portrait = { ...createLayerForType("image"), scale: 0.05 };
+
+    expect(getImageLayerSize(landscape, 800, 400)).toEqual({ width: 96, height: 48 });
+    expect(getImageLayerSize(portrait, 400, 800)).toEqual({ width: 48, height: 96 });
+  });
+
+  it("creates matching image render plans from natural image dimensions", () => {
+    const layer = { ...createLayerForType("image"), positionPreset: "top-left" as const, scale: 0.25, rotation: 18 };
+    const plan = createImageRenderPlan({
+      layer,
+      pageWidth: 612,
+      pageHeight: 792,
+      sourceWidth: 1200,
+      sourceHeight: 600,
+    });
+
+    expect(plan.width / plan.height).toBeCloseTo(2);
+    expect(plan.rotation).toBe(18);
+    expect(plan.x).toBe(48);
+    expect(plan.top).toBe(48);
+  });
+
+  it("creates one seal render plan for preview and export drawing", () => {
+    const layer = {
+      ...createLayerForType("seal"),
+      positionPreset: "bottom-right" as const,
+      sealTitle: "approved",
+      sealSubtitle: "document control",
+      sealDocumentId: "doc-7",
+      sealShowDate: true,
+      rotation: -10,
+    };
+    const plan = createSealRenderPlan({
+      layer,
+      pageWidth: 612,
+      pageHeight: 792,
+      dateText: "2026-06-01",
+    });
+
+    expect(plan.title).toBe("APPROVED");
+    expect(plan.subtitle).toBe("DOCUMENT CONTROL");
+    expect(plan.documentId).toBe("DOC-7");
+    expect(plan.dateText).toBe("2026-06-01");
+    expect(plan.rotation).toBe(-10);
+    expect(plan.x).toBe(612 - 48 - plan.width);
+    expect(plan.y).toBe(48);
+    expect(plan.top).toBe(792 - 48 - plan.height);
   });
 });
