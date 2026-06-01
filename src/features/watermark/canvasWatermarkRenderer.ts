@@ -31,6 +31,29 @@ function getScale(input: {
   };
 }
 
+function traceRoundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  const resolvedRadius = Math.min(radius, width / 2, height / 2);
+
+  context.beginPath();
+  context.moveTo(x + resolvedRadius, y);
+  context.lineTo(x + width - resolvedRadius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + resolvedRadius);
+  context.lineTo(x + width, y + height - resolvedRadius);
+  context.quadraticCurveTo(x + width, y + height, x + width - resolvedRadius, y + height);
+  context.lineTo(x + resolvedRadius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - resolvedRadius);
+  context.lineTo(x, y + resolvedRadius);
+  context.quadraticCurveTo(x, y, x + resolvedRadius, y);
+  context.closePath();
+}
+
 export function getCanvasImageDimensions(image: CanvasDrawableImage): { width: number; height: number } {
   const maybeBitmap = image as CanvasDrawableImage & {
     width?: number;
@@ -131,8 +154,19 @@ export function drawSealWatermarkToCanvas(input: {
     );
     input.context.stroke();
   } else {
-    input.context.strokeRect(-width / 2, -height / 2, width, height);
+    traceRoundedRect(input.context, -width / 2, -height / 2, width, height, plan.borderRadius * scaleX);
+    input.context.stroke();
     input.context.globalAlpha = clampOpacity(plan.opacity * 0.75);
+    input.context.lineWidth = Math.max(1, plan.borderWidth * 0.65 * scaleX);
+    traceRoundedRect(
+      input.context,
+      -width / 2 + plan.innerInset * scaleX,
+      -height / 2 + plan.innerInset * scaleY,
+      width - plan.innerInset * 2 * scaleX,
+      height - plan.innerInset * 2 * scaleY,
+      Math.max(2, (plan.borderRadius - plan.innerInset / 2) * scaleX),
+    );
+    input.context.stroke();
     input.context.fillRect(
       -width / 2 + plan.dividerInset * scaleX,
       -height / 2 + plan.dividerTop * scaleY,

@@ -48,6 +48,7 @@ export interface SealRenderPlan extends LayerPlacement {
   subtitleFontSize: number;
   metaFontSize: number;
   dividerInset: number;
+  innerInset: number;
   dividerTop: number;
   dividerBottom: number;
   titleY: number;
@@ -81,8 +82,8 @@ export function getSealLayerSize(layer: DocumentLayer): LayerSize {
   const sealScale = Math.min(1.8, Math.max(0.55, layer.scale || 1));
 
   return {
-    width: (layer.sealStyle === "circular" ? 150 : 220) * sealScale,
-    height: (layer.sealStyle === "circular" ? 150 : 92) * sealScale,
+    width: (layer.sealStyle === "circular" ? 172 : 236) * sealScale,
+    height: (layer.sealStyle === "circular" ? 172 : 108) * sealScale,
   };
 }
 
@@ -188,7 +189,8 @@ export function createSealRenderPlan(input: {
   const subtitle = (layer.sealSubtitle || "DOCUMENT CONTROL").trim().toUpperCase();
   const documentId = layer.sealDocumentId.trim().toUpperCase();
   const metaRows = Number(Boolean(documentId)) + Number(layer.sealShowDate);
-  const metaStart = size.height / 2 - (metaRows > 1 ? 32 : 18);
+  const isCircular = layer.sealStyle === "circular";
+  const metaStart = size.height * (isCircular ? 0.68 : 0.73) - (metaRows > 1 ? 5 * sealScale : 0);
 
   return {
     ...placement,
@@ -201,22 +203,23 @@ export function createSealRenderPlan(input: {
     color: layer.color,
     opacity: layer.opacity,
     borderWidth: Math.max(1, layer.sealBorderThickness),
-    borderRadius: layer.sealStyle === "circular" ? Math.max(size.width, size.height) : 8,
+    borderRadius: isCircular ? Math.max(size.width, size.height) : 10 * sealScale,
     scale: sealScale,
     rotationOrigin: "center",
     anchor: "center",
     position: layer.positionPreset,
     shape: layer.sealStyle,
-    titleFontSize: Math.max(10, 22 * sealScale),
-    subtitleFontSize: Math.max(8, 9.5 * sealScale),
-    metaFontSize: Math.max(8, 8.5 * sealScale),
-    dividerInset: 14,
-    dividerTop: 28,
-    dividerBottom: size.height - 16,
-    titleY: size.height / 2 - 2,
-    subtitleY: size.height / 2 + 16,
+    titleFontSize: Math.max(11, (isCircular ? 20 : 24) * sealScale),
+    subtitleFontSize: Math.max(8, (isCircular ? 9 : 10) * sealScale),
+    metaFontSize: Math.max(8, (isCircular ? 8 : 8.5) * sealScale),
+    dividerInset: (isCircular ? 26 : 18) * sealScale,
+    innerInset: (isCircular ? 13 : 7) * sealScale,
+    dividerTop: size.height * (isCircular ? 0.34 : 0.31),
+    dividerBottom: size.height * (isCircular ? 0.63 : 0.66),
+    titleY: size.height * (isCircular ? 0.47 : 0.46),
+    subtitleY: size.height * (isCircular ? 0.58 : 0.6),
     documentIdY: documentId ? metaStart : 0,
-    dateY: documentId && layer.sealShowDate ? metaStart + 14 : metaStart,
-    circular: layer.sealStyle === "circular",
+    dateY: documentId && layer.sealShowDate ? metaStart + 12 * sealScale : metaStart,
+    circular: isCircular,
   };
 }

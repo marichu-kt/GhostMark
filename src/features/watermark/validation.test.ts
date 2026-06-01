@@ -174,6 +174,16 @@ describe("seal defaults", () => {
   });
 });
 
+describe("pattern defaults", () => {
+  it("creates a large diagonal pattern watermark by default", () => {
+    const pattern = createLayerForType("pattern");
+
+    expect(pattern.fontSize).toBe(95);
+    expect(pattern.opacity).toBe(0.12);
+    expect(pattern.rotation).toBe(-26);
+  });
+});
+
 describe("blackout defaults", () => {
   it("does not create an automatic rectangle", () => {
     expect(createLayerForType("blackout").blackoutRects).toEqual([]);

@@ -67,7 +67,7 @@ export function createLayerForType(type: LayerType): DocumentLayer {
     case "image":
       return { ...layer, name: "Image", opacity: 0.22, scale: 0.35, rotation: 0 };
     case "pattern":
-      return { ...layer, name: "Pattern", text: "DRAFT", opacity: 0.12, fontSize: 38 };
+      return { ...layer, name: "Pattern", text: "DRAFT", opacity: 0.12, fontSize: 95, rotation: -26 };
     case "seal":
       return {
         ...layer,

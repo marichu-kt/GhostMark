@@ -61,7 +61,7 @@ describe("shared layer geometry", () => {
 
     expect(getTextLayerSize(text)).toEqual({ width: estimateLayerTextWidth("CONFIDENTIAL", 64), height: 64 });
     expect(getPatternTextSize(pattern)).toEqual({ width: estimateLayerTextWidth("DRAFT", 28), height: 28 });
-    expect(getSealLayerSize(seal)).toEqual({ width: 220, height: 92 });
+    expect(getSealLayerSize(seal)).toEqual({ width: 236, height: 108 });
     expect(getImageLayerSize(image)).toEqual({ width: 130, height: 130 });
   });
 
@@ -122,6 +122,50 @@ describe("shared layer geometry", () => {
     expect(plan.x).toBe(612 - 48 - plan.width);
     expect(plan.y).toBe(48);
     expect(plan.top).toBe(792 - 48 - plan.height);
+  });
+
+  it("keeps rectangular seal typography inside the stamp bands", () => {
+    const layer = {
+      ...createLayerForType("seal"),
+      sealDocumentId: "doc-7",
+      sealShowDate: true,
+    };
+    const plan = createSealRenderPlan({
+      layer,
+      pageWidth: 612,
+      pageHeight: 792,
+      dateText: "2026-06-01",
+    });
+
+    expect(plan.innerInset).toBeGreaterThan(0);
+    expect(plan.dividerTop).toBeGreaterThan(plan.innerInset);
+    expect(plan.titleY).toBeGreaterThan(plan.dividerTop);
+    expect(plan.subtitleY).toBeGreaterThan(plan.titleY);
+    expect(plan.documentIdY).toBeGreaterThan(plan.subtitleY);
+    expect(plan.dateY).toBeGreaterThan(plan.documentIdY);
+    expect(plan.dateY).toBeLessThan(plan.height - plan.innerInset);
+  });
+
+  it("keeps circular seal geometry balanced within the stamp", () => {
+    const layer = {
+      ...createLayerForType("seal"),
+      sealStyle: "circular" as const,
+      sealDocumentId: "case-9",
+      sealShowDate: true,
+    };
+    const plan = createSealRenderPlan({
+      layer,
+      pageWidth: 612,
+      pageHeight: 792,
+      dateText: "2026-06-01",
+    });
+
+    expect(plan.width).toBe(plan.height);
+    expect(plan.circular).toBe(true);
+    expect(plan.innerInset).toBeGreaterThan(plan.borderWidth);
+    expect(plan.titleY).toBeGreaterThan(plan.dividerTop);
+    expect(plan.subtitleY).toBeGreaterThan(plan.titleY);
+    expect(plan.dateY).toBeLessThan(plan.height - plan.innerInset);
   });
 
   it("keeps seal placement stable at top-left, center, and bottom-right", () => {
