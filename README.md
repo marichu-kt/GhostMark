@@ -61,13 +61,10 @@ flowchart LR
 
 ## Demo
 
-<p align="center">
-  <img src="./public/demo/demo-1.png" alt="GhostMark upload screen" width="760" />
-</p>
+| Home page — attach your PDFs to apply watermarks                                                       |
+| ------------------------------------------------------------------------------------------------------ |
+| <p align="center"><img src="./public/demo/demo-1.png" alt="GhostMark upload screen" width="760" /></p> |
 
-<p align="center">
-  <sub>Import PDFs locally in the browser. Files stay on your device.</sub>
-</p>
 
 | Sample                                                                                                                        | Preview                                                                                   |
 | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
