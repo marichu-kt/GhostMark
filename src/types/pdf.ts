@@ -4,6 +4,7 @@ export interface LoadedPdf {
   fileSize: number;
   pageCount: number;
   bytes: Uint8Array;
+  password?: string;
   loadedAt: string;
 }
 

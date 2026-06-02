@@ -5,6 +5,10 @@ import type { DocumentLayer } from "../types/watermark";
 import { useAppSettings } from "./AppProviders";
 import { createDownloadFileName } from "../features/pdf/fileFormatting";
 import { exportPdf } from "../features/pdf/exportPdf";
+import {
+  validateExportPasswordProtection,
+  type ExportPasswordProtection,
+} from "../features/pdf/pdfEncryption";
 import { getExportFooterModel, type ExportWorkflowStep } from "./exportFlow";
 import {
   clampPreviewPage,
@@ -53,6 +57,11 @@ export function App() {
   const [exportResult, setExportResult] = useState<PdfExportResult | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null);
+  const [exportPasswordProtection, setExportPasswordProtection] = useState<ExportPasswordProtection>({
+    enabled: false,
+    password: "",
+    confirmPassword: "",
+  });
   const [generating, setGenerating] = useState(false);
   const loadedPdfRef = useRef<LoadedPdf | null>(null);
   const exportResultRef = useRef<PdfExportResult | null>(null);
@@ -138,6 +147,7 @@ export function App() {
     const defaultLayers = createDefaultDocumentLayers();
     setLayers(defaultLayers);
     setSelectedLayerId(defaultLayers[0]?.id ?? null);
+    setExportPasswordProtection({ enabled: false, password: "", confirmPassword: "" });
     setActiveStep("edit");
   }
 
@@ -148,6 +158,7 @@ export function App() {
     revokeExportResult();
     setLoadedPdf(null);
     setCurrentPage(1);
+    setExportPasswordProtection({ enabled: false, password: "", confirmPassword: "" });
     setActiveStep("import");
   }
 
@@ -171,6 +182,7 @@ export function App() {
       const defaultLayers = createDefaultDocumentLayers();
       setLayers(defaultLayers);
       setSelectedLayerId(defaultLayers[0]?.id ?? null);
+      setExportPasswordProtection({ enabled: false, password: "", confirmPassword: "" });
       setExportError(null);
 
       if (resetExport) {
@@ -196,6 +208,14 @@ export function App() {
       return;
     }
 
+    const passwordValidation = validateExportPasswordProtection(exportPasswordProtection);
+
+    if (!passwordValidation.isValid) {
+      setExportError(t(passwordValidation.messageKey ?? "export.error"));
+      setActiveStep("export");
+      return;
+    }
+
     setGenerating(true);
     setExportError(null);
     setExportProgress({ current: 0, total: loadedPdf.pageCount });
@@ -206,11 +226,16 @@ export function App() {
       const result = await exportPdf(loadedPdf.bytes, layers, {
         outputFileName,
         cleanupMetadata: true,
+        inputPassword: loadedPdf.password,
+        passwordProtection: exportPasswordProtection.enabled
+          ? { password: exportPasswordProtection.password }
+          : undefined,
         onProgress: setExportProgress,
       });
       setExportResult(result);
       exportResultRef.current = result;
       triggerDownload(result);
+      setExportPasswordProtection({ enabled: false, password: "", confirmPassword: "" });
 
       setCurrentPage(1);
 
@@ -225,6 +250,7 @@ export function App() {
         const defaultLayers = createDefaultDocumentLayers();
         setLayers(defaultLayers);
         setSelectedLayerId(defaultLayers[0]?.id ?? null);
+        setExportPasswordProtection({ enabled: false, password: "", confirmPassword: "" });
       }
     } catch (error) {
       console.error("GhostMark export failed", error);
@@ -252,6 +278,13 @@ export function App() {
   );
   const watermarkReady = validation.isValid;
   const validationMessage = validation.messageKey ? t(validation.messageKey) : undefined;
+  const passwordValidation = useMemo(
+    () => validateExportPasswordProtection(exportPasswordProtection),
+    [exportPasswordProtection],
+  );
+  const passwordValidationMessage = passwordValidation.messageKey
+    ? t(passwordValidation.messageKey)
+    : undefined;
   const watermarkSummary = useMemo(() => getLayersSummary(layers), [layers]);
   const affectedPagesSummary = useMemo(
     () => getDocumentAffectedPagesSummary(layers, loadedPdf?.pageCount ?? 1),
@@ -297,6 +330,9 @@ export function App() {
             largePdfMode={largePdfMode}
             visiblePageCount={visiblePageCount}
             totalPageCount={loadedPdf?.pageCount ?? 1}
+            passwordProtection={exportPasswordProtection}
+            passwordValidationMessage={passwordValidationMessage}
+            onPasswordProtectionChange={setExportPasswordProtection}
             onStartNew={() => clearSession()}
           />
         );
@@ -314,6 +350,8 @@ export function App() {
     outputFileName,
     layers,
     largePdfMode,
+    exportPasswordProtection,
+    passwordValidationMessage,
     selectedLayerId,
     t,
     visiblePageCount,
@@ -326,7 +364,7 @@ export function App() {
     const footerModel = getExportFooterModel({
       hasDocument: Boolean(loadedPdf),
       activeStep,
-      watermarkReady,
+      watermarkReady: watermarkReady && passwordValidation.isValid,
       generating,
       hasExportResult: Boolean(exportResult),
     });

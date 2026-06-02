@@ -16,11 +16,12 @@ import {
   resolveFlattenedExportQuality,
 } from "./flattenedExportPlan";
 import { sanitizePdfMetadata } from "./metadataSanitizer";
-import { renderPdfPageToCanvas } from "./renderPdfPreview";
+import { getPdfPageSizes, renderPdfPageToCanvas } from "./renderPdfPreview";
 
 interface ApplyWatermarkOptions {
   cleanupMetadata?: boolean;
   exportQuality?: FlattenedExportQualityMode;
+  inputPassword?: string;
   onProgress?: (progress: { current: number; total: number }) => void;
 }
 
@@ -306,9 +307,8 @@ async function createFlattenedPdf(
   layers: DocumentLayer[],
   options: ApplyWatermarkOptions,
 ): Promise<Uint8Array> {
-  const sourceDoc = await PDFDocument.load(inputBytes.slice(), { updateMetadata: false });
+  const sourcePages = await getPdfPageSizes(inputBytes, options.inputPassword);
   const outputDoc = await PDFDocument.create();
-  const sourcePages = sourceDoc.getPages();
   const canvasImages = await createCanvasImagesForLayers(layers);
   const pagePlans = buildFlattenedExportPlan(layers, sourcePages.length);
   const layersById = new Map(layers.map((layer) => [layer.id, layer]));
@@ -318,12 +318,13 @@ async function createFlattenedPdf(
     for (const pagePlan of pagePlans) {
       const pageIndex = pagePlan.pageIndex;
       const sourcePage = sourcePages[pageIndex];
-      const { width, height } = sourcePage.getSize();
+      const { width, height } = sourcePage;
       const pageNumber = pagePlan.pageNumber;
 
       const canvas = document.createElement("canvas");
       await renderPdfPageToCanvas(inputBytes, canvas, pageNumber, exportQuality.renderScale, {
         maxCanvasPixels: exportQuality.maxCanvasPixels,
+        password: options.inputPassword,
       });
       const context = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
 

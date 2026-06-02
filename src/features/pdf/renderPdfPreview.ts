@@ -11,6 +11,7 @@ export interface PdfPageSize {
 export interface RenderPdfPageOptions {
   signal?: AbortSignal;
   maxCanvasPixels?: number;
+  password?: string;
 }
 
 const DEFAULT_MAX_CANVAS_PIXELS = 16_000_000;
@@ -34,14 +35,37 @@ function getPixelRatioForCanvas(width: number, height: number, maxCanvasPixels: 
   return Math.max(1, deviceScale * Math.sqrt(maxCanvasPixels / requestedPixels));
 }
 
-export async function getPdfPageSize(bytes: Uint8Array, pageNumber: number): Promise<PdfPageSize> {
-  const loadingTask = pdfjsLib.getDocument({ data: bytes.slice() });
+export async function getPdfPageSize(
+  bytes: Uint8Array,
+  pageNumber: number,
+  password?: string,
+): Promise<PdfPageSize> {
+  const loadingTask = pdfjsLib.getDocument({ data: bytes.slice(), password });
   const pdf = await loadingTask.promise;
 
   try {
     const page = await pdf.getPage(pageNumber);
     const viewport = page.getViewport({ scale: 1 });
     return { width: viewport.width, height: viewport.height };
+  } finally {
+    await pdf.destroy();
+  }
+}
+
+export async function getPdfPageSizes(bytes: Uint8Array, password?: string): Promise<PdfPageSize[]> {
+  const loadingTask = pdfjsLib.getDocument({ data: bytes.slice(), password });
+  const pdf = await loadingTask.promise;
+
+  try {
+    const sizes: PdfPageSize[] = [];
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 1 });
+      sizes.push({ width: viewport.width, height: viewport.height });
+    }
+
+    return sizes;
   } finally {
     await pdf.destroy();
   }
@@ -56,7 +80,7 @@ export async function renderPdfPageToCanvas(
 ): Promise<void> {
   ensureNotAborted(options.signal);
 
-  const loadingTask = pdfjsLib.getDocument({ data: bytes.slice() });
+  const loadingTask = pdfjsLib.getDocument({ data: bytes.slice(), password: options.password });
   const cancelLoad = () => {
     void loadingTask.destroy();
   };

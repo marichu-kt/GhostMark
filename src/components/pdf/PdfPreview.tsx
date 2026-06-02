@@ -78,6 +78,7 @@ export function PdfPreview({
       try {
         await renderPdfPageToCanvas(document.bytes, canvasRef.current, safeCurrentPage, zoom, {
           signal: controller.signal,
+          password: document.password,
         });
         const rect = canvasRef.current.getBoundingClientRect();
         setPageDisplaySize({ width: rect.width, height: rect.height });
@@ -106,7 +107,7 @@ export function PdfPreview({
     }
 
     try {
-      const pageSize = await getPdfPageSize(document.bytes, safeCurrentPage);
+      const pageSize = await getPdfPageSize(document.bytes, safeCurrentPage, document.password);
       const availableWidth = Math.max(320, viewportRef.current.clientWidth - 64);
       onZoomChange(Number(Math.min(2.5, Math.max(0.35, availableWidth / pageSize.width)).toFixed(2)));
     } catch {

@@ -40,6 +40,7 @@ function PageThumbnail({ document, page, selected, onSelect }: PageThumbnailProp
         await renderPdfPageToCanvas(document.bytes, canvasRef.current, page, 0.18, {
           signal: controller.signal,
           maxCanvasPixels: 900_000,
+          password: document.password,
         });
       } catch {
         if (!cancelled) {

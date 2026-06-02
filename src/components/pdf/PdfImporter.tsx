@@ -2,10 +2,12 @@ import { type DragEvent, useRef, useState } from "react";
 import { FileText, FileUp, LockKeyhole, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import type { LoadedPdf } from "../../types/pdf";
 import { formatFileSize } from "../../features/pdf/fileFormatting";
-import { loadPdf, PdfImportError } from "../../features/pdf/loadPdf";
+import { loadPdf, PdfImportError, PdfPasswordRequiredError } from "../../features/pdf/loadPdf";
 import { useTranslation } from "../../features/i18n/useTranslation";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
+import { Modal } from "../ui/Modal";
 import { Notice } from "../ui/Notice";
 
 interface PdfImporterProps {
@@ -27,9 +29,12 @@ export function PdfImporter({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [passwordFile, setPasswordFile] = useState<File | null>(null);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const { t } = useTranslation();
 
-  async function handleFile(file: File | undefined) {
+  async function handleFile(file: File | undefined, filePassword?: string) {
     if (!file) {
       return;
     }
@@ -38,20 +43,48 @@ export function PdfImporter({
     setLoading(true);
 
     try {
-      const document = await loadPdf(file);
+      const document = await loadPdf(file, { password: filePassword });
+      setPasswordFile(null);
+      setPassword("");
+      setPasswordError(null);
       onLoaded(document);
     } catch (caughtError) {
-      setError(
-        caughtError instanceof PdfImportError && caughtError.message.includes(".pdf")
-          ? t("import.errorChoosePdf")
-          : t("import.errorLoad"),
-      );
+      if (caughtError instanceof PdfPasswordRequiredError) {
+        setPasswordFile(file);
+        setPasswordError(caughtError.reason === "incorrect" ? t("import.passwordIncorrect") : null);
+      } else {
+        setError(
+          caughtError instanceof PdfImportError && caughtError.message.includes(".pdf")
+            ? t("import.errorChoosePdf")
+            : t("import.errorLoad"),
+        );
+      }
     } finally {
       setLoading(false);
       if (inputRef.current) {
         inputRef.current.value = "";
       }
     }
+  }
+
+  function closePasswordPrompt() {
+    setPasswordFile(null);
+    setPassword("");
+    setPasswordError(null);
+    setLoading(false);
+  }
+
+  function submitPassword() {
+    if (!passwordFile) {
+      return;
+    }
+
+    if (!password) {
+      setPasswordError(t("import.passwordRequired"));
+      return;
+    }
+
+    void handleFile(passwordFile, password);
   }
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
@@ -74,13 +107,45 @@ export function PdfImporter({
   }
 
   const input = (
-    <input
-      ref={inputRef}
-      type="file"
-      accept=".pdf,application/pdf"
-      className="sr-only"
-      onChange={(event) => void handleFile(event.target.files?.[0])}
-    />
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        className="sr-only"
+        onChange={(event) => void handleFile(event.target.files?.[0])}
+      />
+      <Modal open={Boolean(passwordFile)} title={t("import.passwordProtectedTitle")} onClose={closePasswordPrompt}>
+        <form
+          className="grid gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitPassword();
+          }}
+        >
+          <p className="text-sm leading-6 text-steel-200">{t("import.passwordProtectedNote")}</p>
+          <Input
+            label={t("import.passwordLabel")}
+            type="password"
+            value={password}
+            autoComplete="current-password"
+            error={passwordError ?? undefined}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              setPasswordError(null);
+            }}
+          />
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={closePasswordPrompt}>
+              {t("actions.cancel")}
+            </Button>
+            <Button type="submit" variant="primary" disabled={loading}>
+              {loading ? t("preview.loading") : t("import.unlockPdf")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
   );
 
   if (mode === "button") {

@@ -1,10 +1,30 @@
-import { PDFDocument } from "pdf-lib";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
 import type { LoadedPdf } from "../../types/pdf";
 
+if (typeof window !== "undefined") {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+}
+
 export class PdfImportError extends Error {
-  constructor(message: string) {
+  cause?: unknown;
+
+  constructor(message: string, cause?: unknown) {
     super(message);
     this.name = "PdfImportError";
+    this.cause = cause;
+  }
+}
+
+export type PdfPasswordErrorReason = "required" | "incorrect";
+
+export class PdfPasswordRequiredError extends PdfImportError {
+  reason: PdfPasswordErrorReason;
+
+  constructor(reason: PdfPasswordErrorReason) {
+    super(reason === "incorrect" ? "Incorrect PDF password." : "Password is required to open this PDF.");
+    this.name = "PdfPasswordRequiredError";
+    this.reason = reason;
   }
 }
 
@@ -17,27 +37,65 @@ export function validatePdfFile(file: File): void {
   }
 }
 
-export async function loadPdf(file: File): Promise<LoadedPdf> {
+function getPasswordErrorReason(error: unknown): PdfPasswordErrorReason | null {
+  if (!(error instanceof Error) || error.name !== "PasswordException") {
+    return null;
+  }
+
+  const code = "code" in error ? Number((error as { code?: number }).code) : null;
+
+  if (code === pdfjsLib.PasswordResponses.INCORRECT_PASSWORD) {
+    return "incorrect";
+  }
+
+  if (code === pdfjsLib.PasswordResponses.NEED_PASSWORD) {
+    return "required";
+  }
+
+  return "required";
+}
+
+export interface LoadPdfOptions {
+  password?: string;
+}
+
+export async function loadPdf(file: File, options: LoadPdfOptions = {}): Promise<LoadedPdf> {
   validatePdfFile(file);
 
   try {
     const arrayBuffer = await file.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
-    const pdf = await PDFDocument.load(bytes.slice(), { updateMetadata: false });
+    const loadingTask = pdfjsLib.getDocument({
+      data: bytes.slice(),
+      password: options.password,
+      disableWorker: typeof window === "undefined",
+    } as unknown as Parameters<typeof pdfjsLib.getDocument>[0]);
+    const pdf = await loadingTask.promise;
 
-    return {
-      id: crypto.randomUUID(),
-      fileName: file.name,
-      fileSize: file.size,
-      pageCount: pdf.getPageCount(),
-      bytes,
-      loadedAt: new Date().toISOString(),
-    };
+    try {
+      return {
+        id: crypto.randomUUID(),
+        fileName: file.name,
+        fileSize: file.size,
+        pageCount: pdf.numPages,
+        bytes,
+        password: options.password,
+        loadedAt: new Date().toISOString(),
+      };
+    } finally {
+      await pdf.destroy();
+    }
   } catch (error) {
     if (error instanceof PdfImportError) {
       throw error;
     }
 
-    throw new PdfImportError("GhostMark could not read this PDF.");
+    const passwordReason = getPasswordErrorReason(error);
+
+    if (passwordReason) {
+      throw new PdfPasswordRequiredError(passwordReason);
+    }
+
+    throw new PdfImportError("GhostMark could not read this PDF.", error);
   }
 }

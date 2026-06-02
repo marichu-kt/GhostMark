@@ -30,12 +30,16 @@ function installCanvasDom() {
     });
   }
 
-  if (!globalThis.crypto) {
-    Object.defineProperty(globalThis, "crypto", {
-      value: { randomUUID: () => "test-id" } as unknown as Crypto,
-      configurable: true,
-    });
-  }
+  Object.defineProperty(globalThis, "crypto", {
+    value: {
+      getRandomValues: <T extends Uint8Array>(array: T) => {
+        array.fill(7);
+        return array;
+      },
+      randomUUID: () => "test-id",
+    } as unknown as Crypto,
+    configurable: true,
+  });
 
   Object.defineProperty(globalThis, "DOMMatrix", { value: DOMMatrix, configurable: true });
   Object.defineProperty(globalThis, "ImageData", { value: ImageData, configurable: true });
@@ -131,9 +135,9 @@ async function createSelectableTextPdf(pageCount = 1) {
   return pdf.save();
 }
 
-async function extractText(bytes: Uint8Array) {
+async function extractText(bytes: Uint8Array, password?: string) {
   const pdfjsLib = await configurePdfJsWorker();
-  const task = pdfjsLib.getDocument({ data: bytes.slice(), disableWorker: true } as unknown as Parameters<
+  const task = pdfjsLib.getDocument({ data: bytes.slice(), password, disableWorker: true } as unknown as Parameters<
     typeof pdfjsLib.getDocument
   >[0]);
   const pdf = await task.promise;
@@ -150,6 +154,15 @@ async function extractText(bytes: Uint8Array) {
   } finally {
     await pdf.destroy();
   }
+}
+
+async function expectPdfPasswordFailure(bytes: Uint8Array, password?: string) {
+  const pdfjsLib = await configurePdfJsWorker();
+  const task = pdfjsLib.getDocument({ data: bytes.slice(), password, disableWorker: true } as unknown as Parameters<
+    typeof pdfjsLib.getDocument
+  >[0]);
+
+  await expect(task.promise).rejects.toMatchObject({ name: "PasswordException" });
 }
 
 describe("exportPdf flattened output", () => {
@@ -282,5 +295,31 @@ describe("exportPdf flattened output", () => {
     expect(reloaded.getTitle()).toBe("");
     expect(reloaded.getAuthor()).toBe("");
     expect(createImageBitmapMock).toHaveBeenCalled();
+  }, 20_000);
+
+  it("encrypts the flattened export with a required open password", async () => {
+    installCanvasDom();
+    const { exportPdf } = await import("./exportPdf");
+    await configurePdfJsWorker();
+    const inputBytes = await createSelectableTextPdf(2);
+
+    const result = await exportPdf(new Uint8Array(inputBytes), createDefaultDocumentLayers(), {
+      outputFileName: "protected.pdf",
+      cleanupMetadata: true,
+      passwordProtection: { password: "strongpass123" },
+    });
+    const exportedBytes = new Uint8Array(await result.blob.arrayBuffer());
+    const rawPdf = bytesToBinaryString(exportedBytes);
+
+    expect(rawPdf).toContain("/Encrypt");
+    expect(rawPdf).toContain("/AESV3");
+    await expectPdfPasswordFailure(exportedBytes);
+    await expectPdfPasswordFailure(exportedBytes, "wrongpass123");
+
+    const after = await extractText(exportedBytes, "strongpass123");
+    expect(after.pageCount).toBe(2);
+    expect(after.text.trim()).toBe("");
+    expect(rawPdf).toContain("/DCTDecode");
+    expect(rawPdf).not.toContain(sourceText);
   }, 20_000);
 });

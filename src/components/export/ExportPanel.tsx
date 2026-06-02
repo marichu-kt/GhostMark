@@ -1,7 +1,11 @@
 import type { PdfExportResult } from "../../types/pdf";
+import type { ExportPasswordProtection } from "../../features/pdf/pdfEncryption";
 import { useTranslation } from "../../features/i18n/useTranslation";
+import { Collapsible } from "../ui/Collapsible";
 import { FieldGroup } from "../ui/FieldGroup";
+import { Input } from "../ui/Input";
 import { Notice } from "../ui/Notice";
+import { Toggle } from "../ui/Toggle";
 import { ExportSummary } from "./ExportSummary";
 
 interface ExportPanelProps {
@@ -16,6 +20,9 @@ interface ExportPanelProps {
   largePdfMode?: boolean;
   visiblePageCount?: number;
   totalPageCount?: number;
+  passwordProtection: ExportPasswordProtection;
+  passwordValidationMessage?: string;
+  onPasswordProtectionChange: (protection: ExportPasswordProtection) => void;
   onStartNew: () => void;
 }
 
@@ -31,6 +38,9 @@ export function ExportPanel({
   largePdfMode = false,
   visiblePageCount,
   totalPageCount,
+  passwordProtection,
+  passwordValidationMessage,
+  onPasswordProtectionChange,
   onStartNew,
 }: ExportPanelProps) {
   const { t } = useTranslation();
@@ -66,6 +76,59 @@ export function ExportPanel({
         <Notice tone="info">
           {t("export.flattenedCopyProtection")} {t("metadata.cleanupApplied")} {t("metadata.notCertified")}
         </Notice>
+        <Collapsible title={t("export.passwordProtection")} description={t("export.passwordProtectionDescription")}>
+          <Toggle
+            label={t("export.enablePasswordProtection")}
+            description={t("export.passwordProtectionNote")}
+            checked={passwordProtection.enabled}
+            onChange={(enabled) =>
+              onPasswordProtectionChange({
+                enabled,
+                password: enabled ? passwordProtection.password : "",
+                confirmPassword: enabled ? passwordProtection.confirmPassword : "",
+              })
+            }
+          />
+          {passwordProtection.enabled ? (
+            <div className="grid gap-3">
+              <Input
+                label={t("export.password")}
+                type="password"
+                value={passwordProtection.password}
+                autoComplete="new-password"
+                error={
+                  passwordValidationMessage && !passwordProtection.password
+                    ? passwordValidationMessage
+                    : undefined
+                }
+                onChange={(event) =>
+                  onPasswordProtectionChange({
+                    ...passwordProtection,
+                    password: event.target.value,
+                  })
+                }
+              />
+              <Input
+                label={t("export.confirmPassword")}
+                type="password"
+                value={passwordProtection.confirmPassword}
+                autoComplete="new-password"
+                error={
+                  passwordValidationMessage && passwordProtection.password
+                    ? passwordValidationMessage
+                    : undefined
+                }
+                onChange={(event) =>
+                  onPasswordProtectionChange({
+                    ...passwordProtection,
+                    confirmPassword: event.target.value,
+                  })
+                }
+              />
+              <Notice tone="info">{t("export.passwordSecurityNote")}</Notice>
+            </div>
+          ) : null}
+        </Collapsible>
         {progress ? (
           <Notice tone="info">
             {t("export.processingPage", {
@@ -75,6 +138,7 @@ export function ExportPanel({
           </Notice>
         ) : null}
         {disabled && validationMessage ? <Notice tone="warning">{validationMessage}</Notice> : null}
+        {passwordValidationMessage ? <Notice tone="warning">{passwordValidationMessage}</Notice> : null}
         {error ? <Notice tone="danger">{error}</Notice> : null}
       </FieldGroup>
 

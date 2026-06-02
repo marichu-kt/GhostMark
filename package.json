@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json --pretty && tsc --noEmit -p tsconfig.node.json --pretty"
   },
   "dependencies": {
+    "@libpdf/core": "^0.3.6",
     "lucide-react": "^0.468.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "4.8.69",
