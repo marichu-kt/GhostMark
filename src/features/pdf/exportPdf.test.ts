@@ -83,6 +83,31 @@ function installRejectingCreateImageBitmap() {
   return createImageBitmapMock;
 }
 
+function installCanvasImageBitmap() {
+  const createImageBitmapMock = vi.fn(async () => createCanvas(20, 20) as unknown as ImageBitmap);
+  Object.defineProperty(globalThis, "createImageBitmap", {
+    value: createImageBitmapMock,
+    configurable: true,
+  });
+  (globalThis.window as Window & { createImageBitmap: typeof createImageBitmap }).createImageBitmap =
+    createImageBitmapMock as unknown as typeof createImageBitmap;
+  return createImageBitmapMock;
+}
+
+function createTestPngBytes(): Uint8Array {
+  const canvas = createCanvas(20, 20);
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#b91c1c";
+  context.fillRect(0, 0, 20, 20);
+  context.fillStyle = "#ffffff";
+  context.fillRect(5, 5, 10, 10);
+  return new Uint8Array(canvas.toBuffer("image/png"));
+}
+
+function bytesToBinaryString(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+}
+
 async function createSelectableTextPdf(pageCount = 1) {
   const pdf = await PDFDocument.create();
   pdf.setTitle("Sensitive source title");
@@ -149,6 +174,8 @@ describe("exportPdf flattened output", () => {
     expect(result.fileName).toBe("flattened.pdf");
     expect(after.text).not.toContain(sourceText);
     expect(after.text.trim()).toBe("");
+    expect(bytesToBinaryString(exportedBytes)).toContain("/DCTDecode");
+    expect(bytesToBinaryString(exportedBytes)).not.toContain(sourceText);
     expect(reloaded.getTitle()).toBe("");
     expect(reloaded.getAuthor()).toBe("");
     expect(reloaded.getSubject()).toBe("");
@@ -195,5 +222,65 @@ describe("exportPdf flattened output", () => {
     expect(reloaded.getAuthor()).toBe("");
     expect(reloaded.getCreator()).toBe("GhostMark");
     expect(createImageBitmapMock).not.toHaveBeenCalled();
+  }, 20_000);
+
+  it("keeps source text non-extractable with text, pattern, image, seal, SafeLayer, and Blackout layers", async () => {
+    installCanvasDom();
+    const createImageBitmapMock = installCanvasImageBitmap();
+    const { exportPdf } = await import("./exportPdf");
+    await configurePdfJsWorker();
+    const inputBytes = await createSelectableTextPdf(2);
+    const text = {
+      ...createLayerForType("text"),
+      id: "text-layer",
+      text: "CONFIDENTIAL",
+      pages: { mode: "all" as const, selection: "" },
+    };
+    const pattern = {
+      ...createLayerForType("pattern"),
+      id: "pattern-layer",
+      pages: { mode: "all" as const, selection: "" },
+    };
+    const seal = {
+      ...createLayerForType("seal"),
+      id: "seal-layer",
+      pages: { mode: "all" as const, selection: "" },
+    };
+    const safeLayer = {
+      ...createLayerForType("safelayer"),
+      id: "safelayer-layer",
+      pages: { mode: "all" as const, selection: "" },
+    };
+    const blackout = {
+      ...createLayerForType("blackout"),
+      id: "blackout-layer",
+      pages: { mode: "all" as const, selection: "" },
+      blackoutRects: [{ id: "rect-page-1", page: 1, x: 28, y: 88, width: 230, height: 30 }],
+    };
+    const image = {
+      ...createLayerForType("image"),
+      id: "image-layer",
+      pages: { mode: "all" as const, selection: "" },
+      imageData: createTestPngBytes(),
+      imageMimeType: "image/png" as const,
+    };
+
+    const result = await exportPdf(new Uint8Array(inputBytes), [blackout, text, pattern, image, seal, safeLayer], {
+      outputFileName: "all-layers.pdf",
+      cleanupMetadata: true,
+    });
+    const exportedBytes = new Uint8Array(await result.blob.arrayBuffer());
+    const after = await extractText(exportedBytes);
+    const reloaded = await PDFDocument.load(exportedBytes);
+    const rawPdf = bytesToBinaryString(exportedBytes);
+
+    expect(after.pageCount).toBe(2);
+    expect(after.text.trim()).toBe("");
+    expect(rawPdf).toContain("/DCTDecode");
+    expect(rawPdf).not.toContain(sourceText);
+    expect(reloaded.getPageCount()).toBe(2);
+    expect(reloaded.getTitle()).toBe("");
+    expect(reloaded.getAuthor()).toBe("");
+    expect(createImageBitmapMock).toHaveBeenCalled();
   }, 20_000);
 });

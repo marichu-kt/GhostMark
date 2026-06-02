@@ -12,14 +12,15 @@ import {
 import { drawSafeLayerToCanvas } from "../watermark/safelayerCanvasRenderer";
 import {
   buildFlattenedExportPlan,
-  FLATTENED_EXPORT_SCALE,
-  MAX_EXPORT_CANVAS_PIXELS,
+  type FlattenedExportQualityMode,
+  resolveFlattenedExportQuality,
 } from "./flattenedExportPlan";
 import { sanitizePdfMetadata } from "./metadataSanitizer";
 import { renderPdfPageToCanvas } from "./renderPdfPreview";
 
 interface ApplyWatermarkOptions {
   cleanupMetadata?: boolean;
+  exportQuality?: FlattenedExportQualityMode;
   onProgress?: (progress: { current: number; total: number }) => void;
 }
 
@@ -311,6 +312,7 @@ async function createFlattenedPdf(
   const canvasImages = await createCanvasImagesForLayers(layers);
   const pagePlans = buildFlattenedExportPlan(layers, sourcePages.length);
   const layersById = new Map(layers.map((layer) => [layer.id, layer]));
+  const exportQuality = resolveFlattenedExportQuality(options.exportQuality);
 
   try {
     for (const pagePlan of pagePlans) {
@@ -320,8 +322,8 @@ async function createFlattenedPdf(
       const pageNumber = pagePlan.pageNumber;
 
       const canvas = document.createElement("canvas");
-      await renderPdfPageToCanvas(inputBytes, canvas, pageNumber, FLATTENED_EXPORT_SCALE, {
-        maxCanvasPixels: MAX_EXPORT_CANVAS_PIXELS,
+      await renderPdfPageToCanvas(inputBytes, canvas, pageNumber, exportQuality.renderScale, {
+        maxCanvasPixels: exportQuality.maxCanvasPixels,
       });
       const context = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
 
@@ -375,11 +377,13 @@ async function createFlattenedPdf(
         });
       }
 
-      const imageBytes = dataUrlToBytes(canvas.toDataURL("image/jpeg", 0.93));
+      const imageBytes = dataUrlToBytes(canvas.toDataURL(exportQuality.imageType, exportQuality.imageQuality));
       const embeddedPage = await outputDoc.embedJpg(imageBytes);
       const page = outputDoc.addPage([width, height]);
       page.drawImage(embeddedPage, { x: 0, y: 0, width, height });
       options.onProgress?.({ current: pageNumber, total: sourcePages.length });
+      canvas.width = 1;
+      canvas.height = 1;
 
       if (pageIndex % 3 === 2) {
         await yieldToBrowser();

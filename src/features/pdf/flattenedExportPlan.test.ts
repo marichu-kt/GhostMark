@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { createLayerForType } from "../watermark/defaults";
 import { SAFELAYER_PREVIEW_PAGE_LIMIT } from "../watermark/safelayerRenderer";
-import { buildFlattenedExportPlan, getFlattenedExportPageIndexes } from "./flattenedExportPlan";
+import {
+  DEFAULT_FLATTENED_EXPORT_QUALITY,
+  FLATTENED_EXPORT_QUALITY_PRESETS,
+  buildFlattenedExportPlan,
+  getFlattenedExportPageIndexes,
+  resolveFlattenedExportQuality,
+} from "./flattenedExportPlan";
 import { getVisiblePageCount } from "./largePdf";
 
 if (!globalThis.crypto) {
@@ -50,5 +56,30 @@ describe("flattened export planning", () => {
     const plan = buildFlattenedExportPlan([blackout], 1000);
 
     expect(plan[199].layerIds).toContain("blackout");
+  });
+
+  it("uses compressed JPEG settings for the default flattened export", () => {
+    const settings = resolveFlattenedExportQuality();
+
+    expect(DEFAULT_FLATTENED_EXPORT_QUALITY).toBe("balanced");
+    expect(settings.imageType).toBe("image/jpeg");
+    expect(settings.imageQuality).toBe(0.76);
+    expect(settings.renderScale).toBe(1.5);
+    expect(settings.maxCanvasPixels).toBe(14_000_000);
+  });
+
+  it("keeps export quality presets capped and ordered by output intent", () => {
+    const small = resolveFlattenedExportQuality("small");
+    const balanced = resolveFlattenedExportQuality("balanced");
+    const high = resolveFlattenedExportQuality("high");
+
+    expect(Object.keys(FLATTENED_EXPORT_QUALITY_PRESETS)).toEqual(["small", "balanced", "high"]);
+    expect(small.imageType).toBe("image/jpeg");
+    expect(small.imageQuality).toBeLessThan(balanced.imageQuality);
+    expect(balanced.imageQuality).toBeLessThan(high.imageQuality);
+    expect(small.renderScale).toBeLessThan(balanced.renderScale);
+    expect(balanced.renderScale).toBeLessThanOrEqual(high.renderScale);
+    expect(small.maxCanvasPixels).toBeLessThan(balanced.maxCanvasPixels);
+    expect(balanced.maxCanvasPixels).toBeLessThan(high.maxCanvasPixels);
   });
 });

@@ -4,10 +4,51 @@ import { resolvePageRules } from "./pageRules";
 export const FLATTENED_EXPORT_SCALE = 1.65;
 export const MAX_EXPORT_CANVAS_PIXELS = 18_000_000;
 
+export type FlattenedExportQualityMode = "small" | "balanced" | "high";
+
+export interface FlattenedExportQualitySettings {
+  imageType: "image/jpeg";
+  imageQuality: number;
+  renderScale: number;
+  maxCanvasPixels: number;
+}
+
+export const DEFAULT_FLATTENED_EXPORT_QUALITY: FlattenedExportQualityMode = "balanced";
+
+export const FLATTENED_EXPORT_QUALITY_PRESETS: Record<
+  FlattenedExportQualityMode,
+  FlattenedExportQualitySettings
+> = {
+  small: {
+    imageType: "image/jpeg",
+    imageQuality: 0.64,
+    renderScale: 1.35,
+    maxCanvasPixels: 12_000_000,
+  },
+  balanced: {
+    imageType: "image/jpeg",
+    imageQuality: 0.76,
+    renderScale: 1.5,
+    maxCanvasPixels: 14_000_000,
+  },
+  high: {
+    imageType: "image/jpeg",
+    imageQuality: 0.9,
+    renderScale: FLATTENED_EXPORT_SCALE,
+    maxCanvasPixels: MAX_EXPORT_CANVAS_PIXELS,
+  },
+};
+
 export interface FlattenedExportPagePlan {
   pageIndex: number;
   pageNumber: number;
   layerIds: string[];
+}
+
+export function resolveFlattenedExportQuality(
+  mode: FlattenedExportQualityMode = DEFAULT_FLATTENED_EXPORT_QUALITY,
+): FlattenedExportQualitySettings {
+  return FLATTENED_EXPORT_QUALITY_PRESETS[mode] ?? FLATTENED_EXPORT_QUALITY_PRESETS.balanced;
 }
 
 export function getFlattenedExportPageIndexes(totalPages: number): number[] {

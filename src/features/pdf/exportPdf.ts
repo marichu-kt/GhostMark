@@ -1,10 +1,12 @@
 import type { PdfExportResult } from "../../types/pdf";
 import type { DocumentLayer } from "../../types/watermark";
 import { applyDocumentLayers } from "./applyWatermark";
+import type { FlattenedExportQualityMode } from "./flattenedExportPlan";
 
 export interface ExportPdfOptions {
   outputFileName: string;
   cleanupMetadata: boolean;
+  exportQuality?: FlattenedExportQualityMode;
   onProgress?: (progress: { current: number; total: number }) => void;
 }
 
@@ -15,6 +17,7 @@ export async function exportPdf(
 ): Promise<PdfExportResult> {
   const bytes = await applyDocumentLayers(inputBytes, layers, {
     cleanupMetadata: options.cleanupMetadata,
+    exportQuality: options.exportQuality,
     onProgress: options.onProgress,
   });
   const blobBytes = new Uint8Array(bytes);
