@@ -2,6 +2,8 @@ import { useRef, useState } from "react";
 import {
   Barcode,
   Copy,
+  Eye,
+  EyeOff,
   Grid3X3,
   ImagePlus,
   Layers3,
@@ -9,6 +11,7 @@ import {
   PenLine,
   QrCode,
   RectangleHorizontal,
+  RefreshCw,
   Stamp,
   Trash2,
   Type,
@@ -20,8 +23,24 @@ import type {
   PageRuleConfig,
   SignaturePoint,
 } from "../../types/watermark";
-import type { ExportPasswordProtection } from "../../features/pdf/pdfEncryption";
+import {
+  clearExportPasswordProtection,
+  enableExportPasswordProtection,
+  type ExportPasswordProtection,
+} from "../../features/pdf/pdfEncryption";
 import type { TranslationKey } from "../../features/i18n/i18n";
+import {
+  DEFAULT_PASSPHRASE_GENERATOR_OPTIONS,
+  DEFAULT_PASSWORD_GENERATOR_OPTIONS,
+  generatePassphrase,
+  generatePassword,
+  getPasswordQuality,
+  type PassphraseGeneratorOptions,
+  type PasswordGeneratorMode,
+  type PasswordGeneratorOptions,
+  type PasswordQuality,
+} from "../../features/pdf/passwordGenerator";
+import { validateBarcodeLayer } from "../../features/watermark/barcode";
 import { createLayerForType } from "../../features/watermark/defaults";
 import { duplicateLayer, getLayerDisplayName } from "../../features/watermark/layers";
 import { getLayerListSummary } from "../../features/watermark/validation";
@@ -84,6 +103,39 @@ export const SAFELAYER_VISIBLE_INSPECTOR_KEYS = [
   "watermark.advanced",
 ] as const;
 
+export const PASSWORD_GENERATOR_VISIBLE_KEYS = [
+  "export.passwordQuality",
+  "export.password",
+  "export.passphrase",
+  "export.length",
+  "export.characterTypes",
+  "export.generatePassword",
+  "export.generatePassphrase",
+  "export.wordCount",
+  "export.wordSeparator",
+  "export.wordCase",
+] as const;
+
+const qualityBarStyles: Record<PasswordQuality, string> = {
+  weak: "w-1/4 bg-danger-500",
+  fair: "w-2/4 bg-amberline-300",
+  good: "w-3/4 bg-emerald-400",
+  excellent: "w-full bg-brand-red",
+};
+
+function getPasswordQualityKey(quality: PasswordQuality): TranslationKey {
+  switch (quality) {
+    case "fair":
+      return "export.passwordQualityFair";
+    case "good":
+      return "export.passwordQualityGood";
+    case "excellent":
+      return "export.passwordQualityExcellent";
+    default:
+      return "export.passwordQualityWeak";
+  }
+}
+
 function getLayerTypeTranslationKey(type: LayerType): TranslationKey {
   switch (type) {
     case "image":
@@ -132,9 +184,20 @@ export function WatermarkDesigner({
   const drawingStrokeIdRef = useRef<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [internalSelectedProtection, setInternalSelectedProtection] = useState<"password" | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [generatorMode, setGeneratorMode] = useState<PasswordGeneratorMode>("password");
+  const [passwordOptions, setPasswordOptions] = useState<PasswordGeneratorOptions>(
+    DEFAULT_PASSWORD_GENERATOR_OPTIONS,
+  );
+  const [passphraseOptions, setPassphraseOptions] = useState<PassphraseGeneratorOptions>(
+    DEFAULT_PASSPHRASE_GENERATOR_OPTIONS,
+  );
   const { t } = useTranslation();
   const activeProtection = selectedProtection ?? internalSelectedProtection;
   const selectedLayer = layers.find((layer) => layer.id === selectedLayerId) ?? layers[0] ?? null;
+  const showPasswordProtectionItem = passwordProtection.enabled || activeProtection === "password";
+  const selectedBarcodeValidation =
+    selectedLayer?.type === "barcode" ? validateBarcodeLayer(selectedLayer) : null;
 
   function replaceLayers(nextLayers: DocumentLayer[]) {
     onChange(nextLayers);
@@ -147,6 +210,43 @@ export function WatermarkDesigner({
   function selectProtection(nextProtection: "password" | null) {
     setInternalSelectedProtection(nextProtection);
     onSelectedProtectionChange?.(nextProtection);
+  }
+
+  function patchPasswordProtection(patch: Partial<ExportPasswordProtection>) {
+    onPasswordProtectionChange({
+      ...passwordProtection,
+      ...patch,
+    });
+  }
+
+  function selectPasswordProtection() {
+    onPasswordProtectionChange(enableExportPasswordProtection(passwordProtection));
+    selectProtection("password");
+    onSelectedLayerChange(null);
+  }
+
+  function clearPasswordProtection() {
+    onPasswordProtectionChange(clearExportPasswordProtection());
+    selectProtection(null);
+    onSelectedLayerChange(layers[0]?.id ?? null);
+  }
+
+  function useGeneratedPassword(value: string) {
+    onPasswordProtectionChange({
+      enabled: true,
+      password: value,
+      confirmPassword: value,
+    });
+    selectProtection("password");
+    onSelectedLayerChange(null);
+  }
+
+  async function copyPasswordToClipboard() {
+    if (!passwordProtection.password || !navigator.clipboard) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(passwordProtection.password);
   }
 
   function addLayer(type: LayerType) {
@@ -309,10 +409,7 @@ export function WatermarkDesigner({
             variant="quiet"
             size="sm"
             className="min-w-0 flex-wrap"
-            onClick={() => {
-              selectProtection("password");
-              onSelectedLayerChange(null);
-            }}
+            onClick={selectPasswordProtection}
           >
             <LockKeyhole size={15} aria-hidden="true" />
             <span className="min-w-0 truncate">{t("layers.password")}</span>
@@ -381,6 +478,33 @@ export function WatermarkDesigner({
         )}
       </FieldGroup>
 
+      {showPasswordProtectionItem ? (
+        <FieldGroup title={t("layers.protection")}>
+          <div
+            className={`min-w-0 rounded-md border p-2 transition-colors ${
+              activeProtection === "password"
+                ? "border-brand-red bg-graphite-800/90"
+                : "border-graphite-700 bg-graphite-950/80"
+            }`}
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <LockKeyhole size={16} className="shrink-0 text-brand-red" aria-hidden="true" />
+              <button type="button" className="min-w-0 flex-1 text-left" onClick={selectPasswordProtection}>
+                <span className="block truncate text-sm font-semibold text-white">
+                  {t("export.passwordProtection")}
+                </span>
+                <span className="block truncate text-xs text-steel-400">
+                  {t("export.passwordProtectionDescription")}
+                </span>
+              </button>
+              <Button size="icon" variant="quiet" aria-label={t("layers.delete")} onClick={clearPasswordProtection}>
+                <Trash2 size={13} aria-hidden="true" />
+              </Button>
+            </div>
+          </div>
+        </FieldGroup>
+      ) : null}
+
       {activeProtection === "password" ? (
         <FieldGroup title={t("export.passwordProtection")}>
           <Toggle
@@ -388,35 +512,176 @@ export function WatermarkDesigner({
             description={t("export.passwordProtectionNote")}
             checked={passwordProtection.enabled}
             onChange={(enabled) =>
-              onPasswordProtectionChange({
-                enabled,
-                password: enabled ? passwordProtection.password : "",
-                confirmPassword: enabled ? passwordProtection.confirmPassword : "",
-              })
+              enabled ? patchPasswordProtection({ enabled: true }) : clearPasswordProtection()
             }
           />
           {passwordProtection.enabled ? (
             <>
-              <Input
-                label={t("export.password")}
-                type="password"
-                value={passwordProtection.password}
-                autoComplete="new-password"
-                error={
-                  passwordValidationMessage && !passwordProtection.password
-                    ? passwordValidationMessage
-                    : undefined
-                }
-                onChange={(event) =>
-                  onPasswordProtectionChange({
-                    ...passwordProtection,
-                    password: event.target.value,
-                  })
-                }
-              />
+              <div className="grid gap-2 rounded-md border border-brand-red/25 bg-graphite-950/90 p-3 shadow-[0_0_24px_rgba(198,40,40,0.08)]">
+                <label className="grid min-w-0 gap-1.5 text-sm text-steel-100">
+                  <span className="font-medium">{t("export.password")}</span>
+                  <span className="flex min-w-0 overflow-hidden rounded-md border border-graphite-700 bg-graphite-950">
+                    <input
+                      className="min-h-10 min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-white placeholder:text-steel-500"
+                      type={showPassword ? "text" : "password"}
+                      value={passwordProtection.password}
+                      autoComplete="new-password"
+                      onChange={(event) => patchPasswordProtection({ password: event.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="grid w-10 place-items-center text-steel-300 hover:text-white"
+                      aria-label={showPassword ? t("export.hidePassword") : t("export.showPassword")}
+                      onClick={() => setShowPassword((current) => !current)}
+                    >
+                      {showPassword ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
+                    </button>
+                    <button
+                      type="button"
+                      className="grid w-10 place-items-center text-steel-300 hover:text-white"
+                      aria-label={t("export.regenerate")}
+                      onClick={() =>
+                        useGeneratedPassword(
+                          generatorMode === "password"
+                            ? generatePassword(passwordOptions)
+                            : generatePassphrase(passphraseOptions),
+                        )
+                      }
+                    >
+                      <RefreshCw size={15} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="grid w-10 place-items-center text-steel-300 hover:text-white"
+                      aria-label={t("export.copyPassword")}
+                      onClick={() => void copyPasswordToClipboard()}
+                    >
+                      <Copy size={15} aria-hidden="true" />
+                    </button>
+                  </span>
+                  {passwordValidationMessage && !passwordProtection.password ? (
+                    <span className="text-xs leading-5 text-danger-100">{passwordValidationMessage}</span>
+                  ) : null}
+                </label>
+                <div className="grid gap-1.5">
+                  <div className="flex items-center justify-between gap-3 text-xs text-steel-200">
+                    <span>{t("export.passwordQuality")}</span>
+                    <span className="font-semibold text-white">
+                      {t(getPasswordQualityKey(getPasswordQuality(passwordProtection.password)))}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-graphite-800">
+                    <div
+                      className={`h-full rounded-full transition-all ${qualityBarStyles[getPasswordQuality(passwordProtection.password)]}`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 rounded-md border border-graphite-700 bg-graphite-950 p-1">
+                <Button
+                  size="sm"
+                  variant={generatorMode === "password" ? "primary" : "ghost"}
+                  onClick={() => setGeneratorMode("password")}
+                >
+                  {t("export.password")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={generatorMode === "passphrase" ? "primary" : "ghost"}
+                  onClick={() => setGeneratorMode("passphrase")}
+                >
+                  {t("export.passphrase")}
+                </Button>
+              </div>
+
+              {generatorMode === "password" ? (
+                <div className="grid gap-3 rounded-md border border-graphite-700 bg-graphite-950/80 p-3">
+                  <Slider
+                    label={t("export.length")}
+                    min={12}
+                    max={40}
+                    value={passwordOptions.length}
+                    displayValue={String(passwordOptions.length)}
+                    onChange={(length) => setPasswordOptions((current) => ({ ...current, length }))}
+                  />
+                  <div className="grid gap-2">
+                    <span className="text-sm font-medium text-steel-100">{t("export.characterTypes")}</span>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-steel-100">
+                      {[
+                        ["uppercase", "A-Z"],
+                        ["lowercase", "a-z"],
+                        ["numbers", "0-9"],
+                        ["symbols", t("export.symbols")],
+                        ["extendedAscii", t("export.extendedAscii")],
+                      ].map(([key, label]) => (
+                        <label key={key} className="flex items-center gap-2 rounded-md border border-graphite-700 bg-graphite-900 p-2">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-brand-red"
+                            checked={Boolean(passwordOptions[key as keyof PasswordGeneratorOptions])}
+                            onChange={(event) =>
+                              setPasswordOptions((current) => ({
+                                ...current,
+                                [key]: event.target.checked,
+                              }))
+                            }
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <Button variant="secondary" onClick={() => useGeneratedPassword(generatePassword(passwordOptions))}>
+                    <RefreshCw size={15} aria-hidden="true" />
+                    {t("export.generatePassword")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-3 rounded-md border border-graphite-700 bg-graphite-950/80 p-3">
+                  <Slider
+                    label={t("export.wordCount")}
+                    min={4}
+                    max={8}
+                    value={passphraseOptions.wordCount}
+                    displayValue={String(passphraseOptions.wordCount)}
+                    onChange={(wordCount) => setPassphraseOptions((current) => ({ ...current, wordCount }))}
+                  />
+                  <Input
+                    label={t("export.wordSeparator")}
+                    value={passphraseOptions.separator}
+                    onChange={(event) =>
+                      setPassphraseOptions((current) => ({ ...current, separator: event.target.value.slice(0, 3) }))
+                    }
+                  />
+                  <Select
+                    label={t("export.wordCase")}
+                    value={passphraseOptions.wordCase}
+                    onChange={(event) =>
+                      setPassphraseOptions((current) => ({
+                        ...current,
+                        wordCase: event.target.value as PassphraseGeneratorOptions["wordCase"],
+                      }))
+                    }
+                    options={[
+                      { value: "lower", label: t("export.lowerCase") },
+                      { value: "upper", label: t("export.upperCase") },
+                      { value: "title", label: t("export.titleCase") },
+                    ]}
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={() => useGeneratedPassword(generatePassphrase(passphraseOptions))}
+                  >
+                    <RefreshCw size={15} aria-hidden="true" />
+                    {t("export.generatePassphrase")}
+                  </Button>
+                </div>
+              )}
+
               <Input
                 label={t("export.confirmPassword")}
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={passwordProtection.confirmPassword}
                 autoComplete="new-password"
                 error={
@@ -425,8 +690,7 @@ export function WatermarkDesigner({
                     : undefined
                 }
                 onChange={(event) =>
-                  onPasswordProtectionChange({
-                    ...passwordProtection,
+                  patchPasswordProtection({
                     confirmPassword: event.target.value,
                   })
                 }
@@ -577,16 +841,39 @@ export function WatermarkDesigner({
                 <Input
                   label={t("watermark.barcodeValue")}
                   value={selectedLayer.barcodeValue}
-                  error={!selectedLayer.barcodeValue.trim() ? t("validation.addBarcodeValue") : undefined}
-                  onChange={(event) => patchSelectedLayer({ barcodeValue: event.target.value })}
+                  error={
+                    !selectedLayer.barcodeValue.trim()
+                      ? t("validation.addBarcodeValue")
+                      : selectedBarcodeValidation?.messageKey
+                        ? t(selectedBarcodeValidation.messageKey)
+                        : undefined
+                  }
+                  onChange={(event) =>
+                    patchSelectedLayer({
+                      barcodeValue:
+                        selectedLayer.barcodeFormat === "CODE39"
+                          ? event.target.value.toUpperCase()
+                          : event.target.value,
+                    })
+                  }
                 />
                 <Select
                   label={t("watermark.barcodeFormat")}
                   value={selectedLayer.barcodeFormat}
                   onChange={(event) =>
-                    patchSelectedLayer({ barcodeFormat: event.target.value as DocumentLayer["barcodeFormat"] })
+                    patchSelectedLayer({
+                      barcodeFormat: event.target.value as DocumentLayer["barcodeFormat"],
+                      barcodeValue:
+                        event.target.value === "CODE39"
+                          ? selectedLayer.barcodeValue.toUpperCase()
+                          : selectedLayer.barcodeValue,
+                    })
                   }
-                  options={[{ value: "CODE128", label: "Code 128" }]}
+                  options={[
+                    { value: "CODE128", label: t("watermark.barcodeCode128") },
+                    { value: "CODE39", label: t("watermark.barcodeCode39") },
+                    { value: "EAN13", label: t("watermark.barcodeEan13") },
+                  ]}
                 />
                 <Slider
                   label={t("blackout.width")}

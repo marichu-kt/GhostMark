@@ -8,6 +8,7 @@ import {
   type LayerPlacement,
   type SealRenderPlan,
 } from "./layerGeometry";
+import { validateBarcodeLayer } from "./barcode";
 import { createInteractiveLayerPlacement as createSpecialPlacement } from "./interactiveGeometry";
 
 export type CanvasDrawableImage = CanvasImageSource | { width: number; height: number };
@@ -298,9 +299,10 @@ export function drawBarcodeWatermarkToCanvas(input: {
   scaleX?: number;
   scaleY?: number;
 }): LayerPlacement | null {
-  const value = input.layer.barcodeValue.trim();
+  const validation = validateBarcodeLayer(input.layer);
+  const value = validation.normalizedValue;
 
-  if (!value) {
+  if (!value || !validation.isValid) {
     return null;
   }
 
@@ -325,7 +327,7 @@ export function drawBarcodeWatermarkToCanvas(input: {
 
       try {
         JsBarcode(barcodeCanvas, value, {
-          format: input.layer.barcodeFormat,
+          format: validation.normalizedFormat,
           width: Math.max(1, width / Math.max(60, value.length * 9)),
           height: Math.max(24, height - 12),
           displayValue: false,

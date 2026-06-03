@@ -2,6 +2,7 @@ import type { LoadedPdf } from "../../types/pdf";
 import type { DocumentLayer, WatermarkConfig } from "../../types/watermark";
 import type { TranslationKey } from "../i18n/i18n";
 import { resolvePageRules } from "../pdf/pageRules";
+import { validateBarcodeLayer } from "./barcode";
 import { getEnabledLayers, getLayerDisplayName } from "./layers";
 
 export interface WatermarkValidationResult {
@@ -41,6 +42,14 @@ export function validateWatermarkConfig(
     return { isValid: false, messageKey: "validation.addBarcodeValue" };
   }
 
+  if (config.type === "barcode") {
+    const barcodeValidation = validateBarcodeLayer(config);
+
+    if (!barcodeValidation.isValid) {
+      return { isValid: false, messageKey: barcodeValidation.messageKey };
+    }
+  }
+
   if (
     config.type === "signature" &&
     config.signatureMode === "typed" &&
@@ -75,10 +84,6 @@ export function validateDocumentLayers(
   }
 
   const enabledLayers = getEnabledLayers(layers);
-
-  if (enabledLayers.length === 0) {
-    return { isValid: false, messageKey: "validation.addLayer" };
-  }
 
   for (const layer of enabledLayers) {
     const result = validateWatermarkConfig(layer, loadedPdf);
@@ -152,9 +157,14 @@ export function getAffectedPagesSummary(config: WatermarkConfig, totalPages: num
 
 export function getDocumentAffectedPagesSummary(layers: DocumentLayer[], totalPages: number): string {
   const pages = new Set<number>();
+  const enabledLayers = getEnabledLayers(layers);
+
+  if (enabledLayers.length === 0) {
+    return `All ${totalPages} pages`;
+  }
 
   try {
-    for (const layer of getEnabledLayers(layers)) {
+    for (const layer of enabledLayers) {
       for (const pageIndex of resolvePageRules(layer.pages, totalPages)) {
         pages.add(pageIndex);
       }

@@ -1,7 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { validateExportPasswordProtection } from "./pdfEncryption";
+import {
+  clearExportPasswordProtection,
+  enableExportPasswordProtection,
+  validateExportPasswordProtection,
+} from "./pdfEncryption";
 
 describe("validateExportPasswordProtection", () => {
+  it("enables and clears password protection without creating visual layer state", () => {
+    const enabled = enableExportPasswordProtection({
+      enabled: false,
+      password: "SensitiveLongPass1!",
+      confirmPassword: "SensitiveLongPass1!",
+    });
+
+    expect(enabled).toEqual({
+      enabled: true,
+      password: "SensitiveLongPass1!",
+      confirmPassword: "SensitiveLongPass1!",
+    });
+    expect(clearExportPasswordProtection()).toEqual({
+      enabled: false,
+      password: "",
+      confirmPassword: "",
+    });
+  });
+
   it("allows export when password protection is disabled", () => {
     expect(
       validateExportPasswordProtection({
@@ -33,20 +56,33 @@ describe("validateExportPasswordProtection", () => {
   });
 
   it("rejects common weak passwords", () => {
+    for (const password of ["ghostmark", "00000000", "letmein", "welcome", "iloveyou"]) {
+      expect(validateExportPasswordProtection({
+        enabled: true,
+        password,
+        confirmPassword: password,
+      })).toEqual({ isValid: false, messageKey: "export.passwordWeak" });
+    }
+  });
+
+  it("rejects predictable 12-character passwords", () => {
     expect(
       validateExportPasswordProtection({
         enabled: true,
-        password: "ghostmark",
-        confirmPassword: "ghostmark",
+        password: "111111111111",
+        confirmPassword: "111111111111",
       }),
     ).toEqual({ isValid: false, messageKey: "export.passwordWeak" });
+  });
+
+  it("requires password confirmation", () => {
     expect(
       validateExportPasswordProtection({
         enabled: true,
-        password: "ghostmark000",
-        confirmPassword: "ghostmark000",
+        password: "strongpassphrase",
+        confirmPassword: "",
       }),
-    ).toEqual({ isValid: true });
+    ).toEqual({ isValid: false, messageKey: "export.confirmPasswordRequired" });
   });
 
   it("requires matching confirmation", () => {

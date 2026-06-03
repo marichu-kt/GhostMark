@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ADD_MARK_PROTECTION_BUTTON_KEYS, SAFELAYER_VISIBLE_INSPECTOR_KEYS } from "./WatermarkDesigner";
+import {
+  ADD_MARK_PROTECTION_BUTTON_KEYS,
+  PASSWORD_GENERATOR_VISIBLE_KEYS,
+  SAFELAYER_VISIBLE_INSPECTOR_KEYS,
+} from "./WatermarkDesigner";
 
 describe("WatermarkDesigner SafeLayer controls", () => {
   it("documents the minimal SafeLayer inspector contract", () => {
@@ -26,5 +30,9 @@ describe("WatermarkDesigner add panel", () => {
       "layers.signature",
       "layers.password",
     ]);
+  });
+
+  it("keeps entropy bits out of the password generator UI contract", () => {
+    expect(PASSWORD_GENERATOR_VISIBLE_KEYS.join(" ")).not.toMatch(/entropy|bits/i);
   });
 });

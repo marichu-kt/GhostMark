@@ -17,7 +17,6 @@ describe("interactive QR, barcode, and signature geometry", () => {
   it("moves a QR layer in PDF coordinates from preview deltas", () => {
     const layer = {
       ...createLayerForType("qr"),
-      positionPreset: "bottom-right" as const,
       qrSize: 100,
     };
     const moved = moveInteractiveLayer({
@@ -31,7 +30,7 @@ describe("interactive QR, barcode, and signature geometry", () => {
     expect(moved).toMatchObject({
       positionPreset: "center",
       x: 132,
-      y: 28,
+      y: 12,
     });
   });
 

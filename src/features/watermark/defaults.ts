@@ -118,7 +118,7 @@ export function createLayerForType(type: LayerType): DocumentLayer {
         color: "#111827",
         opacity: 0.92,
         rotation: 0,
-        positionPreset: "bottom-right",
+        positionPreset: "top-right",
         qrSize: 118,
       };
     case "barcode":
@@ -129,7 +129,7 @@ export function createLayerForType(type: LayerType): DocumentLayer {
         color: "#111827",
         opacity: 0.92,
         rotation: 0,
-        positionPreset: "bottom-right",
+        positionPreset: "top-left",
         barcodeWidth: 220,
         barcodeHeight: 72,
       };

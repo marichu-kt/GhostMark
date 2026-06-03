@@ -128,6 +128,14 @@ describe("validateWatermarkConfig", () => {
     });
   });
 
+  it("rejects invalid barcode values for the selected format", () => {
+    const config = makeConfig({ type: "barcode", barcodeFormat: "EAN13", barcodeValue: "GHOSTMARK-001" });
+    expect(validateWatermarkConfig(config, loadedPdf)).toEqual({
+      isValid: false,
+      messageKey: "validation.invalidEan13",
+    });
+  });
+
   it("requires typed signature text or drawn signature strokes for signature layers", () => {
     expect(
       validateWatermarkConfig(makeConfig({ type: "signature", signatureMode: "typed", signatureText: " " }), loadedPdf),
@@ -154,10 +162,9 @@ describe("validateWatermarkConfig", () => {
 });
 
 describe("validateDocumentLayers", () => {
-  it("requires an enabled layer", () => {
+  it("allows export without enabled visual layers so the PDF can still be flattened", () => {
     expect(validateDocumentLayers([makeConfig({ enabled: false })], loadedPdf)).toEqual({
-      isValid: false,
-      messageKey: "validation.addLayer",
+      isValid: true,
     });
   });
 
@@ -206,6 +213,10 @@ describe("watermark summaries", () => {
       ),
     ).toBe("3 pages");
   });
+
+  it("summarizes zero-layer flattened export as all pages", () => {
+    expect(getDocumentAffectedPagesSummary([makeConfig({ enabled: false })], 6)).toBe("All 6 pages");
+  });
 });
 
 describe("seal defaults", () => {
@@ -242,12 +253,13 @@ describe("QR, barcode, and signature defaults", () => {
       type: "qr",
       qrContent: "https://marichu-kt.github.io/GhostMark/",
       qrSize: 118,
-      positionPreset: "bottom-right",
+      positionPreset: "top-right",
     });
     expect(createLayerForType("barcode")).toMatchObject({
       type: "barcode",
       barcodeValue: "GHOSTMARK-001",
       barcodeFormat: "CODE128",
+      positionPreset: "top-left",
       barcodeWidth: 220,
       barcodeHeight: 72,
     });

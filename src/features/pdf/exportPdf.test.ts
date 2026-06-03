@@ -196,6 +196,26 @@ describe("exportPdf flattened output", () => {
     expect(reloaded.getCreator()).toBe("GhostMark");
   }, 20_000);
 
+  it("flattens zero-layer exports so source text is still not extractable", async () => {
+    installCanvasDom();
+    const { exportPdf } = await import("./exportPdf");
+    await configurePdfJsWorker();
+    const inputBytes = await createSelectableTextPdf();
+
+    const result = await exportPdf(new Uint8Array(inputBytes), [], {
+      outputFileName: "flat-copy.pdf",
+      cleanupMetadata: true,
+    });
+    const exportedBytes = new Uint8Array(await result.blob.arrayBuffer());
+    const after = await extractText(exportedBytes);
+    const rawPdf = bytesToBinaryString(exportedBytes);
+
+    expect(after.pageCount).toBe(1);
+    expect(after.text.trim()).toBe("");
+    expect(rawPdf).toContain("/DCTDecode");
+    expect(rawPdf).not.toContain(sourceText);
+  }, 20_000);
+
   it("exports SafeLayer and Blackout through the flattened production path without throwing", async () => {
     installCanvasDom();
     const createImageBitmapMock = installRejectingCreateImageBitmap();

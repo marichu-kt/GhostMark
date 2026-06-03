@@ -102,7 +102,7 @@ export interface DocumentLayer {
   qrContent: string;
   qrSize: number;
   barcodeValue: string;
-  barcodeFormat: "CODE128";
+  barcodeFormat: "CODE128" | "CODE39" | "EAN13";
   barcodeWidth: number;
   barcodeHeight: number;
   signatureMode: "typed" | "drawn";
