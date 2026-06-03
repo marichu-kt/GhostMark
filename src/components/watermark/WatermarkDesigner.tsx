@@ -1,19 +1,26 @@
 import { useRef, useState } from "react";
 import {
+  Barcode,
   Copy,
   Grid3X3,
   ImagePlus,
   Layers3,
+  LockKeyhole,
+  PenLine,
+  QrCode,
   RectangleHorizontal,
   Stamp,
   Trash2,
   Type,
 } from "lucide-react";
+import type { PointerEvent } from "react";
 import type {
   DocumentLayer,
   LayerType,
   PageRuleConfig,
+  SignaturePoint,
 } from "../../types/watermark";
+import type { ExportPasswordProtection } from "../../features/pdf/pdfEncryption";
 import type { TranslationKey } from "../../features/i18n/i18n";
 import { createLayerForType } from "../../features/watermark/defaults";
 import { duplicateLayer, getLayerDisplayName } from "../../features/watermark/layers";
@@ -34,11 +41,29 @@ interface WatermarkDesignerProps {
   layers: DocumentLayer[];
   selectedLayerId: string | null;
   totalPages: number;
+  passwordProtection: ExportPasswordProtection;
+  passwordValidationMessage?: string;
+  selectedProtection?: "password" | null;
   onChange: (layers: DocumentLayer[]) => void;
   onSelectedLayerChange: (layerId: string | null) => void;
+  onSelectedProtectionChange?: (protection: "password" | null) => void;
+  onPasswordProtectionChange: (protection: ExportPasswordProtection) => void;
 }
 
-const layerTypes: LayerType[] = ["text", "image", "pattern", "seal", "safelayer", "blackout"];
+const layerTypes: LayerType[] = ["text", "image", "pattern", "seal", "safelayer", "blackout", "qr", "barcode", "signature"];
+
+export const ADD_MARK_PROTECTION_BUTTON_KEYS = [
+  "layers.text",
+  "layers.image",
+  "layers.pattern",
+  "layers.seal",
+  "layers.safelayer",
+  "layers.blackout",
+  "layers.qr",
+  "layers.barcode",
+  "layers.signature",
+  "layers.password",
+] as const;
 
 const layerIcons: Record<LayerType, typeof Type> = {
   text: Type,
@@ -47,6 +72,9 @@ const layerIcons: Record<LayerType, typeof Type> = {
   seal: Stamp,
   safelayer: Layers3,
   blackout: RectangleHorizontal,
+  qr: QrCode,
+  barcode: Barcode,
+  signature: PenLine,
 };
 
 export const SAFELAYER_VISIBLE_INSPECTOR_KEYS = [
@@ -68,21 +96,44 @@ function getLayerTypeTranslationKey(type: LayerType): TranslationKey {
       return "layers.safelayer";
     case "blackout":
       return "layers.blackout";
+    case "qr":
+      return "layers.qr";
+    case "barcode":
+      return "layers.barcode";
+    case "signature":
+      return "layers.signature";
     default:
       return "layers.text";
   }
+}
+
+function getSignaturePoint(event: PointerEvent<SVGSVGElement>): SignaturePoint {
+  const rect = event.currentTarget.getBoundingClientRect();
+
+  return {
+    x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
+    y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
+  };
 }
 
 export function WatermarkDesigner({
   layers,
   selectedLayerId,
   totalPages,
+  passwordProtection,
+  passwordValidationMessage,
+  selectedProtection,
   onChange,
   onSelectedLayerChange,
+  onSelectedProtectionChange,
+  onPasswordProtectionChange,
 }: WatermarkDesignerProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const drawingStrokeIdRef = useRef<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [internalSelectedProtection, setInternalSelectedProtection] = useState<"password" | null>(null);
   const { t } = useTranslation();
+  const activeProtection = selectedProtection ?? internalSelectedProtection;
   const selectedLayer = layers.find((layer) => layer.id === selectedLayerId) ?? layers[0] ?? null;
 
   function replaceLayers(nextLayers: DocumentLayer[]) {
@@ -91,6 +142,11 @@ export function WatermarkDesigner({
 
   function updateLayer(layerId: string, patch: Partial<DocumentLayer>) {
     replaceLayers(layers.map((layer) => (layer.id === layerId ? { ...layer, ...patch } : layer)));
+  }
+
+  function selectProtection(nextProtection: "password" | null) {
+    setInternalSelectedProtection(nextProtection);
+    onSelectedProtectionChange?.(nextProtection);
   }
 
   function addLayer(type: LayerType) {
@@ -105,6 +161,7 @@ export function WatermarkDesigner({
         : {}),
     };
     replaceLayers([...layers, layer]);
+    selectProtection(null);
     onSelectedLayerChange(layer.id);
   }
 
@@ -129,6 +186,11 @@ export function WatermarkDesigner({
     }
 
     updateLayer(selectedLayer.id, patch);
+  }
+
+  function selectVisualLayer(layerId: string) {
+    selectProtection(null);
+    onSelectedLayerChange(layerId);
   }
 
   async function handleImage(file: File | undefined) {
@@ -188,9 +250,50 @@ export function WatermarkDesigner({
     });
   }
 
+  function startSignatureStroke(event: PointerEvent<SVGSVGElement>) {
+    if (!selectedLayer || selectedLayer.type !== "signature") {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const strokeId = crypto.randomUUID();
+    drawingStrokeIdRef.current = strokeId;
+    patchSelectedLayer({
+      signatureMode: "drawn",
+      signatureStrokes: [
+        ...selectedLayer.signatureStrokes,
+        { id: strokeId, points: [getSignaturePoint(event)] },
+      ],
+    });
+  }
+
+  function moveSignatureStroke(event: PointerEvent<SVGSVGElement>) {
+    const strokeId = drawingStrokeIdRef.current;
+
+    if (!strokeId || !selectedLayer || selectedLayer.type !== "signature") {
+      return;
+    }
+
+    const point = getSignaturePoint(event);
+    patchSelectedLayer({
+      signatureStrokes: selectedLayer.signatureStrokes.map((stroke) =>
+        stroke.id === strokeId ? { ...stroke, points: [...stroke.points, point] } : stroke,
+      ),
+    });
+  }
+
+  function endSignatureStroke(event: PointerEvent<SVGSVGElement>) {
+    if (drawingStrokeIdRef.current) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    drawingStrokeIdRef.current = null;
+  }
+
   return (
     <>
-      <FieldGroup title={t("layers.addWatermark")}>
+      <FieldGroup title={t("layers.addWatermarkProtection")}>
         <div className="grid min-w-0 grid-cols-2 gap-2">
           {layerTypes.map((type) => {
             const Icon = layerIcons[type];
@@ -202,6 +305,18 @@ export function WatermarkDesigner({
               </Button>
             );
           })}
+          <Button
+            variant="quiet"
+            size="sm"
+            className="min-w-0 flex-wrap"
+            onClick={() => {
+              selectProtection("password");
+              onSelectedLayerChange(null);
+            }}
+          >
+            <LockKeyhole size={15} aria-hidden="true" />
+            <span className="min-w-0 truncate">{t("layers.password")}</span>
+          </Button>
         </div>
       </FieldGroup>
 
@@ -213,7 +328,7 @@ export function WatermarkDesigner({
         ) : (
           <div className="grid min-w-0 gap-2">
             {layers.map((layer) => {
-              const selected = selectedLayer?.id === layer.id;
+              const selected = !activeProtection && selectedLayer?.id === layer.id;
 
               return (
                 <div
@@ -233,7 +348,7 @@ export function WatermarkDesigner({
                     <button
                       type="button"
                       className="min-w-0 flex-1 text-left"
-                      onClick={() => onSelectedLayerChange(layer.id)}
+                      onClick={() => selectVisualLayer(layer.id)}
                     >
                       <span className="block truncate text-sm font-semibold text-white">
                         {getLayerDisplayName(layer)}
@@ -266,7 +381,62 @@ export function WatermarkDesigner({
         )}
       </FieldGroup>
 
-      {selectedLayer ? (
+      {activeProtection === "password" ? (
+        <FieldGroup title={t("export.passwordProtection")}>
+          <Toggle
+            label={t("export.enablePasswordProtection")}
+            description={t("export.passwordProtectionNote")}
+            checked={passwordProtection.enabled}
+            onChange={(enabled) =>
+              onPasswordProtectionChange({
+                enabled,
+                password: enabled ? passwordProtection.password : "",
+                confirmPassword: enabled ? passwordProtection.confirmPassword : "",
+              })
+            }
+          />
+          {passwordProtection.enabled ? (
+            <>
+              <Input
+                label={t("export.password")}
+                type="password"
+                value={passwordProtection.password}
+                autoComplete="new-password"
+                error={
+                  passwordValidationMessage && !passwordProtection.password
+                    ? passwordValidationMessage
+                    : undefined
+                }
+                onChange={(event) =>
+                  onPasswordProtectionChange({
+                    ...passwordProtection,
+                    password: event.target.value,
+                  })
+                }
+              />
+              <Input
+                label={t("export.confirmPassword")}
+                type="password"
+                value={passwordProtection.confirmPassword}
+                autoComplete="new-password"
+                error={
+                  passwordValidationMessage && passwordProtection.password
+                    ? passwordValidationMessage
+                    : undefined
+                }
+                onChange={(event) =>
+                  onPasswordProtectionChange({
+                    ...passwordProtection,
+                    confirmPassword: event.target.value,
+                  })
+                }
+              />
+              <Notice tone="info">{t("export.passwordSecurityNote")}</Notice>
+              <Notice tone="info">{t("export.passwordFlattenedFirst")}</Notice>
+            </>
+          ) : null}
+        </FieldGroup>
+      ) : selectedLayer ? (
         <>
           <FieldGroup title={t("layers.currentMark")}>
             {selectedLayer.type === "text" || selectedLayer.type === "pattern" || selectedLayer.type === "safelayer" ? (
@@ -383,7 +553,155 @@ export function WatermarkDesigner({
               </>
             ) : null}
 
-            {selectedLayer.type === "text" || selectedLayer.type === "seal" || selectedLayer.type === "image" ? (
+            {selectedLayer.type === "qr" ? (
+              <>
+                <Input
+                  label={t("watermark.qrContent")}
+                  value={selectedLayer.qrContent}
+                  error={!selectedLayer.qrContent.trim() ? t("validation.addQrContent") : undefined}
+                  onChange={(event) => patchSelectedLayer({ qrContent: event.target.value })}
+                />
+                <Slider
+                  label={t("watermark.size")}
+                  min={52}
+                  max={260}
+                  value={selectedLayer.qrSize}
+                  displayValue={`${selectedLayer.qrSize}px`}
+                  onChange={(qrSize) => patchSelectedLayer({ qrSize })}
+                />
+              </>
+            ) : null}
+
+            {selectedLayer.type === "barcode" ? (
+              <>
+                <Input
+                  label={t("watermark.barcodeValue")}
+                  value={selectedLayer.barcodeValue}
+                  error={!selectedLayer.barcodeValue.trim() ? t("validation.addBarcodeValue") : undefined}
+                  onChange={(event) => patchSelectedLayer({ barcodeValue: event.target.value })}
+                />
+                <Select
+                  label={t("watermark.barcodeFormat")}
+                  value={selectedLayer.barcodeFormat}
+                  onChange={(event) =>
+                    patchSelectedLayer({ barcodeFormat: event.target.value as DocumentLayer["barcodeFormat"] })
+                  }
+                  options={[{ value: "CODE128", label: "Code 128" }]}
+                />
+                <Slider
+                  label={t("blackout.width")}
+                  min={90}
+                  max={420}
+                  value={selectedLayer.barcodeWidth}
+                  displayValue={`${selectedLayer.barcodeWidth}px`}
+                  onChange={(barcodeWidth) => patchSelectedLayer({ barcodeWidth })}
+                />
+                <Slider
+                  label={t("blackout.height")}
+                  min={42}
+                  max={180}
+                  value={selectedLayer.barcodeHeight}
+                  displayValue={`${selectedLayer.barcodeHeight}px`}
+                  onChange={(barcodeHeight) => patchSelectedLayer({ barcodeHeight })}
+                />
+              </>
+            ) : null}
+
+            {selectedLayer.type === "signature" ? (
+              <>
+                <Notice tone="info">{t("signature.visualNote")}</Notice>
+                <Select
+                  label={t("signature.mode")}
+                  value={selectedLayer.signatureMode}
+                  onChange={(event) =>
+                    patchSelectedLayer({ signatureMode: event.target.value as DocumentLayer["signatureMode"] })
+                  }
+                  options={[
+                    { value: "typed", label: t("signature.typed") },
+                    { value: "drawn", label: t("signature.drawn") },
+                  ]}
+                />
+                {selectedLayer.signatureMode === "typed" ? (
+                  <>
+                    <Input
+                      label={t("signature.text")}
+                      value={selectedLayer.signatureText}
+                      error={!selectedLayer.signatureText.trim() ? t("validation.addSignatureText") : undefined}
+                      onChange={(event) => patchSelectedLayer({ signatureText: event.target.value })}
+                    />
+                    <Select
+                      label={t("signature.style")}
+                      value={selectedLayer.signatureStyle}
+                      onChange={(event) =>
+                        patchSelectedLayer({ signatureStyle: event.target.value as DocumentLayer["signatureStyle"] })
+                      }
+                      options={[
+                        { value: "classic", label: t("signature.styleClassic") },
+                        { value: "formal", label: t("signature.styleFormal") },
+                        { value: "compact", label: t("signature.styleCompact") },
+                      ]}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="h-32 w-full touch-none rounded-md border border-graphite-600 bg-document-50"
+                      role="img"
+                      aria-label={t("signature.drawSignature")}
+                      viewBox="0 0 1 1"
+                      preserveAspectRatio="none"
+                      onPointerDown={startSignatureStroke}
+                      onPointerMove={moveSignatureStroke}
+                      onPointerUp={endSignatureStroke}
+                      onPointerCancel={endSignatureStroke}
+                    >
+                      {selectedLayer.signatureStrokes.map((stroke) => (
+                        <polyline
+                          key={stroke.id}
+                          points={stroke.points.map((point) => `${point.x},${point.y}`).join(" ")}
+                          fill="none"
+                          stroke={selectedLayer.color}
+                          strokeWidth="0.02"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      ))}
+                    </svg>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => patchSelectedLayer({ signatureStrokes: [] })}
+                    >
+                      {t("signature.clear")}
+                    </Button>
+                  </>
+                )}
+                <Slider
+                  label={t("blackout.width")}
+                  min={96}
+                  max={420}
+                  value={selectedLayer.signatureWidth}
+                  displayValue={`${selectedLayer.signatureWidth}px`}
+                  onChange={(signatureWidth) => patchSelectedLayer({ signatureWidth })}
+                />
+                <Slider
+                  label={t("blackout.height")}
+                  min={42}
+                  max={180}
+                  value={selectedLayer.signatureHeight}
+                  displayValue={`${selectedLayer.signatureHeight}px`}
+                  onChange={(signatureHeight) => patchSelectedLayer({ signatureHeight })}
+                />
+              </>
+            ) : null}
+
+            {selectedLayer.type === "text" ||
+            selectedLayer.type === "seal" ||
+            selectedLayer.type === "image" ||
+            selectedLayer.type === "qr" ||
+            selectedLayer.type === "barcode" ||
+            selectedLayer.type === "signature" ? (
               <PositionGridPicker
                 label={t("watermark.position")}
                 value={selectedLayer.positionPreset}
@@ -429,7 +747,10 @@ export function WatermarkDesigner({
             {selectedLayer.type === "text" ||
             selectedLayer.type === "pattern" ||
             selectedLayer.type === "image" ||
-            selectedLayer.type === "seal" ? (
+            selectedLayer.type === "seal" ||
+            selectedLayer.type === "qr" ||
+            selectedLayer.type === "barcode" ||
+            selectedLayer.type === "signature" ? (
               <Slider
                 label={t("watermark.rotation")}
                 min={selectedLayer.type === "seal" ? -30 : -90}
@@ -440,7 +761,11 @@ export function WatermarkDesigner({
               />
             ) : null}
 
-            {selectedLayer.type === "text" || selectedLayer.type === "safelayer" ? (
+            {selectedLayer.type === "text" ||
+            selectedLayer.type === "safelayer" ||
+            selectedLayer.type === "qr" ||
+            selectedLayer.type === "barcode" ||
+            selectedLayer.type === "signature" ? (
               <Input
                 label={t("watermark.color")}
                 type="color"

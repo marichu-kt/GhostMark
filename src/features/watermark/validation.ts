@@ -33,6 +33,30 @@ export function validateWatermarkConfig(
     return { isValid: false, messageKey: "validation.addBlackoutRect" };
   }
 
+  if (config.type === "qr" && !config.qrContent.trim()) {
+    return { isValid: false, messageKey: "validation.addQrContent" };
+  }
+
+  if (config.type === "barcode" && !config.barcodeValue.trim()) {
+    return { isValid: false, messageKey: "validation.addBarcodeValue" };
+  }
+
+  if (
+    config.type === "signature" &&
+    config.signatureMode === "typed" &&
+    !config.signatureText.trim()
+  ) {
+    return { isValid: false, messageKey: "validation.addSignatureText" };
+  }
+
+  if (
+    config.type === "signature" &&
+    config.signatureMode === "drawn" &&
+    config.signatureStrokes.every((stroke) => stroke.points.length < 2)
+  ) {
+    return { isValid: false, messageKey: "validation.drawSignature" };
+  }
+
   try {
     resolvePageRules(config.pages, loadedPdf.pageCount);
   } catch {
@@ -79,6 +103,14 @@ export function getWatermarkSummary(config: WatermarkConfig): string {
       return `SafeLayer: ${config.text.trim() || "Not set"}`;
     case "blackout":
       return `Blackout: ${config.blackoutRects.length} rectangles`;
+    case "qr":
+      return `QR: ${config.qrContent.trim() || "Not set"}`;
+    case "barcode":
+      return `Barcode: ${config.barcodeValue.trim() || "Not set"}`;
+    case "signature":
+      return config.signatureMode === "drawn"
+        ? `Signature: ${config.signatureStrokes.length} strokes`
+        : `Signature: ${config.signatureText.trim() || "Not set"}`;
     case "image":
       return config.imageData ? "Image watermark ready" : "Image watermark missing";
     default:

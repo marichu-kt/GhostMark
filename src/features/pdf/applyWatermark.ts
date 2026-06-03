@@ -6,8 +6,11 @@ import {
   resolveLayerPlacement,
 } from "../watermark/layerGeometry";
 import {
+  drawBarcodeWatermarkToCanvas,
   drawImageWatermarkToCanvas,
+  drawQrWatermarkToCanvas,
   drawSealWatermarkToCanvas,
+  drawSignatureWatermarkToCanvas,
 } from "../watermark/canvasWatermarkRenderer";
 import { drawSafeLayerToCanvas } from "../watermark/safelayerCanvasRenderer";
 import {
@@ -292,6 +295,42 @@ async function drawCanvasLayer(input: {
       if (canvasImage) {
         drawCanvasImageWatermark(context, layer, canvasImage, pageWidth, pageHeight, scaleX, scaleY);
       }
+      break;
+    case "qr":
+      drawQrWatermarkToCanvas({
+        context,
+        layer,
+        pageWidth,
+        pageHeight,
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
+        scaleX,
+        scaleY,
+      });
+      break;
+    case "barcode":
+      drawBarcodeWatermarkToCanvas({
+        context,
+        layer,
+        pageWidth,
+        pageHeight,
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
+        scaleX,
+        scaleY,
+      });
+      break;
+    case "signature":
+      drawSignatureWatermarkToCanvas({
+        context,
+        layer,
+        pageWidth,
+        pageHeight,
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
+        scaleX,
+        scaleY,
+      });
       break;
     default:
       break;

@@ -22,23 +22,50 @@ describe("validateExportPasswordProtection", () => {
     ).toEqual({ isValid: false, messageKey: "export.passwordRequired" });
   });
 
-  it("requires at least 8 characters", () => {
+  it("requires at least 12 characters", () => {
     expect(
       validateExportPasswordProtection({
         enabled: true,
-        password: "short",
-        confirmPassword: "short",
+        password: "eight888",
+        confirmPassword: "eight888",
       }),
     ).toEqual({ isValid: false, messageKey: "export.passwordTooShort" });
+  });
+
+  it("rejects common weak passwords", () => {
+    expect(
+      validateExportPasswordProtection({
+        enabled: true,
+        password: "ghostmark",
+        confirmPassword: "ghostmark",
+      }),
+    ).toEqual({ isValid: false, messageKey: "export.passwordWeak" });
+    expect(
+      validateExportPasswordProtection({
+        enabled: true,
+        password: "ghostmark000",
+        confirmPassword: "ghostmark000",
+      }),
+    ).toEqual({ isValid: true });
   });
 
   it("requires matching confirmation", () => {
     expect(
       validateExportPasswordProtection({
         enabled: true,
-        password: "strongpass",
+        password: "strongpassphrase",
         confirmPassword: "different",
       }),
     ).toEqual({ isValid: false, messageKey: "export.passwordMismatch" });
+  });
+
+  it("accepts a matching 12-character passphrase", () => {
+    expect(
+      validateExportPasswordProtection({
+        enabled: true,
+        password: "longpass1234",
+        confirmPassword: "longpass1234",
+      }),
+    ).toEqual({ isValid: true });
   });
 });

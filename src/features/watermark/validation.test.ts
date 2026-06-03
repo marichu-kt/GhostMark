@@ -64,6 +64,18 @@ function makeConfig(patch: Partial<WatermarkConfig> = {}): WatermarkConfig {
     safeLayerContourStrength: 16,
     safeLayerHolographicIntensity: 0.32,
     blackoutRects: [],
+    qrContent: "https://marichu-kt.github.io/GhostMark/",
+    qrSize: 118,
+    barcodeValue: "GHOSTMARK-001",
+    barcodeFormat: "CODE128",
+    barcodeWidth: 220,
+    barcodeHeight: 72,
+    signatureMode: "typed",
+    signatureText: "Approved",
+    signatureStyle: "classic",
+    signatureWidth: 220,
+    signatureHeight: 86,
+    signatureStrokes: [],
     ...patch,
   };
 }
@@ -97,6 +109,40 @@ describe("validateWatermarkConfig", () => {
     expect(validateWatermarkConfig(config, loadedPdf)).toEqual({
       isValid: false,
       messageKey: "validation.addBlackoutRect",
+    });
+  });
+
+  it("requires QR content for QR layers", () => {
+    const config = makeConfig({ type: "qr", qrContent: "   " });
+    expect(validateWatermarkConfig(config, loadedPdf)).toEqual({
+      isValid: false,
+      messageKey: "validation.addQrContent",
+    });
+  });
+
+  it("requires a barcode value for barcode layers", () => {
+    const config = makeConfig({ type: "barcode", barcodeValue: "   " });
+    expect(validateWatermarkConfig(config, loadedPdf)).toEqual({
+      isValid: false,
+      messageKey: "validation.addBarcodeValue",
+    });
+  });
+
+  it("requires typed signature text or drawn signature strokes for signature layers", () => {
+    expect(
+      validateWatermarkConfig(makeConfig({ type: "signature", signatureMode: "typed", signatureText: " " }), loadedPdf),
+    ).toEqual({
+      isValid: false,
+      messageKey: "validation.addSignatureText",
+    });
+    expect(
+      validateWatermarkConfig(
+        makeConfig({ type: "signature", signatureMode: "drawn", signatureStrokes: [] }),
+        loadedPdf,
+      ),
+    ).toEqual({
+      isValid: false,
+      messageKey: "validation.drawSignature",
     });
   });
 
@@ -187,5 +233,30 @@ describe("pattern defaults", () => {
 describe("blackout defaults", () => {
   it("does not create an automatic rectangle", () => {
     expect(createLayerForType("blackout").blackoutRects).toEqual([]);
+  });
+});
+
+describe("QR, barcode, and signature defaults", () => {
+  it("creates local QR, Code 128 barcode, and typed signature defaults", () => {
+    expect(createLayerForType("qr")).toMatchObject({
+      type: "qr",
+      qrContent: "https://marichu-kt.github.io/GhostMark/",
+      qrSize: 118,
+      positionPreset: "bottom-right",
+    });
+    expect(createLayerForType("barcode")).toMatchObject({
+      type: "barcode",
+      barcodeValue: "GHOSTMARK-001",
+      barcodeFormat: "CODE128",
+      barcodeWidth: 220,
+      barcodeHeight: 72,
+    });
+    expect(createLayerForType("signature")).toMatchObject({
+      type: "signature",
+      signatureMode: "typed",
+      signatureText: "Approved",
+      signatureWidth: 220,
+      signatureHeight: 86,
+    });
   });
 });

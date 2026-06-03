@@ -9,6 +9,10 @@ export function getLayerTypeLabel(type: LayerType): string {
     return "SafeLayer";
   }
 
+  if (type === "qr") {
+    return "QR";
+  }
+
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
@@ -31,5 +35,10 @@ export function duplicateLayer(layer: DocumentLayer): DocumentLayer {
     name: `${getLayerDisplayName(layer)} copy`,
     imageData: layer.imageData ? new Uint8Array(layer.imageData) : undefined,
     blackoutRects: layer.blackoutRects.map((rect) => ({ ...rect, id: crypto.randomUUID() })),
+    signatureStrokes: layer.signatureStrokes.map((stroke) => ({
+      ...stroke,
+      id: crypto.randomUUID(),
+      points: stroke.points.map((point) => ({ ...point })),
+    })),
   };
 }

@@ -54,6 +54,7 @@ export function App() {
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [layers, setLayers] = useState<DocumentLayer[]>(() => createDefaultDocumentLayers());
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(() => layers[0]?.id ?? null);
+  const [selectedProtection, setSelectedProtection] = useState<"password" | null>(null);
   const [exportResult, setExportResult] = useState<PdfExportResult | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null);
@@ -135,6 +136,14 @@ export function App() {
     setExportResult(null);
   }
 
+  const handleSelectedLayerChange = useCallback((layerId: string | null) => {
+    setSelectedLayerId(layerId);
+
+    if (layerId) {
+      setSelectedProtection(null);
+    }
+  }, []);
+
   function handleLoaded(document: LoadedPdf) {
     if (loadedPdfRef.current) {
       wipeBytes(loadedPdfRef.current.bytes);
@@ -147,6 +156,7 @@ export function App() {
     const defaultLayers = createDefaultDocumentLayers();
     setLayers(defaultLayers);
     setSelectedLayerId(defaultLayers[0]?.id ?? null);
+    setSelectedProtection(null);
     setExportPasswordProtection({ enabled: false, password: "", confirmPassword: "" });
     setActiveStep("edit");
   }
@@ -158,6 +168,7 @@ export function App() {
     revokeExportResult();
     setLoadedPdf(null);
     setCurrentPage(1);
+    setSelectedProtection(null);
     setExportPasswordProtection({ enabled: false, password: "", confirmPassword: "" });
     setActiveStep("import");
   }
@@ -179,10 +190,11 @@ export function App() {
       setLoadedPdf(null);
       setCurrentPage(1);
       setZoom(1.1);
-      const defaultLayers = createDefaultDocumentLayers();
-      setLayers(defaultLayers);
-      setSelectedLayerId(defaultLayers[0]?.id ?? null);
-      setExportPasswordProtection({ enabled: false, password: "", confirmPassword: "" });
+    const defaultLayers = createDefaultDocumentLayers();
+    setLayers(defaultLayers);
+    setSelectedLayerId(defaultLayers[0]?.id ?? null);
+    setSelectedProtection(null);
+    setExportPasswordProtection({ enabled: false, password: "", confirmPassword: "" });
       setExportError(null);
 
       if (resetExport) {
@@ -212,7 +224,9 @@ export function App() {
 
     if (!passwordValidation.isValid) {
       setExportError(t(passwordValidation.messageKey ?? "export.error"));
-      setActiveStep("export");
+      setSelectedLayerId(null);
+      setSelectedProtection("password");
+      setActiveStep("edit");
       return;
     }
 
@@ -250,6 +264,7 @@ export function App() {
         const defaultLayers = createDefaultDocumentLayers();
         setLayers(defaultLayers);
         setSelectedLayerId(defaultLayers[0]?.id ?? null);
+        setSelectedProtection(null);
         setExportPasswordProtection({ enabled: false, password: "", confirmPassword: "" });
       }
     } catch (error) {
@@ -310,8 +325,13 @@ export function App() {
             layers={layers}
             selectedLayerId={selectedLayerId}
             totalPages={loadedPdf?.pageCount ?? 1}
+            passwordProtection={exportPasswordProtection}
+            passwordValidationMessage={passwordValidationMessage}
+            selectedProtection={selectedProtection}
             onChange={setLayers}
-            onSelectedLayerChange={setSelectedLayerId}
+            onSelectedLayerChange={handleSelectedLayerChange}
+            onSelectedProtectionChange={setSelectedProtection}
+            onPasswordProtectionChange={setExportPasswordProtection}
           />
         );
       case "security":
@@ -351,8 +371,10 @@ export function App() {
     layers,
     largePdfMode,
     exportPasswordProtection,
+    handleSelectedLayerChange,
     passwordValidationMessage,
     selectedLayerId,
+    selectedProtection,
     t,
     visiblePageCount,
     validationMessage,
@@ -410,6 +432,7 @@ export function App() {
           onZoomChange={setZoom}
           onPreviewEnabledChange={setPreviewEnabled}
           onLayersChange={setLayers}
+          onSelectedLayerChange={handleSelectedLayerChange}
         />
       ) : (
         <EmptyState onLoaded={handleLoaded} />

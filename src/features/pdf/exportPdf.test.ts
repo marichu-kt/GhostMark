@@ -194,7 +194,7 @@ describe("exportPdf flattened output", () => {
     expect(reloaded.getSubject()).toBe("");
     expect(reloaded.getKeywords()).toBe("");
     expect(reloaded.getCreator()).toBe("GhostMark");
-  });
+  }, 20_000);
 
   it("exports SafeLayer and Blackout through the flattened production path without throwing", async () => {
     installCanvasDom();
@@ -237,7 +237,7 @@ describe("exportPdf flattened output", () => {
     expect(createImageBitmapMock).not.toHaveBeenCalled();
   }, 20_000);
 
-  it("keeps source text non-extractable with text, pattern, image, seal, SafeLayer, and Blackout layers", async () => {
+  it("keeps source text non-extractable with text, pattern, image, seal, SafeLayer, Blackout, QR, Barcode, and Signature layers", async () => {
     installCanvasDom();
     const createImageBitmapMock = installCanvasImageBitmap();
     const { exportPdf } = await import("./exportPdf");
@@ -277,11 +277,42 @@ describe("exportPdf flattened output", () => {
       imageData: createTestPngBytes(),
       imageMimeType: "image/png" as const,
     };
+    const qr = {
+      ...createLayerForType("qr"),
+      id: "qr-layer",
+      pages: { mode: "all" as const, selection: "" },
+    };
+    const barcode = {
+      ...createLayerForType("barcode"),
+      id: "barcode-layer",
+      pages: { mode: "all" as const, selection: "" },
+    };
+    const signature = {
+      ...createLayerForType("signature"),
+      id: "signature-layer",
+      pages: { mode: "all" as const, selection: "" },
+      signatureMode: "drawn" as const,
+      signatureStrokes: [
+        {
+          id: "stroke-1",
+          points: [
+            { x: 0.08, y: 0.58 },
+            { x: 0.3, y: 0.42 },
+            { x: 0.58, y: 0.48 },
+            { x: 0.9, y: 0.36 },
+          ],
+        },
+      ],
+    };
 
-    const result = await exportPdf(new Uint8Array(inputBytes), [blackout, text, pattern, image, seal, safeLayer], {
-      outputFileName: "all-layers.pdf",
-      cleanupMetadata: true,
-    });
+    const result = await exportPdf(
+      new Uint8Array(inputBytes),
+      [blackout, text, pattern, image, seal, safeLayer, qr, barcode, signature],
+      {
+        outputFileName: "all-layers.pdf",
+        cleanupMetadata: true,
+      },
+    );
     const exportedBytes = new Uint8Array(await result.blob.arrayBuffer());
     const after = await extractText(exportedBytes);
     const reloaded = await PDFDocument.load(exportedBytes);

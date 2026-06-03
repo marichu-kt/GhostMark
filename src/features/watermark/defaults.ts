@@ -49,6 +49,18 @@ export function createDefaultLayer(type: LayerType = "text"): DocumentLayer {
     safeLayerContourStrength: SAFELAYER_CONTOUR_STRENGTH,
     safeLayerHolographicIntensity: SAFELAYER_HOLOGRAPHIC_INTENSITY,
     blackoutRects: [],
+    qrContent: "https://marichu-kt.github.io/GhostMark/",
+    qrSize: 118,
+    barcodeValue: "GHOSTMARK-001",
+    barcodeFormat: "CODE128",
+    barcodeWidth: 220,
+    barcodeHeight: 72,
+    signatureMode: "typed",
+    signatureText: "Approved",
+    signatureStyle: "classic",
+    signatureWidth: 220,
+    signatureHeight: 86,
+    signatureStrokes: [],
   };
 }
 
@@ -97,6 +109,42 @@ export function createLayerForType(type: LayerType): DocumentLayer {
         color: "#000000",
         text: "",
         blackoutRects: [],
+      };
+    case "qr":
+      return {
+        ...layer,
+        name: "QR",
+        text: "",
+        color: "#111827",
+        opacity: 0.92,
+        rotation: 0,
+        positionPreset: "bottom-right",
+        qrSize: 118,
+      };
+    case "barcode":
+      return {
+        ...layer,
+        name: "Barcode",
+        text: "",
+        color: "#111827",
+        opacity: 0.92,
+        rotation: 0,
+        positionPreset: "bottom-right",
+        barcodeWidth: 220,
+        barcodeHeight: 72,
+      };
+    case "signature":
+      return {
+        ...layer,
+        name: "Signature",
+        text: "",
+        color: "#111827",
+        opacity: 0.9,
+        rotation: 0,
+        positionPreset: "bottom-right",
+        signatureText: "Approved",
+        signatureWidth: 220,
+        signatureHeight: 86,
       };
     default:
       return { ...layer, name: "Text" };

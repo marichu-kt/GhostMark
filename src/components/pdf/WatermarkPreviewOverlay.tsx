@@ -1,11 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import type { DocumentLayer } from "../../types/watermark";
 import { FLATTENED_EXPORT_SCALE } from "../../features/pdf/flattenedExportPlan";
 import { resolvePageRules } from "../../features/pdf/pageRules";
 import {
   drawImageWatermarkToCanvas,
+  drawBarcodeWatermarkToCanvas,
+  drawQrWatermarkToCanvas,
   drawSealWatermarkToCanvas,
+  drawSignatureWatermarkToCanvas,
 } from "../../features/watermark/canvasWatermarkRenderer";
+import {
+  createInteractivePreviewBox,
+  isInteractiveLayer,
+  moveInteractiveLayer,
+  resizeInteractiveLayer,
+  type InteractionMode,
+} from "../../features/watermark/interactiveGeometry";
 import { getPatternTextSize, getTextLayerSize } from "../../features/watermark/layerGeometry";
 import { resolvePreviewWatermarkPosition } from "../../features/watermark/previewGeometry";
 import { drawSafeLayerContoursToCanvas } from "../../features/watermark/safelayerCanvasRenderer";
@@ -21,6 +31,8 @@ interface WatermarkPreviewOverlayProps {
   pageWidth: number;
   pageHeight: number;
   selectedLayerId?: string | null;
+  onLayersChange?: (layers: DocumentLayer[]) => void;
+  onSelectedLayerChange?: (layerId: string | null) => void;
 }
 
 function bytesToDataUrl(bytes: Uint8Array, mimeType: string): string {
@@ -180,6 +192,45 @@ function CanvasWatermarkLayerPreview({
         scaleY,
       });
     }
+
+    if (layer.type === "qr") {
+      drawQrWatermarkToCanvas({
+        context,
+        layer,
+        pageWidth: logicalPageWidth,
+        pageHeight: logicalPageHeight,
+        canvasWidth,
+        canvasHeight,
+        scaleX,
+        scaleY,
+      });
+    }
+
+    if (layer.type === "barcode") {
+      drawBarcodeWatermarkToCanvas({
+        context,
+        layer,
+        pageWidth: logicalPageWidth,
+        pageHeight: logicalPageHeight,
+        canvasWidth,
+        canvasHeight,
+        scaleX,
+        scaleY,
+      });
+    }
+
+    if (layer.type === "signature") {
+      drawSignatureWatermarkToCanvas({
+        context,
+        layer,
+        pageWidth: logicalPageWidth,
+        pageHeight: logicalPageHeight,
+        canvasWidth,
+        canvasHeight,
+        scaleX,
+        scaleY,
+      });
+    }
   }, [image, layer, pageHeight, pageWidth, zoom]);
 
   if (layer.type === "image" && !image) {
@@ -205,8 +256,17 @@ export function WatermarkPreviewOverlay({
   pageWidth,
   pageHeight,
   selectedLayerId,
+  onLayersChange,
+  onSelectedLayerChange,
 }: WatermarkPreviewOverlayProps) {
   const [imageElements, setImageElements] = useState<Map<string, HTMLImageElement>>(() => new Map());
+  const interactionRef = useRef<{
+    layerId: string;
+    mode: InteractionMode;
+    startX: number;
+    startY: number;
+    startLayer: DocumentLayer;
+  } | null>(null);
   const imageUrls = useMemo(() => {
     const urls = new Map<string, string>();
 
@@ -262,6 +322,69 @@ export function WatermarkPreviewOverlay({
   }
 
   const pageIndex = currentPage - 1;
+  const logicalPageWidth = pageWidth / zoom;
+  const logicalPageHeight = pageHeight / zoom;
+
+  function patchLayer(layerId: string, patch: Partial<DocumentLayer>) {
+    if (!onLayersChange) {
+      return;
+    }
+
+    onLayersChange(layers.map((layer) => (layer.id === layerId ? { ...layer, ...patch } : layer)));
+  }
+
+  function handleInteractivePointerDown(
+    event: PointerEvent<HTMLElement>,
+    layer: DocumentLayer,
+    mode: InteractionMode,
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    onSelectedLayerChange?.(layer.id);
+    interactionRef.current = {
+      layerId: layer.id,
+      mode,
+      startX: event.clientX,
+      startY: event.clientY,
+      startLayer: layer,
+    };
+  }
+
+  function handleInteractivePointerMove(event: PointerEvent<HTMLElement>) {
+    const interaction = interactionRef.current;
+
+    if (!interaction) {
+      return;
+    }
+
+    event.preventDefault();
+    const deltaX = (event.clientX - interaction.startX) / zoom;
+    const deltaY = (event.clientY - interaction.startY) / zoom;
+    const patch =
+      interaction.mode === "move"
+        ? moveInteractiveLayer({
+            layer: interaction.startLayer,
+            deltaX,
+            deltaY,
+            pageWidth: logicalPageWidth,
+            pageHeight: logicalPageHeight,
+          })
+        : resizeInteractiveLayer({
+            layer: interaction.startLayer,
+            deltaX,
+            deltaY,
+            pageWidth: logicalPageWidth,
+            pageHeight: logicalPageHeight,
+          });
+
+    patchLayer(interaction.layerId, patch);
+  }
+
+  function handleInteractivePointerUp(event: PointerEvent<HTMLElement>) {
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    interactionRef.current = null;
+  }
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -410,7 +533,61 @@ export function WatermarkPreviewOverlay({
           );
         }
 
+        if (layer.type === "qr" || layer.type === "barcode" || layer.type === "signature") {
+          return (
+            <CanvasWatermarkLayerPreview
+              key={layer.id}
+              layer={layer}
+              pageWidth={pageWidth}
+              pageHeight={pageHeight}
+              zoom={zoom}
+            />
+          );
+        }
+
         return null;
+      })}
+      {layers.map((layer) => {
+        if (
+          !isInteractiveLayer(layer) ||
+          !layer.enabled ||
+          !layerAppliesToPage(layer, pageIndex, totalPages)
+        ) {
+          return null;
+        }
+
+        const selected = layer.id === selectedLayerId;
+        const box = createInteractivePreviewBox({ layer, pageWidth, pageHeight, zoom });
+
+        return (
+          <div
+            key={`${layer.id}-interaction`}
+            className={`pointer-events-auto absolute touch-none ${
+              selected ? "cursor-move" : "cursor-pointer"
+            }`}
+            style={{
+              left: box.x,
+              top: box.top,
+              width: box.width,
+              height: box.height,
+              transform: `rotate(${layer.rotation}deg)`,
+              transformOrigin: "center",
+              outline: selected ? "1px solid rgba(255,75,92,0.85)" : "1px solid transparent",
+              boxShadow: selected ? "0 0 0 2px rgba(0,0,0,0.22)" : undefined,
+            }}
+            onPointerDown={(event) => handleInteractivePointerDown(event, layer, "move")}
+            onPointerMove={handleInteractivePointerMove}
+            onPointerUp={handleInteractivePointerUp}
+            onPointerCancel={handleInteractivePointerUp}
+          >
+            {selected ? (
+              <span
+                className="absolute -bottom-2 -right-2 h-4 w-4 cursor-nwse-resize rounded-sm border border-white/90 bg-brand-red shadow-lg"
+                onPointerDown={(event) => handleInteractivePointerDown(event, layer, "resize")}
+              />
+            ) : null}
+          </div>
+        );
       })}
     </div>
   );

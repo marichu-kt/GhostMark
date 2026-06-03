@@ -4,7 +4,10 @@ export type LayerType =
   | "pattern"
   | "seal"
   | "safelayer"
-  | "blackout";
+  | "blackout"
+  | "qr"
+  | "barcode"
+  | "signature";
 
 export type WatermarkType = LayerType;
 
@@ -32,6 +35,16 @@ export interface BlackoutRect {
   y: number;
   width: number;
   height: number;
+}
+
+export interface SignaturePoint {
+  x: number;
+  y: number;
+}
+
+export interface SignatureStroke {
+  id: string;
+  points: SignaturePoint[];
 }
 
 export type PageRuleMode =
@@ -86,6 +99,18 @@ export interface DocumentLayer {
   safeLayerContourStrength: number;
   safeLayerHolographicIntensity: number;
   blackoutRects: BlackoutRect[];
+  qrContent: string;
+  qrSize: number;
+  barcodeValue: string;
+  barcodeFormat: "CODE128";
+  barcodeWidth: number;
+  barcodeHeight: number;
+  signatureMode: "typed" | "drawn";
+  signatureText: string;
+  signatureStyle: "classic" | "formal" | "compact";
+  signatureWidth: number;
+  signatureHeight: number;
+  signatureStrokes: SignatureStroke[];
 }
 
 export type WatermarkConfig = DocumentLayer;
@@ -96,3 +121,6 @@ export type PatternLayerConfig = DocumentLayer & { type: "pattern" };
 export type SealLayerConfig = DocumentLayer & { type: "seal" };
 export type SafeLayerConfig = DocumentLayer & { type: "safelayer" };
 export type BlackoutLayerConfig = DocumentLayer & { type: "blackout" };
+export type QrLayerConfig = DocumentLayer & { type: "qr" };
+export type BarcodeLayerConfig = DocumentLayer & { type: "barcode" };
+export type SignatureLayerConfig = DocumentLayer & { type: "signature" };

@@ -10,10 +10,19 @@ export interface ExportPasswordProtectionOptions {
 
 export interface PasswordValidationResult {
   isValid: boolean;
-  messageKey?: "export.passwordRequired" | "export.passwordTooShort" | "export.passwordMismatch";
+  messageKey?: "export.passwordRequired" | "export.passwordTooShort" | "export.passwordMismatch" | "export.passwordWeak";
 }
 
-export const EXPORT_PASSWORD_MIN_LENGTH = 8;
+export const EXPORT_PASSWORD_MIN_LENGTH = 12;
+const WEAK_EXPORT_PASSWORDS = new Set([
+  "password",
+  "12345678",
+  "123456789",
+  "qwerty",
+  "ghostmark",
+  "admin123",
+  "11111111",
+]);
 
 function createOwnerPassword() {
   const randomBytes = new Uint8Array(32);
@@ -30,6 +39,10 @@ export function validateExportPasswordProtection(
 
   if (!protection.password) {
     return { isValid: false, messageKey: "export.passwordRequired" };
+  }
+
+  if (WEAK_EXPORT_PASSWORDS.has(protection.password.trim().toLowerCase())) {
+    return { isValid: false, messageKey: "export.passwordWeak" };
   }
 
   if (protection.password.length < EXPORT_PASSWORD_MIN_LENGTH) {

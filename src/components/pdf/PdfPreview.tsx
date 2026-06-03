@@ -27,6 +27,7 @@ interface PdfPreviewProps {
   onZoomChange: (zoom: number) => void;
   onPreviewEnabledChange: (enabled: boolean) => void;
   onLayersChange: (layers: DocumentLayer[]) => void;
+  onSelectedLayerChange: (layerId: string | null) => void;
 }
 
 interface DragPoint {
@@ -45,6 +46,7 @@ export function PdfPreview({
   onZoomChange,
   onPreviewEnabledChange,
   onLayersChange,
+  onSelectedLayerChange,
 }: PdfPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -243,6 +245,8 @@ export function PdfPreview({
               pageWidth={pageDisplaySize.width}
               pageHeight={pageDisplaySize.height}
               selectedLayerId={selectedLayerId}
+              onLayersChange={onLayersChange}
+              onSelectedLayerChange={onSelectedLayerChange}
             />
             {drawingEnabled ? (
               <div
