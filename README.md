@@ -85,11 +85,20 @@ flowchart LR
 ## Features
 
 * **Text watermark** — add custom text with size, opacity, color, rotation, and position controls.
-* **Image watermark** — place a logo or image over your PDF.
+* **Image watermark** — place a logo or image over your PDF while preserving aspect ratio.
 * **Pattern watermark** — repeat text across pages as a subtle document mark.
-* **Professional seal** — add document-control style stamps.
-* **Multi-layer editing** — combine several watermark layers in one PDF.
+* **Professional seal** — add document-control style circular or rectangular stamps.
+* **SafeLayer protection** — apply a dense wavy protection layer with contour texture.
+* **Blackout redaction** — cover sensitive areas with black rectangles that are flattened into the export.
+* **QR code watermark** — add a local QR code layer and position it directly on the page.
+* **Barcode watermark** — add Code 128, Code 39, or validated EAN-13 barcodes for document IDs.
+* **Visual signature** — add a typed signature or draw one locally with the pointer.
+* **Password protection** — encrypt exported PDFs with a password after flattening.
+* **Password-protected PDF import** — unlock encrypted PDFs locally before editing.
+* **Multi-layer editing** — combine several visual layers in one PDF.
 * **Live preview** — review changes before exporting.
+* **Image-based flattened export** — export pages as flattened image-based PDF pages to remove normal text selection.
+* **Metadata cleanup** — remove standard document metadata during export.
 * **Local PDF export** — generate the final PDF in your browser.
 * **No upload** — files stay on your device while you work.
 
