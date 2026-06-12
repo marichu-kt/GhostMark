@@ -1,8 +1,8 @@
 import type { DocumentLayer } from "../../types/watermark";
 import { resolvePageRules } from "./pageRules";
 
-export const FLATTENED_EXPORT_SCALE = 1.65;
-export const MAX_EXPORT_CANVAS_PIXELS = 18_000_000;
+export const FLATTENED_EXPORT_SCALE = 2;
+export const MAX_EXPORT_CANVAS_PIXELS = 32_000_000;
 
 export type FlattenedExportQualityMode = "small" | "balanced" | "high";
 
@@ -21,20 +21,20 @@ export const FLATTENED_EXPORT_QUALITY_PRESETS: Record<
 > = {
   small: {
     imageType: "image/jpeg",
-    imageQuality: 0.64,
-    renderScale: 1.35,
-    maxCanvasPixels: 12_000_000,
+    imageQuality: 0.78,
+    renderScale: 1.5,
+    maxCanvasPixels: 18_000_000,
   },
   balanced: {
     imageType: "image/jpeg",
-    imageQuality: 0.76,
-    renderScale: 1.5,
-    maxCanvasPixels: 14_000_000,
+    imageQuality: 0.9,
+    renderScale: FLATTENED_EXPORT_SCALE,
+    maxCanvasPixels: 28_000_000,
   },
   high: {
     imageType: "image/jpeg",
-    imageQuality: 0.9,
-    renderScale: FLATTENED_EXPORT_SCALE,
+    imageQuality: 0.92,
+    renderScale: 2.25,
     maxCanvasPixels: MAX_EXPORT_CANVAS_PIXELS,
   },
 };

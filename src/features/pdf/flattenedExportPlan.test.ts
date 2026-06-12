@@ -58,14 +58,14 @@ describe("flattened export planning", () => {
     expect(plan[199].layerIds).toContain("blackout");
   });
 
-  it("uses compressed JPEG settings for the default flattened export", () => {
+  it("uses sharp JPEG settings for the default flattened export", () => {
     const settings = resolveFlattenedExportQuality();
 
     expect(DEFAULT_FLATTENED_EXPORT_QUALITY).toBe("balanced");
     expect(settings.imageType).toBe("image/jpeg");
-    expect(settings.imageQuality).toBe(0.76);
-    expect(settings.renderScale).toBe(1.5);
-    expect(settings.maxCanvasPixels).toBe(14_000_000);
+    expect(settings.imageQuality).toBe(0.9);
+    expect(settings.renderScale).toBe(2);
+    expect(settings.maxCanvasPixels).toBe(28_000_000);
   });
 
   it("keeps export quality presets capped and ordered by output intent", () => {
