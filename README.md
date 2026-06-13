@@ -77,7 +77,7 @@ flowchart LR
 | Blackout<br><sub>Black rectangles flattened into the exported PDF.</sub><br>[Open PDF](samples/sample-blackout.pdf)           | <img src="samples/sample-blackout.png" alt="Blackout sample preview" width="520">            |
 | QR code<br><sub>A scannable QR watermark positioned on the page.</sub><br>[Open PDF](samples/sample-qr.pdf)                   | <img src="samples/sample-qr.png" alt="QR code sample preview" width="520">                   |
 | Barcode<br><sub>A local Code 128 barcode watermark for document IDs.</sub><br>[Open PDF](samples/sample-barcode.pdf)          | <img src="samples/sample-barcode.png" alt="Barcode sample preview" width="520">              |
-| Signature<br><sub>A visual signature mark rendered into the exported PDF.</sub><br>[Open PDF](samples/sample-signaturee.pdf)   | <img src="samples/sample-signature.png" alt="Signature sample preview" width="520">          |
+| Signature<br><sub>A visual signature mark rendered into the exported PDF.</sub><br>[Open PDF](samples/sample-signaturee.pdf)   | <img src="samples/sample-signaturee.png" alt="Signature sample preview" width="520">          |
 | Password<br><sub>An encrypted export protected with password settings.</sub><br>[Open PDF](samples/sample-password.pdf)       | <img src="samples/sample-password.png" alt="Password protection sample preview" width="520"> |
 
 ---
